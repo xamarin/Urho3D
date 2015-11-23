@@ -194,6 +194,9 @@ void PrintLine(const String& str, bool error)
 #if !defined(ANDROID) && !defined(IOS)
     fprintf(error ? stderr : stdout, "%s\n", str.CString());
 #endif
+#if defined (IOS)
+    SDL_Log (str.CString());
+#endif
 }
 
 const Vector<String>& ParseArguments(const String& cmdLine, bool skipFirstArgument)
