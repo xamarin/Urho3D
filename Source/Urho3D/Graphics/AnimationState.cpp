@@ -89,7 +89,7 @@ AnimationState::AnimationState(Node* node, Animation* animation) :
                     if (targetNode)
                         stateTrack.node_ = targetNode;
                     else
-                        LOGWARNING("Node " + i->second_.name_ + " not found for node animation " + animation_->GetName());
+                        URHO3D_LOGWARNING("Node " + i->second_.name_ + " not found for node animation " + animation_->GetName());
                 }
 
                 if (stateTrack.node_)
@@ -301,6 +301,7 @@ void AnimationState::AddTime(float delta)
 
                 VariantMap& eventData = senderNode->GetEventDataMap();
                 eventData[P_NODE] = senderNode;
+                eventData[P_ANIMATION] = animation_;
                 eventData[P_NAME] = animation_->GetAnimationName();
                 eventData[P_TIME] = i->time_;
                 eventData[P_DATA] = i->data_;

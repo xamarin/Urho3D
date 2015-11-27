@@ -22,7 +22,7 @@
 
 # Check existence of stdint.h for LibCpuId
 include (CheckIncludeFiles)
-CHECK_INCLUDE_FILES (stdint.h HAVE_STDINT_H)
+check_include_files (stdint.h HAVE_STDINT_H)
 if (HAVE_STDINT_H)
     add_definitions (-DHAVE_STDINT_H)
 endif ()
@@ -43,7 +43,9 @@ if (URHO3D_LIB_TYPE STREQUAL SHARED AND NOT WIN32 AND NOT ANDROID AND NOT IOS AN
     endif ()
     # When installing/packaging set the first RPATH entry to the library location relative to the executable
     set (CMAKE_INSTALL_RPATH ${ORIGIN}/../lib${LIB_SUFFIX}/${PATH_SUFFIX})    # The library location is based on SDK install destination
-    # The second entry to the install destination of the library, if the destination location is not in the system default search path
+    # The second entry to the library location relative to the executable in the tool directory
+    list (APPEND CMAKE_INSTALL_RPATH ${ORIGIN}/../../lib${LIB_SUFFIX}/${PATH_SUFFIX})    # The tools are installed one directory further down from normal executable
+    # The last entry to the install destination of the library, if the destination location is not in the system default search path
     list (FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES ${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX} isSystemDir)
     if (isSystemDir STREQUAL -1)
         list (APPEND CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/${DEST_LIBRARY_DIR})

@@ -221,15 +221,20 @@ namespace Urho3D
 Methods:
 
 - void SetAnimationEnabled(bool enable)
+- void SetAnimationTime(float time)
 - void SetObjectAnimation(ObjectAnimation* objectAnimation)
 - void SetAttributeAnimation(const String name, ValueAnimation* attributeAnimation, WrapMode wrapMode = WM_LOOP, float speed = 1.0f)
 - void SetAttributeAnimationWrapMode(const String name, WrapMode wrapMode)
 - void SetAttributeAnimationSpeed(const String name, float speed)
+- void SetAttributeAnimationTime(const String name, float time)
+- void RemoveObjectAnimation()
+- void RemoveAttributeAnimation(const String name)
 - bool GetAnimationEnabled() const
 - ObjectAnimation* GetObjectAnimation() const
 - ValueAnimation* GetAttributeAnimation(const String name) const
 - WrapMode GetAttributeAnimationWrapMode(const String name) const
 - float GetAttributeAnimationSpeed(const String name) const
+- float GetAttributeAnimationTime(const String name) const
 
 Properties:
 
@@ -695,6 +700,7 @@ Methods:
 - void Transform(const Matrix3& transform)
 - void Transform(const Matrix3x4& transform)
 - void Clear()
+- bool Defined() const
 - Vector3 Center() const
 - Vector3 Size() const
 - Vector3 HalfSize() const
@@ -712,7 +718,6 @@ Properties:
 
 - Vector3 min
 - Vector3 max
-- bool defined
 - Vector3 center (readonly)
 - Vector3 size (readonly)
 - Vector3 halfSize (readonly)
@@ -2111,14 +2116,17 @@ Properties:
 Methods:
 
 - void SetDrawObstacles(bool enable)
+- void SetMaxLayers(unsigned maxLayers)
 - void SetMaxObstacles(unsigned maxObstacles)
 - bool GetDrawObstacles() const
+- unsigned GetMaxLayers() const
 - unsigned GetMaxObstacles() const
 
 Properties:
 
 - bool drawObstacles
 - int maxObstacles
+- unsigned maxLayers
 
 <a name="Class_Engine"></a>
 ### Engine : Object
@@ -3776,6 +3784,7 @@ Methods:
 - const Variant& GetVar(StringHash key) const
 - const VariantMap& GetVars() const
 - Component* GetComponent(const String type, bool recursive = false) const
+- Component* GetParentComponent(const String type, bool recursive = false) const
 - const PODVector<Component*>& GetComponents(const String type, bool recursive = false)
 - const PODVector<Node*>& GetChildren(bool recursive = false)
 - const PODVector<Node*>& GetChildrenWithComponent(const String type, bool recursive = false)
@@ -3824,7 +3833,6 @@ Properties:
 Methods:
 
 - StringHash GetType() const
-- StringHash GetBaseType() const
 - const String GetTypeName() const
 - const String GetCategory() const
 - void SendEvent(const String eventName, VariantMap* eventData = 0)
@@ -3832,7 +3840,6 @@ Methods:
 Properties:
 
 - StringHash type (readonly)
-- StringHash baseType (readonly)
 - const String typeName (readonly)
 - const String category (readonly)
 
@@ -3880,6 +3887,7 @@ Methods:
 - const PODVector<OctreeQueryResult>& GetDrawables(const BoundingBox& box, char drawableFlags = DRAWABLE_ANY, unsigned viewMask = DEFAULT_VIEWMASK) const
 - const PODVector<OctreeQueryResult>& GetDrawables(const Frustum& frustum, char drawableFlags = DRAWABLE_ANY, unsigned viewMask = DEFAULT_VIEWMASK) const
 - const PODVector<OctreeQueryResult>& GetDrawables(const Sphere& sphere, char drawableFlags = DRAWABLE_ANY, unsigned viewMask = DEFAULT_VIEWMASK) const
+- const PODVector<OctreeQueryResult>& GetAllDrawables(char drawableFlags = DRAWABLE_ANY, unsigned viewMask = DEFAULT_VIEWMASK) const
 - const PODVector<RayQueryResult>& Raycast(const Ray& ray, RayQueryLevel level, float maxDistance, char drawableFlags, unsigned viewMask = DEFAULT_VIEWMASK) const
 - RayQueryResult RaycastSingle(const Ray& ray, RayQueryLevel level, float maxDistance, char drawableFlags, unsigned viewMask = DEFAULT_VIEWMASK) const
 - unsigned GetNumLevels() const
@@ -4192,6 +4200,7 @@ Methods:
 - void SetGravity(const Vector3& gravity)
 - void SetMaxSubSteps(int num)
 - void SetNumIterations(int num)
+- void SetUpdateEnabled(bool enable)
 - void SetInterpolation(bool enable)
 - void SetInternalEdge(bool enable)
 - void SetSplitImpulse(bool enable)
@@ -4208,6 +4217,7 @@ Methods:
 - Vector3 GetGravity() const
 - int GetMaxSubSteps() const
 - int GetNumIterations() const
+- bool IsUpdateEnabled() const
 - bool GetInterpolation() const
 - bool GetInternalEdge() const
 - bool GetSplitImpulse() const
@@ -4219,12 +4229,12 @@ Properties:
 - Vector3 gravity
 - int maxSubSteps
 - int numIterations
+- bool updateEnabled
 - bool interpolation
 - bool internalEdge
 - bool splitImpulse
 - int fps
 - float maxNetworkAngularVelocity
-- bool applyingTransforms
 
 <a name="Class_PhysicsWorld2D"></a>
 ### PhysicsWorld2D : Component
@@ -4232,6 +4242,7 @@ Properties:
 Methods:
 
 - void DrawDebugGeometry()
+- void SetUpdateEnabled(bool enable)
 - void SetDrawShape(bool drawShape)
 - void SetDrawJoint(bool drawJoint)
 - void SetDrawAabb(bool drawAabb)
@@ -4250,6 +4261,7 @@ Methods:
 - RigidBody2D* GetRigidBody(const Vector2& point, unsigned collisionMask = M_MAX_UNSIGNED)
 - RigidBody2D* GetRigidBody(int screenX, int screenY, unsigned collisionMask = M_MAX_UNSIGNED)
 - const PODVector<RigidBody2D*>& GetRigidBodies(const Rect& aabb, unsigned collisionMask = M_MAX_UNSIGNED)
+- bool IsUpdateEnabled() const
 - bool GetDrawShape() const
 - bool GetDrawJoint() const
 - bool GetDrawAabb() const
@@ -4266,6 +4278,7 @@ Methods:
 
 Properties:
 
+- bool updateEnabled
 - bool drawShape
 - bool drawJoint
 - bool drawAabb
@@ -4502,6 +4515,7 @@ Methods:
 - void Merge(const Rect& rect)
 - void Clear()
 - void Clip(const Rect& rect)
+- bool Defined() const
 - Vector2 Center() const
 - Vector2 Size() const
 - Vector2 HalfSize() const
@@ -4692,6 +4706,7 @@ Methods:
 - void SetMaxOccluderTriangles(int triangles)
 - void SetOcclusionBufferSize(int size)
 - void SetOccluderSizeThreshold(float screenSize)
+- void SetThreadedOcclusion(bool enable)
 - void SetMobileShadowBiasMul(float mul)
 - void SetMobileShadowBiasAdd(float add)
 - void ReloadShaders()
@@ -4715,6 +4730,7 @@ Methods:
 - int GetMaxOccluderTriangles() const
 - int GetOcclusionBufferSize() const
 - float GetOccluderSizeThreshold() const
+- bool GetThreadedOcclusion() const
 - float GetMobileShadowBiasMul() const
 - float GetMobileShadowBiasAdd() const
 - unsigned GetNumViews() const
@@ -4751,6 +4767,7 @@ Properties:
 - int maxOccluderTriangles
 - int occlusionBufferSize
 - float occluderSizeThreshold
+- bool threadedOcclusion
 - float mobileShadowBiasMul
 - float mobileShadowBiasAdd
 - unsigned numViews (readonly)
@@ -4790,8 +4807,8 @@ Methods:
 - void ReleaseAllResources(bool force = false)
 - bool ReloadResource(Resource* resource)
 - void ReloadResourceWithDependencies(const String fileName)
-- void SetMemoryBudget(StringHash type, unsigned budget)
-- void SetMemoryBudget(const String type, unsigned budget)
+- void SetMemoryBudget(StringHash type, long budget)
+- void SetMemoryBudget(const String type, long budget)
 - void SetAutoReloadResources(bool enable)
 - void SetReturnFailedResources(bool enable)
 - void SetSearchPackagesFirst(bool value)
@@ -4803,9 +4820,9 @@ Methods:
 - unsigned GetNumBackgroundLoadResources() const
 - const Vector<String>& GetResourceDirs() const
 - bool Exists(const String name) const
-- unsigned GetMemoryBudget(StringHash type) const
-- unsigned GetMemoryUse(StringHash type) const
-- unsigned GetTotalMemoryUse() const
+- long GetMemoryBudget(StringHash type) const
+- long GetMemoryUse(StringHash type) const
+- long GetTotalMemoryUse() const
 - String GetResourceFileName(const String name) const
 - bool GetAutoReloadResources() const
 - bool GetReturnFailedResources() const
@@ -4817,7 +4834,7 @@ Methods:
 
 Properties:
 
-- unsigned totalMemoryUse (readonly)
+- long totalMemoryUse (readonly)
 - bool autoReloadResources
 - bool returnFailedResources
 - bool searchPackagesFirst
@@ -5432,6 +5449,7 @@ Methods:
 - void Merge(const Polyhedron& poly)
 - void Merge(const Sphere& sphere)
 - void Clear()
+- bool Defined() const
 - Intersection IsInside(const Vector3& point) const
 - Intersection IsInside(const Sphere& sphere) const
 - Intersection IsInsideFast(const Sphere& sphere) const
@@ -5443,7 +5461,6 @@ Properties:
 
 - Vector3 center
 - float radius
-- bool defined
 
 <a name="Class_Spline"></a>
 ### Spline
@@ -5959,7 +5976,7 @@ Methods:
 - void SetBorderColor(const Color& color)
 - void SetSRGB(bool enable)
 - void SetBackupTexture(Texture* texture)
-- void SetMipsToSkip(int quality, int mips)
+- void SetMipsToSkip(int quality, int toSkip)
 - unsigned GetFormat() const
 - bool IsCompressed() const
 - unsigned GetLevels() const
@@ -6889,12 +6906,14 @@ Methods:
 - void delete()
 - void SetScene(Scene* scene)
 - void SetCamera(Camera* camera)
+- void SetCullCamera(Camera* camera)
 - void SetRect(const IntRect& rect)
 - void SetRenderPath(RenderPath* path)
 - void SetRenderPath(XMLFile* file)
 - void SetDrawDebug(bool enable)
 - Scene* GetScene() const
 - Camera* GetCamera() const
+- Camera* GetCullCamera() const
 - const IntRect& GetRect() const
 - RenderPath* GetRenderPath() const
 - bool GetDrawDebug() const
@@ -6906,6 +6925,7 @@ Properties:
 
 - Scene* scene
 - Camera* camera
+- Camera* cullCamera
 - IntRect& rect
 - RenderPath* renderPath
 - bool drawDebug
@@ -7382,6 +7402,7 @@ Properties:
 - int MM_ABSOLUTE
 - int MM_RELATIVE
 - int MM_WRAP
+- int MM_FREE
 
 ### NavigationPushiness
 
@@ -7673,6 +7694,7 @@ Properties:
 - String GetExtension(const String fullPath, bool lowercaseExtension = true)
 - String GetFileName(const String fullPath)
 - String GetFileNameAndExtension(const String fullPath, bool lowercaseExtension = false)
+- String GetFileSizeString(long memorySize)
 - FileSystem* GetFileSystem()
 - Graphics* GetGraphics()
 - Input* GetInput()
@@ -7708,8 +7730,8 @@ Properties:
 - float Random()
 - float Random(float range)
 - float Random(float min, float max)
-- int RandomInt(int min, int max)
 - int RandomInt(int range)
+- int RandomInt(int min, int max)
 - float RandomNormal(float meanValue, float variance)
 - String RemoveTrailingSlash(const String pathName)
 - String ReplaceExtension(const String fullPath, const String newExtension)
@@ -7720,8 +7742,8 @@ Properties:
 - float Sign(float value)
 - float Sin(float angle)
 - float SmoothStep(float lhs, float rhs, float t)
-- void SubscribeToEvent(void* sender, const String eventName, void* functionOrFunctionName)
 - void SubscribeToEvent(const String eventName, void* functionOrFunctionName)
+- void SubscribeToEvent(void* sender, const String eventName, void* functionOrFunctionName)
 - float Tan(float angle)
 - bool ToBool(const String source)
 - Color ToColor(const String source)
@@ -7744,8 +7766,8 @@ Properties:
 - Vector4 ToVector4(const String source, bool allowMissingCoords = false)
 - void UnsubscribeFromAllEvents()
 - void UnsubscribeFromAllEventsExcept(const Vector<String>& exceptionNames)
-- void UnsubscribeFromEvent(Object* sender, const String eventName)
 - void UnsubscribeFromEvent(const String eventName)
+- void UnsubscribeFromEvent(Object* sender, const String eventName)
 - void UnsubscribeFromEvents(Object* sender)
 
 
@@ -7803,6 +7825,7 @@ Properties:
 - unsigned DD_SOURCE_AND_TARGET
 - unsigned DD_TARGET
 - unsigned DEBUGHUD_SHOW_ALL
+- unsigned DEBUGHUD_SHOW_ALL_MEMORY
 - unsigned DEBUGHUD_SHOW_MODE
 - unsigned DEBUGHUD_SHOW_NONE
 - unsigned DEBUGHUD_SHOW_PROFILER

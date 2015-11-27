@@ -20,6 +20,9 @@
 // THE SOFTWARE.
 //
 
+#include <Urho3D/AngelScript/Script.h>
+#include <Urho3D/AngelScript/ScriptFile.h>
+#include <Urho3D/AngelScript/ScriptInstance.h>
 #include <Urho3D/Core/CoreEvents.h>
 #include <Urho3D/Engine/Engine.h>
 #include <Urho3D/Graphics/Camera.h>
@@ -33,9 +36,6 @@
 #include <Urho3D/Input/Input.h>
 #include <Urho3D/Resource/ResourceCache.h>
 #include <Urho3D/Scene/Scene.h>
-#include <Urho3D/Script/Script.h>
-#include <Urho3D/Script/ScriptFile.h>
-#include <Urho3D/Script/ScriptInstance.h>
 #include <Urho3D/UI/Font.h>
 #include <Urho3D/UI/Text.h>
 #include <Urho3D/UI/UI.h>
@@ -44,7 +44,7 @@
 
 #include <Urho3D/DebugNew.h>
 
-DEFINE_APPLICATION_MAIN(AngelScriptIntegration)
+URHO3D_DEFINE_APPLICATION_MAIN(AngelScriptIntegration)
 
 AngelScriptIntegration::AngelScriptIntegration(Context* context) :
     Sample(context)
@@ -155,7 +155,7 @@ void AngelScriptIntegration::SetupViewport()
 void AngelScriptIntegration::SubscribeToEvents()
 {
     // Subscribe HandleUpdate() function for processing update events
-    SubscribeToEvent(E_UPDATE, HANDLER(AngelScriptIntegration, HandleUpdate));
+    SubscribeToEvent(E_UPDATE, URHO3D_HANDLER(AngelScriptIntegration, HandleUpdate));
 }
 
 void AngelScriptIntegration::MoveCamera(float timeStep)

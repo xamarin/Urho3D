@@ -40,6 +40,7 @@ enum LuaScriptObjectMethod
 {
     LSOM_START = 0,
     LSOM_STOP,
+    LSOM_DELAYEDSTART,
     LSOM_UPDATE,
     LSOM_POSTUPDATE,
     LSOM_FIXEDUPDATE,
@@ -56,7 +57,7 @@ enum LuaScriptObjectMethod
 /// Lua script object component.
 class URHO3D_API LuaScriptInstance : public Component, public LuaScriptEventListener
 {
-    OBJECT(LuaScriptInstance);
+    URHO3D_OBJECT(LuaScriptInstance, Component);
 
 public:
     /// Construct.

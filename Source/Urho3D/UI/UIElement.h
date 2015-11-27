@@ -111,8 +111,7 @@ class ResourceCache;
 /// Base class for %UI elements.
 class URHO3D_API UIElement : public Animatable
 {
-    OBJECT(UIElement);
-    BASEOBJECT(UIElement);
+    URHO3D_OBJECT(UIElement, Animatable);
 
 public:
     /// Construct.
@@ -523,11 +522,8 @@ public:
     /// Sort child elements if sorting enabled and order dirty. Called by UI.
     void SortChildren();
 
-    /// Return minimum layout element size in the layout direction. Only valid after layout has been calculated. Used internally by UI for optimizations.
-    int GetLayoutMinSize() const { return layoutMinSize_; }
-
     /// Return maximum layout element size in the layout direction. Only valid after layout has been calculated. Used internally by UI for optimizations.
-    int GetLayoutMaxSize() const { return layoutMaxSize_; }
+    int GetLayoutElementMaxSize() const { return layoutElementMaxSize_; }
 
     /// Return horizontal indentation.
     int GetIndent() const { return indent_; }
@@ -560,14 +556,16 @@ public:
     /// Get element which should send child added / removed events.
     UIElement* GetElementEventSender() const;
 
+    /// Return effective minimum size, also considering layout. Used internally.
+    IntVector2 GetEffectiveMinSize() const;
+
 protected:
     /// Handle attribute animation added.
     virtual void OnAttributeAnimationAdded();
     /// Handle attribute animation removed.
     virtual void OnAttributeAnimationRemoved();
-    /// Set object attribute animation internal.
-    virtual void
-        SetObjectAttributeAnimation(const String& name, ValueAnimation* attributeAnimation, WrapMode wrapMode, float speed);
+    /// Find target of an attribute animation from object hierarchy by name.
+    virtual Animatable* FindAttributeAnimationTarget(const String& name, String& outName);
     /// Mark screen position as needing an update.
     void MarkDirty();
     /// Remove child XML element by matching attribute name.
@@ -633,10 +631,8 @@ protected:
     unsigned resizeNestingLevel_;
     /// Layout update nesting level to prevent endless loop.
     unsigned layoutNestingLevel_;
-    /// Layout element minimum size in layout direction.
-    int layoutMinSize_;
     /// Layout element maximum size in layout direction.
-    int layoutMaxSize_;
+    int layoutElementMaxSize_;
     /// Horizontal indentation.
     int indent_;
     /// Indent spacing (number of pixels per indentation level).
@@ -680,6 +676,8 @@ private:
     IntVector2 maxSize_;
     /// Child elements' offset. Used internally.
     IntVector2 childOffset_;
+    /// Parent's minimum size calculated by layout. Used internally.
+    IntVector2 layoutMinSize_;
     /// Horizontal alignment.
     HorizontalAlignment horizontalAlignment_;
     /// Vertical alignment.

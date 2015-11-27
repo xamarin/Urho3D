@@ -36,7 +36,7 @@ class FileSystem;
 /// Watches a directory and its subdirectories for files being modified.
 class URHO3D_API FileWatcher : public Object, public Thread
 {
-    OBJECT(FileWatcher);
+    URHO3D_OBJECT(FileWatcher, Object);
 
 public:
     /// Construct.
@@ -78,7 +78,7 @@ private:
     /// Watch subdirectories flag.
     bool watchSubDirs_;
 
-#ifdef WIN32
+#ifdef _WIN32
 
     /// Directory handle for the path being watched.
     void* dirHandle_;

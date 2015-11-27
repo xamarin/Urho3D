@@ -34,11 +34,11 @@
 #if defined(IOS)
 #include "../Math/MathDefs.h"
 #include <mach/mach_host.h>
-#elif !defined(ANDROID) && !defined(RPI) && !defined(EMSCRIPTEN)
+#elif !defined(ANDROID) && !defined(RPI) && !defined(__EMSCRIPTEN__)
 #include <LibCpuId/libcpuid.h>
 #endif
 
-#ifdef WIN32
+#ifdef _WIN32
 #include <windows.h>
 #include <io.h>
 #else
@@ -47,7 +47,7 @@
 
 #if defined(_MSC_VER)
 #include <float.h>
-#elif !defined(ANDROID) && !defined(IOS) && !defined(RPI) && !defined(EMSCRIPTEN)
+#elif !defined(ANDROID) && !defined(IOS) && !defined(RPI) && !defined(__EMSCRIPTEN__)
 // From http://stereopsis.com/FPU.html
 
 #define FPU_CW_PREC_MASK        0x0300
@@ -74,14 +74,16 @@ inline void SetFPUState(unsigned control)
 
 #endif
 
+#ifndef MINI_URHO
 #include <SDL/SDL.h>
+#endif
 
 #include "../DebugNew.h"
 
 namespace Urho3D
 {
 
-#ifdef WIN32
+#ifdef _WIN32
 static bool consoleOpened = false;
 #endif
 static String currentLine;
@@ -94,7 +96,7 @@ static void GetCPUData(host_basic_info_data_t* data)
     infoCount = HOST_BASIC_INFO_COUNT;
     host_info(mach_host_self(), HOST_BASIC_INFO, (host_info_t)data, &infoCount);
 }
-#elif !defined(ANDROID) && !defined(RPI) && !defined(EMSCRIPTEN)
+#elif !defined(ANDROID) && !defined(RPI) && !defined(__EMSCRIPTEN__)
 
 static void GetCPUData(struct cpu_id_t* data)
 {
@@ -109,7 +111,7 @@ static void GetCPUData(struct cpu_id_t* data)
 
 void InitFPU()
 {
-#if !defined(URHO3D_LUAJIT) && !defined(ANDROID) && !defined(IOS) && !defined(RPI) && !defined(__x86_64__) && !defined(_M_AMD64) && !defined(EMSCRIPTEN)
+#if !defined(URHO3D_LUAJIT) && !defined(ANDROID) && !defined(IOS) && !defined(RPI) && !defined(__x86_64__) && !defined(_M_AMD64) && !defined(__EMSCRIPTEN__)
     // Make sure FPU is in round-to-nearest, single precision mode
     // This ensures Direct3D and OpenGL behave similarly, and all threads behave similarly
 #ifdef _MSC_VER
@@ -125,7 +127,9 @@ void InitFPU()
 
 void ErrorDialog(const String& title, const String& message)
 {
+#ifndef MINI_URHO
     SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, title.CString(), message.CString(), 0);
+#endif
 }
 
 void ErrorExit(const String& message, int exitCode)
@@ -138,23 +142,14 @@ void ErrorExit(const String& message, int exitCode)
 
 void OpenConsoleWindow()
 {
-#ifdef WIN32
+#ifdef _WIN32
     if (consoleOpened)
         return;
 
     AllocConsole();
-
-    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    int hCrt = _open_osfhandle((size_t)hOut, _O_TEXT);
-    FILE* outFile = _fdopen(hCrt, "w");
-    setvbuf(outFile, NULL, _IONBF, 1);
-    *stdout = *outFile;
-
-    HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
-    hCrt = _open_osfhandle((size_t)hIn, _O_TEXT);
-    FILE* inFile = _fdopen(hCrt, "r");
-    setvbuf(inFile, NULL, _IONBF, 128);
-    *stdin = *inFile;
+    
+    freopen("CONIN$", "r", stdin);
+    freopen("CONOUT$", "w", stdout);
 
     consoleOpened = true;
 #endif
@@ -163,7 +158,7 @@ void OpenConsoleWindow()
 void PrintUnicode(const String& str, bool error)
 {
 #if !defined(ANDROID) && !defined(IOS)
-#ifdef WIN32
+#ifdef _WIN32
     // If the output stream has been redirected, use fprintf instead of WriteConsoleW,
     // though it means that proper Unicode output will not work
     FILE* out = error ? stderr : stdout;
@@ -284,7 +279,7 @@ String GetConsoleInput()
     return ret;
 #endif
 
-#ifdef WIN32
+#ifdef _WIN32
     HANDLE input = GetStdHandle(STD_INPUT_HANDLE);
     HANDLE output = GetStdHandle(STD_OUTPUT_HANDLE);
     if (input == INVALID_HANDLE_VALUE || output == INVALID_HANDLE_VALUE)
@@ -355,13 +350,13 @@ String GetPlatform()
     return "Android";
 #elif defined(IOS)
     return "iOS";
-#elif defined(WIN32)
+#elif defined(_WIN32)
     return "Windows";
 #elif defined(__APPLE__)
     return "Mac OS X";
 #elif defined(RPI)
     return "Raspberry Pi";
-#elif defined(EMSCRIPTEN)
+#elif defined(__EMSCRIPTEN__)
     return "HTML5";
 #elif defined(__linux__)
     return "Linux";
@@ -407,7 +402,7 @@ unsigned GetNumPhysicalCPUs()
 #endif
 #elif defined(ANDROID) || defined(RPI)
     return GetArmCPUCount();
-#elif !defined(EMSCRIPTEN)
+#elif !defined(__EMSCRIPTEN__)
     struct cpu_id_t data;
     GetCPUData(&data);
     return (unsigned)data.num_cores;
@@ -429,7 +424,7 @@ unsigned GetNumLogicalCPUs()
 #endif
 #elif defined(ANDROID) || defined (RPI)
     return GetArmCPUCount();
-#elif !defined(EMSCRIPTEN)
+#elif !defined(__EMSCRIPTEN__)
     struct cpu_id_t data;
     GetCPUData(&data);
     return (unsigned)data.num_logical_cpus;

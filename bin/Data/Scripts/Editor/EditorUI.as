@@ -21,6 +21,7 @@ const StringHash CURSOR_TYPE("Cursor");
 
 const String AUTO_STYLE("");    // Empty string means auto style, i.e. applying style according to UI-element's type automatically
 const String TEMP_SCENE_NAME("_tempscene_.xml");
+const String TEMP_BINARY_SCENE_NAME("_tempscene_.bin");
 const StringHash CALLBACK_VAR("Callback");
 const StringHash INDENT_MODIFIED_BY_ICON_VAR("IconIndented");
 
@@ -37,6 +38,7 @@ Array<String> uiAllFilters = {"*.*"};
 Array<String> uiScriptFilters = {"*.as", "*.*"};
 Array<String> uiParticleFilters = {"*.xml"};
 Array<String> uiRenderPathFilters = {"*.xml"};
+Array<String> uiExportPathFilters = {"*.obj"};
 uint uiSceneFilter = 0;
 uint uiElementFilter = 0;
 uint uiNodeFilter = 0;
@@ -44,10 +46,12 @@ uint uiImportFilter = 0;
 uint uiScriptFilter = 0;
 uint uiParticleFilter = 0;
 uint uiRenderPathFilter = 0;
+uint uiExportFilter = 0;
 String uiScenePath = fileSystem.programDir + "Data/Scenes";
 String uiElementPath = fileSystem.programDir + "Data/UI";
 String uiNodePath = fileSystem.programDir + "Data/Objects";
 String uiImportPath;
+String uiExportPath;
 String uiScriptPath = fileSystem.programDir + "Data/Scripts";
 String uiParticlePath = fileSystem.programDir + "Data/Particles";
 String uiRenderPathPath = fileSystem.programDir + "CoreData/RenderPaths";
@@ -176,6 +180,40 @@ void HandleQuickSearchChange(StringHash eventType, VariantMap& eventData)
     PerformQuickMenuSearch(search.text.ToLower().Trimmed());
 }
 
+void HandleQuickSearchFinish(StringHash eventType, VariantMap& eventData)
+{
+    Menu@ menu = quickMenu.GetChild("ResultsMenu", true);
+    if (menu is null)
+        return;
+        
+    String query = eventData["Text"].GetString();
+    if (query.length <= 0)
+        return;
+    Array<QuickMenuItem@> filtered;
+    {
+        QuickMenuItem@ qi;
+        for (uint x=0; x < quickMenuItems.length; x++)
+        {
+            @qi = quickMenuItems[x];
+            int find = qi.action.Find(query, 0, false);
+            if (find > -1)
+            {
+                qi.sortScore = find;
+                filtered.Push(qi);
+            }
+        }
+    }
+
+    filtered.Sort();
+    if (!filtered.empty)
+    {
+        VariantMap data;
+        Menu@ item = CreateMenuItem(filtered[0].action, filtered[0].callback);
+        data["Element"] = item;
+        item.SendEvent("MenuSelected", data);
+    }
+}
+
 void PerformQuickMenuSearch(const String&in query)
 {
     Menu@ menu = quickMenu.GetChild("ResultsMenu", true);
@@ -261,6 +299,7 @@ void CreateQuickMenu()
     ui.root.AddChild(quickMenu);
     LineEdit@ search = quickMenu.GetChild("Search", true);
     SubscribeToEvent(search, "TextChanged", "HandleQuickSearchChange");
+    SubscribeToEvent(search, "TextFinished", "HandleQuickSearchFinish");
     UIElement@ closeButton = quickMenu.GetChild("CloseButton", true);
     SubscribeToEvent(closeButton, "Pressed", "ToggleQuickMenu");
 }
@@ -313,6 +352,9 @@ void CreateMenuBar()
         popup.AddChild(CreateMenuItem("Import model...", @PickFile));
         popup.AddChild(CreateMenuItem("Import scene...", @PickFile));
         CreateChildDivider(popup);
+        popup.AddChild(CreateMenuItem("Export scene to OBJ...", @PickFile));
+        popup.AddChild(CreateMenuItem("Export selected to OBJ...", @PickFile));
+        CreateChildDivider(popup);
         popup.AddChild(CreateMenuItem("Run script...", @PickFile));
         popup.AddChild(CreateMenuItem("Set resource path...", @PickFile));
         CreateChildDivider(popup);
@@ -351,18 +393,20 @@ void CreateMenuBar()
         
         if (hotKeyMode == HOTKEYS_MODE_STANDARD)    
         {
-            popup.AddChild(CreateMenuItem("Reset position", @SceneResetPosition));
-            popup.AddChild(CreateMenuItem("Reset rotation", @SceneResetRotation));
-            popup.AddChild(CreateMenuItem("Reset scale", @SceneResetScale));
+            popup.AddChild(CreateMenuItem("Reset position", @SceneResetPosition, '1' , QUAL_ALT));
+            popup.AddChild(CreateMenuItem("Reset rotation", @SceneResetRotation, '2' , QUAL_ALT));
+            popup.AddChild(CreateMenuItem("Reset scale", @SceneResetScale, '3' , QUAL_ALT));
+            popup.AddChild(CreateMenuItem("Reset transform", @SceneResetTransform, 'Q' , QUAL_ALT));
         }
         else if (hotKeyMode == HOTKEYS_MODE_BLENDER)
-        { 
+        {
             popup.AddChild(CreateMenuItem("Reset position", @SceneResetPosition, 'G' , QUAL_ALT));
             popup.AddChild(CreateMenuItem("Reset rotation", @SceneResetRotation, 'R', QUAL_ALT));
             popup.AddChild(CreateMenuItem("Reset scale", @SceneResetScale, 'S', QUAL_ALT));
+            popup.AddChild(CreateMenuItem("Reset transform", @SceneResetTransform, 'Q' , QUAL_ALT));            
         }
-        
-        if (hotKeyMode == HOTKEYS_MODE_STANDARD) 
+
+        if (hotKeyMode == HOTKEYS_MODE_STANDARD)
         {
             popup.AddChild(CreateMenuItem("Enable/disable", @SceneToggleEnable, 'E', QUAL_CTRL));
             popup.AddChild(CreateMenuItem("Enable all", @SceneEnableAllNodes, 'E', QUAL_ALT));
@@ -372,7 +416,7 @@ void CreateMenuBar()
             popup.AddChild(CreateMenuItem("Enable/disable", @SceneToggleEnable, 'H'));
             popup.AddChild(CreateMenuItem("Enable all", @SceneEnableAllNodes, 'H', QUAL_ALT));
         }
-        
+
         if (hotKeyMode == HOTKEYS_MODE_STANDARD)
             popup.AddChild(CreateMenuItem("Unparent", @SceneUnparent, 'U', QUAL_CTRL));
         else if (hotKeyMode == HOTKEYS_MODE_BLENDER)
@@ -486,15 +530,15 @@ void CreateMenuBar()
     {
         Menu@ menu = CreateMenu("View");
         Window@ popup = menu.popup;
-        popup.AddChild(CreateMenuItem("Hierarchy", @ShowHierarchyWindow, 'H', QUAL_CTRL));
-        popup.AddChild(CreateMenuItem("Attribute inspector", @ShowAttributeInspectorWindow, 'I', QUAL_CTRL));
-        popup.AddChild(CreateMenuItem("Resource browser", @ShowResourceBrowserWindow, 'B', QUAL_CTRL));
-        popup.AddChild(CreateMenuItem("Material editor", @ShowMaterialEditor));
-        popup.AddChild(CreateMenuItem("Particle editor", @ShowParticleEffectEditor));
-        popup.AddChild(CreateMenuItem("Spawn editor", @ShowSpawnEditor));
-        popup.AddChild(CreateMenuItem("Sound Type editor", @ShowSoundTypeEditor));
-        popup.AddChild(CreateMenuItem("Editor settings", @ShowEditorSettingsDialog));
-        popup.AddChild(CreateMenuItem("Editor preferences", @ShowEditorPreferencesDialog));
+        popup.AddChild(CreateMenuItem("Hierarchy", @ToggleHierarchyWindow, 'H', QUAL_CTRL));
+        popup.AddChild(CreateMenuItem("Attribute inspector", @ToggleAttributeInspectorWindow, 'I', QUAL_CTRL));
+        popup.AddChild(CreateMenuItem("Resource browser", @ToggleResourceBrowserWindow, 'B', QUAL_CTRL));
+        popup.AddChild(CreateMenuItem("Material editor", @ToggleMaterialEditor));
+        popup.AddChild(CreateMenuItem("Particle editor", @ToggleParticleEffectEditor));
+        popup.AddChild(CreateMenuItem("Spawn editor", @ToggleSpawnEditor));
+        popup.AddChild(CreateMenuItem("Sound Type editor", @ToggleSoundTypeEditor));
+        popup.AddChild(CreateMenuItem("Editor settings", @ToggleEditorSettingsDialog));
+        popup.AddChild(CreateMenuItem("Editor preferences", @ToggleEditorPreferencesDialog));
         CreateChildDivider(popup);
         popup.AddChild(CreateMenuItem("Hide editor", @ToggleUI, KEY_F12, QUAL_ANY));
         FinalizedPopupMenu(popup);
@@ -612,6 +656,56 @@ bool PickFile()
     {
         CreateFileSelector("Import scene", "Import", "Cancel", uiImportPath, uiAllFilters, uiImportFilter);
         SubscribeToEvent(uiFileSelector, "FileSelected", "HandleImportScene");
+    }
+    else if (action == "Export scene to OBJ..." || action == "Export selected to OBJ...")
+    {
+        // Set these up together to share the "export settings" options
+        if (action == "Export scene to OBJ...")
+        {
+            CreateFileSelector("Export scene to OBJ", "Save", "Cancel", uiExportPath, uiExportPathFilters, uiExportFilter);
+            SubscribeToEvent(uiFileSelector, "FileSelected", "HandleExportSceneOBJ");
+        }
+        else if (action == "Export selected to OBJ...")
+        {
+            CreateFileSelector("Export selected to OBJ", "Save", "Cancel", uiExportPath, uiExportPathFilters, uiExportFilter);
+            SubscribeToEvent(uiFileSelector, "FileSelected", "HandleExportSelectedOBJ");
+        }
+        
+        Window@ window = uiFileSelector.window;
+        
+            UIElement@ optionsGroup = UIElement();
+            optionsGroup.maxHeight = 30;
+            optionsGroup.layoutMode = LM_HORIZONTAL;
+            window.defaultStyle = uiStyle;
+            window.style = AUTO_STYLE;
+            
+                CheckBox@ checkRightHanded = CheckBox();
+                checkRightHanded.checked = objExportRightHanded_;
+                checkRightHanded.defaultStyle = uiStyle;
+                checkRightHanded.style = AUTO_STYLE;
+                SubscribeToEvent(checkRightHanded, "Toggled", "HandleOBJRightHandedChanged");
+                optionsGroup.AddChild(checkRightHanded);
+                
+                    Text@ lblRightHanded = Text();
+                    lblRightHanded.defaultStyle = uiStyle;
+                    lblRightHanded.style = AUTO_STYLE;
+                    lblRightHanded.text = "  Right handed";
+                    optionsGroup.AddChild(lblRightHanded);
+                
+                CheckBox@ checkZUp = CheckBox();
+                checkZUp.checked = objExportZUp_;
+                checkZUp.defaultStyle = uiStyle;
+                checkZUp.style = AUTO_STYLE;
+                SubscribeToEvent(checkZUp, "Toggled", "HandleOBJZUpChanged");
+                optionsGroup.AddChild(checkZUp);
+                
+                    Text@ lblZUp = Text();
+                    lblZUp.defaultStyle = uiStyle;
+                    lblZUp.style = AUTO_STYLE;
+                    lblZUp.text = " Z Axis Up";
+                    optionsGroup.AddChild(lblZUp);
+                
+            window.AddChild(optionsGroup);
     }
     else if (action == "Run script...")
     {
@@ -1037,7 +1131,7 @@ void CreateContextMenu()
 void UpdateWindowTitle()
 {
     String sceneName = GetFileNameAndExtension(editorScene.fileName);
-    if (sceneName.empty || sceneName == TEMP_SCENE_NAME)
+    if (sceneName.empty || sceneName == TEMP_SCENE_NAME || sceneName == TEMP_BINARY_SCENE_NAME)
         sceneName = "Untitled";
     if (sceneModified)
         sceneName += "*";
@@ -1117,6 +1211,18 @@ void HandleImportScene(StringHash eventType, VariantMap& eventData)
 {
     CloseFileSelector(uiImportFilter, uiImportPath);
     ImportScene(ExtractFileName(eventData));
+}
+
+void HandleExportSceneOBJ(StringHash eventType, VariantMap& eventData)
+{
+    CloseFileSelector(uiExportFilter, uiExportPath);
+    ExportSceneToOBJ(ExtractFileName(eventData));
+}
+
+void HandleExportSelectedOBJ(StringHash eventType, VariantMap& eventData)
+{
+    CloseFileSelector(uiExportFilter, uiExportPath);
+    ExportSelectedToOBJ(ExtractFileName(eventData));
 }
 
 

@@ -116,6 +116,7 @@ else ()
 
         file (GLOB VIDEO_DRIVER_C_FILES src/video/x11/*.c)
     endif ()
+
     find_package (ALSA REQUIRED)
     # todo: remove this fix when the minimum CMake version has been raised to higher than 2.8.7
     # There is a bug in older version of FindALSA.cmake module where it erroneously include 'alsa' directory component into the variable
@@ -126,11 +127,19 @@ else ()
     # end todo
     include_directories (${ALSA_INCLUDE_DIRS})
 
+    find_package (PulseAudio)
+    if (PA_FOUND)
+      include_directories (${PA_INCLUDE_DIRS})
+      get_filename_component (PA_SIMPLE ${PA_LIBRARIES} NAME)
+      add_definitions (-DSDL_AUDIO_DRIVER_PULSEAUDIO=1 -DSDL_AUDIO_DRIVER_PULSEAUDIO_DYNAMIC="${PA_SIMPLE}")
+      file (GLOB PULSEAUDIO_SOURCES src/audio/pulseaudio/*.c)
+    endif ()
+
     file (GLOB SYS_C_FILES
         src/audio/alsa/*.c src/audio/dma/*.c src/audio/dsp/*.c src/haptic/linux/*.c src/joystick/linux/*.c src/loadso/dlopen/*.c
         src/power/linux/*.c src/thread/pthread/*.c src/timer/unix/*.c src/filesystem/unix/*.c
     )
-    set (SYS_C_FILES ${SYS_C_FILES} ${VIDEO_DRIVER_C_FILES})
+    set (SYS_C_FILES ${SYS_C_FILES} ${VIDEO_DRIVER_C_FILES} ${PULSEAUDIO_SOURCES})
 endif ()
 
 file (GLOB H_FILES include/*.h)

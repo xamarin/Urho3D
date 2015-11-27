@@ -156,8 +156,7 @@ void CreateUI()
     instructionText.text =
         "Use WASD keys to move, RMB to rotate view\n"
         "LMB to set destination, SHIFT+LMB to spawn a Jack\n"
-        "CTRL+LMB to teleport main agent\n"
-        "MMB to add obstacles or remove obstacles/agents\n"
+        "MMB or O key to add obstacles or remove obstacles/agents\n"
         "F5 to save scene, F7 to load\n"
         "Space to toggle debug geometry\n"
         "F12 to toggle this instruction text";
@@ -379,7 +378,7 @@ void MoveCamera(float timeStep)
     if (input.mouseButtonPress[MOUSEB_LEFT])
         SetPathPoint(input.qualifierDown[QUAL_SHIFT]);
     // Add new obstacle or remove existing obstacle/agent with middle mouse button
-    else if (input.mouseButtonPress[MOUSEB_MIDDLE])
+    else if (input.mouseButtonPress[MOUSEB_MIDDLE] || input.keyPress['O'])
         AddOrRemoveObject();
 
     // Check for loading/saving the scene from/to the file Data/Scenes/CrowdNavigation.xml relative to the executable directory
@@ -432,7 +431,7 @@ void HandleCrowdAgentFailure(StringHash eventType, VariantMap& eventData)
     int state = eventData["CrowdAgentState"].GetInt();
 
     // If the agent's state is invalid, likely from spawning on the side of a box, find a point in a larger area
-    if (state == CrowdAgentState::CA_STATE_INVALID)
+    if (state == CA_STATE_INVALID)
     {
         // Get a point on the navmesh using more generous extents
         Vector3 newPos = cast<DynamicNavigationMesh>(scene_.GetComponent("DynamicNavigationMesh")).FindNearestPoint(node.position, Vector3(5.0f,5.0f,5.0f));
@@ -507,7 +506,7 @@ String patchInstructions =
         "                <attribute name=\"Horiz Alignment\" value=\"Center\" />" +
         "                <attribute name=\"Vert Alignment\" value=\"Center\" />" +
         "                <attribute name=\"Color\" value=\"0 0 0 1\" />" +
-        "                <attribute name=\"Text\" value=\"Spawn A jack\" />" +
+        "                <attribute name=\"Text\" value=\"Spawn\" />" +
         "            </element>" +
         "            <element type=\"Text\">" +
         "                <attribute name=\"Name\" value=\"KeyBinding\" />" +

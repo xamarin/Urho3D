@@ -44,7 +44,7 @@ enum BodyType2D
 /// 2D rigid body component.
 class URHO3D_API RigidBody2D : public Component
 {
-    OBJECT(RigidBody2D);
+    URHO3D_OBJECT(RigidBody2D, Component);
 
 public:
     /// Construct.
@@ -101,7 +101,7 @@ public:
     /// Release body.
     void ReleaseBody();
 
-    /// Apply world transform.
+    /// Apply world transform. Called by PhysicsWorld2D.
     void ApplyWorldTransform();
     /// Add collision shape.
     void AddCollisionShape2D(CollisionShape2D* collisionShape);

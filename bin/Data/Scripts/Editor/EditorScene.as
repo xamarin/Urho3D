@@ -693,8 +693,8 @@ bool ScenePaste(bool pasteRoot = false, bool duplication = false)
                 newNode = editorScene.CreateChild("", rootElem.GetBool("local") ? LOCAL : REPLICATED);
             else
             {
-                // If we are duplicating, paste into the selected nodes parent
-                if (duplication)
+                // If we are duplicating or have the original node selected, paste into the selected nodes parent
+                if (duplication || editNode is null || editNode.id == rootElem.GetUInt("id"))
                 {
                     if (editNode !is null && editNode.parent !is null)
                         newNode = editNode.parent.CreateChild("", rootElem.GetBool("local") ? LOCAL : REPLICATED);
@@ -1119,6 +1119,30 @@ bool SceneResetScale()
         return false;
 }
 
+bool SceneResetTransform()
+{
+    if (editNode !is null)
+    {
+        Transform oldTransform;
+        oldTransform.Define(editNode);
+
+        editNode.position = Vector3(0.0, 0.0, 0.0);
+        editNode.rotation = Quaternion();
+        editNode.scale = Vector3(1.0, 1.0, 1.0);
+
+        // Create undo action
+        EditNodeTransformAction action;
+        action.Define(editNode, oldTransform);
+        SaveEditAction(action);
+        SetSceneModified();
+
+        UpdateNodeAttributes();
+        return true;
+    }
+    else
+        return false;
+}
+
 bool SceneSelectAll()
 {
     BeginSelectionModify();
@@ -1401,6 +1425,8 @@ void CreateModelWithStaticModel(String filepath, Node@ parent)
 
     StaticModel@ staticModel = parent.GetOrCreateComponent("StaticModel");
     staticModel.model = model;
+    if (applyMaterialList)
+        staticModel.ApplyMaterialList();
     CreateLoadedComponent(staticModel);
 }
 
@@ -1418,6 +1444,8 @@ void CreateModelWithAnimatedModel(String filepath, Node@ parent)
 
     AnimatedModel@ animatedModel = parent.GetOrCreateComponent("AnimatedModel");
     animatedModel.model = model;
+    if (applyMaterialList)
+        animatedModel.ApplyMaterialList();
     CreateLoadedComponent(animatedModel);
 }
 

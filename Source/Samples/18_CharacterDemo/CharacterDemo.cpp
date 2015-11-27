@@ -49,7 +49,7 @@
 
 #include <Urho3D/DebugNew.h>
 
-DEFINE_APPLICATION_MAIN(CharacterDemo)
+URHO3D_DEFINE_APPLICATION_MAIN(CharacterDemo)
 
 CharacterDemo::CharacterDemo(Context* context) :
     Sample(context),
@@ -241,10 +241,10 @@ void CharacterDemo::CreateInstructions()
 void CharacterDemo::SubscribeToEvents()
 {
     // Subscribe to Update event for setting the character controls before physics simulation
-    SubscribeToEvent(E_UPDATE, HANDLER(CharacterDemo, HandleUpdate));
+    SubscribeToEvent(E_UPDATE, URHO3D_HANDLER(CharacterDemo, HandleUpdate));
 
     // Subscribe to PostUpdate event for updating the camera position after physics simulation
-    SubscribeToEvent(E_POSTUPDATE, HANDLER(CharacterDemo, HandlePostUpdate));
+    SubscribeToEvent(E_POSTUPDATE, URHO3D_HANDLER(CharacterDemo, HandlePostUpdate));
 
     // Unsubscribe the SceneUpdate event from base class as the camera node is being controlled in HandlePostUpdate() in this sample
     UnsubscribeFromEvent(E_SCENEUPDATE);
@@ -303,6 +303,8 @@ void CharacterDemo::HandleUpdate(StringHash eventType, VariantMap& eventData)
             }
             // Limit pitch
             character_->controls_.pitch_ = Clamp(character_->controls_.pitch_, -80.0f, 80.0f);
+            // Set rotation already here so that it's updated every rendering frame instead of every physics frame
+            character_->GetNode()->SetRotation(Quaternion(character_->controls_.yaw_, Vector3::UP));
 
             // Switch between 1st and 3rd person
             if (input->GetKeyPress('F'))
@@ -329,9 +331,6 @@ void CharacterDemo::HandleUpdate(StringHash eventType, VariantMap& eventData)
                     character_ = characterNode->GetComponent<Character>();
             }
         }
-
-        // Set rotation already here so that it's updated every rendering frame instead of every physics frame
-        character_->GetNode()->SetRotation(Quaternion(character_->controls_.yaw_, Vector3::UP));
     }
 }
 

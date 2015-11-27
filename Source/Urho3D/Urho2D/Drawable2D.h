@@ -28,6 +28,7 @@
 namespace Urho3D
 {
 
+class Drawable2D; 
 class Renderer2D;
 class Texture2D;
 class VertexBuffer;
@@ -49,6 +50,10 @@ struct SourceBatch2D
     /// Construct.
     SourceBatch2D();
 
+    /// Owner.
+    WeakPtr<Drawable2D> owner_;
+    /// Distance to camera.
+    mutable float distance_;
     /// Draw order.
     int drawOrder_;
     /// Material.
@@ -63,7 +68,7 @@ extern URHO3D_API const float PIXEL_SIZE;
 /// Base class for 2D visible components.
 class URHO3D_API Drawable2D : public Drawable
 {
-    OBJECT(Drawable2D);
+    URHO3D_OBJECT(Drawable2D, Drawable);
 
 public:
     /// Construct.

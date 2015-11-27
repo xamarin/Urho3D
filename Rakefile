@@ -134,6 +134,7 @@ task :make do
     numjobs = ":#{numjobs}" unless numjobs.empty?
     build_options = "/maxcpucount#{numjobs}#{build_options}"
     filter = unfilter ? '' : '/nologo /verbosity:minimal'
+    filter = filter  + ' /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"' if ENV['APPVEYOR']
   elsif !Dir.glob("#{build_tree}/*.ninja").empty?
     # ninja
     if !numjobs.empty?
@@ -191,7 +192,21 @@ task :android do
   if install
     system "cd \"#{build_tree}\" && ant -Dadb.device.arg='-s #{$specific_device}' installd" or abort 'Failed to install APK'
   end
-  android_test_run parameter, intent, package, success_indicator, payload or abort "Failed to test run #{package}/#{intent}, make sure the APK has been installed"
+  android_test_run parameter, intent, package, success_indicator, payload or abort "Failed to test run #{package}/#{intent}"
+end
+
+# Usage: NOT intended to be used manually
+desc 'Build and run the Annotate tool (temporary)'
+task :ci_annotate do
+  system 'rake cmake URHO3D_CLANG_TOOLS=1 && rake make annotate' or abort 'Failed to annotate'
+  system "git config user.name $GIT_NAME && git config user.email $GIT_EMAIL && git remote set-url --push origin https://$GH_TOKEN@github.com/$TRAVIS_REPO_SLUG.git && if git fetch origin clang-tools:clang-tools 2>/dev/null; then git push -qf origin --delete clang-tools; fi && git checkout -B clang-tools && git stash -q && git reset --hard HEAD~ && git stash pop -q && sed -i \"s/COVERITY_SCAN_THRESHOLD/URHO3D_PCH=0 URHO3D_BINDINGS=1 COVERITY_SCAN_THRESHOLD/g\" .travis.yml && git add -A .travis.yml Source/Urho3D && if git commit -qm 'Result of Annotator tool. [ci only: clang-tools]'; then git push -q -u origin clang-tools >/dev/null 2>&1; fi" or abort 'Failed to push clang-tools branch'
+end
+
+# Usage: NOT intended to be used manually
+desc 'Push the generated binding source files to clang-tools branch (temporary)'
+task :ci_push_bindings do
+  abort "Skipped pushing to #{ENV['TRAVIS_BRANCH']} branch due to moving HEAD" unless `git fetch -qf origin #{ENV['TRAVIS_PULL_REQUEST'] == 'false' ? ENV['TRAVIS_BRANCH'] : %Q{+refs/pull/#{ENV['TRAVIS_PULL_REQUEST']}/head'}}; git log -1 --pretty=format:'%H' FETCH_HEAD` == ENV['TRAVIS_COMMIT']
+  system "git config user.name $GIT_NAME && git config user.email $GIT_EMAIL && git remote set-url --push origin https://$GH_TOKEN@github.com/$TRAVIS_REPO_SLUG.git && git add -A Source/Urho3D && if git commit -qm 'Result of AutoBinder tool. [ci skip]'; then git push -q origin HEAD:#{ENV['TRAVIS_BRANCH']} >/dev/null 2>&1; fi" or abort "Failed to push #{ENV['TRAVIS_BRANCH']} branch"
 end
 
 # Usage: NOT intended to be used manually (if you insist then try: rake ci)
@@ -226,7 +241,7 @@ task :ci do
   $build_options = "-DEMSCRIPTEN=#{ENV['HTML5']}" if ENV['HTML5']
   $build_options = "#{$build_options} -DANDROID_ABI=#{ENV['ABI']}" if ENV['ABI']
   $build_options = "#{$build_options} -DANDROID_NATIVE_API_LEVEL=#{ENV['API']}" if ENV['API']
-  ['URHO3D_64BIT', 'URHO3D_LIB_TYPE', 'URHO3D_OPENGL', 'URHO3D_D3D11', 'URHO3D_TEST_TIMEOUT', 'ANDROID', 'RPI', 'RPI_ABI', 'EMSCRIPTEN_SHARE_DATA', 'EMSCRIPTEN_EMRUN_BROWSER'].each { |var| $build_options = "#{$build_options} -D#{var}=#{ENV[var]}" if ENV[var] }
+  ['URHO3D_64BIT', 'URHO3D_LIB_TYPE', 'URHO3D_PCH', 'URHO3D_BINDINGS', 'URHO3D_OPENGL', 'URHO3D_D3D11', 'URHO3D_TEST_TIMEOUT', 'URHO3D_UPDATE_SOURCE_TREE', 'URHO3D_DEPLOYMENT_TARGET', 'CMAKE_OSX_DEPLOYMENT_TARGET', 'IPHONEOS_DEPLOYMENT_TARGET', 'ANDROID', 'RPI', 'RPI_ABI', 'EMSCRIPTEN_SHARE_DATA', 'EMSCRIPTEN_EMRUN_BROWSER'].each { |var| $build_options = "#{$build_options} -D#{var}=\"#{ENV[var]}\"" if ENV[var] }
   if ENV['XCODE']
     # xcodebuild
     xcode_ci
@@ -282,7 +297,7 @@ task :ci_site_update do
   # Update credits from README.md to about.yml
   system "ruby -lne 'BEGIN { credits = false }; puts $_ if credits; credits = true if /bugfixes by:/; credits = false if /^$/' README.md |ruby -i -le 'credits = STDIN.read; puts ARGF.read.gsub(/(?<=contributors:\n).*?\n\n/m, credits)' ../doc-Build/_data/about.yml" or abort 'Failed to update credits'
   # Setup doxygen to use minimal theme
-  system "ruby -i -pe 'BEGIN { a = {%q{HTML_HEADER} => %q{minimal-header.html}, %q{HTML_FOOTER} => %q{minimal-footer.html}, %q{HTML_STYLESHEET} => %q{minimal-doxygen.css}, %q{HTML_COLORSTYLE_HUE} => 200, %q{HTML_COLORSTYLE_SAT} => 0, %q{HTML_COLORSTYLE_GAMMA} => 20, %q{DOT_IMAGE_FORMAT} => %q{svg}, %q{INTERACTIVE_SVG} => %q{YES}} }; a.each {|k, v| gsub(/\#{k}\s*?=.*?\n/, %Q{\#{k} = \#{v}\n}) }' ../Build/Docs/Doxyfile" or abort 'Failed to setup doxygen configuration file'
+  system "ruby -i -pe 'BEGIN { a = {%q{HTML_HEADER} => %q{minimal-header.html}, %q{HTML_FOOTER} => %q{minimal-footer.html}, %q{HTML_STYLESHEET} => %q{minimal-doxygen.css}, %q{HTML_COLORSTYLE_HUE} => 200, %q{HTML_COLORSTYLE_SAT} => 0, %q{HTML_COLORSTYLE_GAMMA} => 20, %q{DOT_IMAGE_FORMAT} => %q{svg}, %q{INTERACTIVE_SVG} => %q{YES}} }; a.each {|k, v| gsub(/\#{k}\s*?=.*?\n/, %Q{\#{k} = \#{v}\n}) }' ../Build/Docs/generated/Doxyfile" or abort 'Failed to setup doxygen configuration file'
   system 'cp ../doc-Build/_includes/Doxygen/minimal-* ../Build/Docs' or abort 'Failed to copy minimal-themed template'
   release = ENV['RELEASE_TAG'] || 'HEAD'
   unless release == 'HEAD'
@@ -341,11 +356,13 @@ task :ci_create_mirrors do
   else
     ci_only = nil
   end
+  # Escape double quotes in the commit message so they do not interfere with the string interpolation below
+  escaped_commit_message = ENV['COMMIT_MESSAGE'].gsub(/"/, '\"')
   # Obtain the whole stream and process the rest of documents except the first one since travis-build does not do that at the moment
   stream = YAML::load_stream(File.open('.travis.yml'))
   notifications = stream[0]['notifications']
   notifications['email']['recipients'] = get_root_commit_and_recipients().last unless notifications['email']['recipients']
-  stream.drop(1).each { |doc| branch = doc.delete('branch'); ci = branch['name']; ci_branch = ENV['RELEASE_TAG'] || (ENV['TRAVIS_BRANCH'] == 'master' && ENV['TRAVIS_PULL_REQUEST'] == 'false') ? ci : (ENV['TRAVIS_PULL_REQUEST'] == 'false' ? "#{ENV['TRAVIS_BRANCH']}-#{ci}" : "PR ##{ENV['TRAVIS_PULL_REQUEST']}-#{ci}"); unless (ci_only && ci_only.map { |i| /#{i}/ =~ ci }.any?) || (!ci_only && (branch['active'] || (scan && /Scan/ =~ ci) || (annotate && /Annotate/ =~ ci))); system "if git fetch origin #{ci_branch}:#{ci_branch} 2>/dev/null; then git push -qf origin --delete #{ci_branch}; fi"; next; end; lastjob = doc['matrix'] && doc['matrix']['include'] ? doc['matrix']['include'].length : (doc['env']['matrix'] ? doc['env']['matrix'].length : 1); doc['after_script'] = [*doc['after_script']] << (lastjob == 1 ? '%s' : "if [ ${TRAVIS_JOB_NUMBER##*.} == #{lastjob} ]; then %s; fi") % 'rake ci_delete_mirror'; doc['notifications'] = notifications unless doc['notifications']; File.open('.travis.yml.doc', 'w') { |file| file.write doc.to_yaml }; system "git checkout -B #{ci_branch} && rm .travis.yml && mv .travis.yml.doc .travis.yml && git add -A . && git commit -qm '#{branch['description']}' && git push -qf -u origin #{ci_branch} >/dev/null 2>&1 && git checkout -q -" or abort "Failed to create #{ci_branch} mirror branch" }
+  stream.drop(1).each { |doc| branch = doc.delete('branch'); ci = branch['name']; ci_branch = ENV['RELEASE_TAG'] || (ENV['TRAVIS_BRANCH'] == 'master' && ENV['TRAVIS_PULL_REQUEST'] == 'false') ? ci : (ENV['TRAVIS_PULL_REQUEST'] == 'false' ? "#{ENV['TRAVIS_BRANCH']}-#{ci}" : "PR ##{ENV['TRAVIS_PULL_REQUEST']}-#{ci}"); unless (ci_only && ci_only.map { |i| /#{i}/ =~ ci }.any?) || (!ci_only && (branch['active'] || (scan && /Scan/ =~ ci) || (annotate && /Annotate/ =~ ci))); system "if git fetch origin #{ci_branch}:#{ci_branch} 2>/dev/null; then git push -qf origin --delete #{ci_branch}; fi"; next; end; lastjob = doc['matrix'] && doc['matrix']['include'] ? doc['matrix']['include'].length : (doc['env']['matrix'] ? doc['env']['matrix'].length : 1); doc['after_script'] = [*doc['after_script']] << (lastjob == 1 ? '%s' : "if [ ${TRAVIS_JOB_NUMBER##*.} == #{lastjob} ]; then %s; fi") % 'rake ci_delete_mirror'; doc['notifications'] = notifications unless doc['notifications']; File.open('.travis.yml.doc', 'w') { |file| file.write doc.to_yaml }; system "git checkout -B #{ci_branch} && rm .appveyor.yml .travis.yml && mv .travis.yml.doc .travis.yml && git add -A . && git commit -qm \"#{escaped_commit_message}\" && git push -qf -u origin #{ci_branch} >/dev/null 2>&1 && git checkout -q -" or abort "Failed to create #{ci_branch} mirror branch" }
 end
 
 # Usage: NOT intended to be used manually
@@ -389,7 +406,7 @@ task :ci_package_upload do
       elapsed_time = (Time.now - Time.at(ENV['CI_START_TIME'].to_i)) / 60
       puts "\niOS checkpoint reached, elapsed time: #{elapsed_time}\n\n"
     end
-    if !ENV['CI_START_TIME'] || elapsed_time < 25 # minutes
+    if !ENV['CI_START_TIME'] || elapsed_time < 20 # minutes
       # Build Mach-O universal binary consisting of iphoneos (universal ARM archs including 'arm64' if 64-bit is enabled) and iphonesimulator (i386 arch and also x86_64 arch if 64-bit is enabled)
       system 'echo Rebuilding Urho3D library as Mach-O universal binary...'
       xcode_build(0, '../Build/Urho3D.xcodeproj', 'Urho3D_universal') or abort 'Failed to build Mach-O universal binary'
@@ -399,8 +416,11 @@ task :ci_package_upload do
   elsif ENV['XCODE']
     xcode_build(ENV['IOS'], '../Build/Urho3D.xcodeproj', 'package') or abort 'Failed to make binary package'
   else
-    if ENV['ANDROID'] && !ENV['NO_SDK_SYSIMG']
-      system "cd ../Build && android update project -p . -t $(android list target |grep android-$API |cut -d ' ' -f2) && ant debug" or abort 'Failed to make Urho3D Samples APK'
+    if ENV['ANDROID']
+      if !ENV['NO_SDK_SYSIMG']
+        system "cd ../Build && android update project -p . -t $(android list target |grep android-$API |cut -d ' ' -f2) && ant debug" or abort 'Failed to make Urho3D Samples APK'
+      end
+      system 'rm -rf ../Build/generated ~/usr/local $(dirname $(which android))/../*' if ENV['TRAVIS']   # Clean up some disk space before packaging on Travis CI
     end
     if ENV['URHO3D_USE_LIB64_RPM']
       system "cd ../Build && cmake . -DURHO3D_USE_LIB64_RPM=#{ENV['URHO3D_USE_LIB64_RPM']}" or abort 'Failed to reconfigure to generate 64-bit RPM package'
@@ -453,6 +473,34 @@ EOF" or abort 'Failed to create release directory remotely'
   if ENV['RELEASE_TAG'] && ENV['SF_DEFAULT']
     # Mark the corresponding binary package as default download for each Windows/Mac/Linux host systems
     system "curl -H 'Accept: application/json' -X PUT -d 'default=%s' -d \"api_key=$SF_API\" https://sourceforge.net/projects/%s/files/%s/#{ENV['RELEASE_TAG']}/Urho3D-#{ENV['RELEASE_TAG']}-%s" % ENV['SF_DEFAULT'].split(':').insert(1, ENV['TRAVIS_REPO_SLUG'].split('/')).flatten or abort 'Failed to set binary tarball/zip as default download'
+  end
+end
+
+# Usage: NOT intended to be used manually
+desc 'Make binary package and upload it to a designated central hosting server'
+task :ci_appveyor_package_upload do
+  # Generate the documentation
+  system 'echo Generating documentation...'
+  system "bash -c 'rake make config=$Configuration target=doc >/dev/null'"  # Ignore the exit status from 'make doc' as Doxygen on Windows host system does not return exit status correctly
+  # Make the package
+  system "bash -c 'rake make config=$Configuration target=package'" or abort 'Failed to make binary package'
+  # Determine the upload location
+  setup_digital_keys
+  unless ENV['RELEASE_TAG']
+    upload_dir = "/home/frs/project/#{ENV['APPVEYOR_REPO_NAME']}/Snapshots"
+  else
+    upload_dir = "/home/frs/project/#{ENV['APPVEYOR_REPO_NAME']}/#{ENV['RELEASE_TAG']}"
+    # Make sure the release directory exists remotely, do this in all the build jobs as we don't know which one would start uploading first
+    system "bash -c 'sftp urho-travis-ci@frs.sourceforge.net <<EOF >/dev/null 2>&1
+mkdir #{upload_dir}
+bye
+EOF'" or abort 'Failed to create release directory remotely'
+  end
+  # Upload the binary package
+  system "bash -c 'scp #{ENV['build_tree']}/Urho3D-* urho-travis-ci@frs.sourceforge.net:#{upload_dir}'" or abort 'Failed to upload binary package'
+  if ENV['RELEASE_TAG'] && ENV['SF_DEFAULT']
+    # Mark the corresponding binary package as default download for each Windows/Mac/Linux host systems
+    system "bash -c \"curl -H 'Accept: application/json' -X PUT -d 'default=%s' -d \"api_key=$SF_API\" https://sourceforge.net/projects/%s/files/%s/#{ENV['RELEASE_TAG']}/Urho3D-#{ENV['RELEASE_TAG']}-%s\"" % ENV['SF_DEFAULT'].split(':').insert(1, ENV['APPVEYOR_REPO_NAME'].split('/')).flatten or abort 'Failed to set binary tarball/zip as default download'
   end
 end
 
@@ -514,8 +562,8 @@ EOF
 end
 
 def makefile_ci
-  if (ENV['WINDOWS'] && ENV['CI']) || (ENV['ANDROID'] && ENV['ABI'] == 'arm64-v8a') || ENV['HTML5']
-    # LuaJIT on MinGW build is not possible on Ubuntu 12.04 LTS as its GCC cross-compiler version is too old
+  if (ENV['WINDOWS'] && ENV['TRAVIS']) || (ENV['ANDROID'] && ENV['ABI'] == 'arm64-v8a') || ENV['HTML5']
+    # LuaJIT on MinGW build is not possible on Travis-CI with Ubuntu 12.04 LTS as its GCC cross-compiler version is too old
     # The upstream LuaJIT library does not support Android arm64-v8a ABI at the moment
     # LuaJIT on Emscripten is not possible
     # Fallback to use Lua library instead
@@ -529,7 +577,13 @@ def makefile_ci
   if ENV['AVD'] && !ENV['PACKAGE_UPLOAD']   # Skip APK test run when packaging
     android_prepare_device ENV['API'], ENV['ABI'], ENV['AVD'] or abort 'Failed to prepare Android (virtual) device for test run'
   end
-  # For Emscripten CI build, skip make test and/or scaffolding test if Travis-CI VM took too long to get here, as otherwise overall build time may exceed 50 minutes time limit
+  # Temporarily put the logic here for clang-tools migration until everything else are in their places
+  if ENV['URHO3D_BINDINGS']
+    system "cd ../Build && make -j$NUMJOBS" or abort 'Failed to build or test Urho3D library with annotated source files'
+    system 'rake ci_push_bindings' or abort
+    return 0
+  end
+  # For Emscripten CI build, skip make test and/or scaffolding test if CI VM took too long to get here, as otherwise overall build time may exceed 50 minutes time limit
   test = $testing == 1 ? '&& make test' : ''
   system "cd ../Build && make -j$NUMJOBS #{test}" or abort 'Failed to build or test Urho3D library'
   unless ENV['CI'] && ENV['HTML5'] && ENV['PACKAGE_UPLOAD']  # For Emscripten, skip scaffolding test when packaging
@@ -572,14 +626,16 @@ end
 def android_find_device api = nil, abi = nil
   # Return the previously found matching device or if not found yet then try to find the matching device now
   return $specific_device if $specific_device
-  wait = api ? '' : 'wait-for-device'
   $specific_api = api.to_s if api
   $specific_abi = abi.to_s if abi
-  for i in `adb #{wait} devices |tail -n +2`.split "\n"
-    device = i.split.first
-    if `adb -s #{device} wait-for-device shell getprop ro.build.version.sdk`.chomp == $specific_api && `adb -s #{device} shell getprop ro.product.cpu.abi`.chomp == $specific_abi
-      return $specific_device = device
+  loop do
+    for i in `adb devices |tail -n +2`.split "\n"
+      device = i.split.first
+      if `adb -s #{device} wait-for-device shell getprop ro.build.version.sdk`.chomp == $specific_api && `adb -s #{device} shell getprop ro.product.cpu.abi`.chomp == $specific_abi
+        return $specific_device = device
+      end
     end
+    break if api
   end
   nil
 end
@@ -671,24 +727,22 @@ def xcode_ci
     # IOS platform does not support LuaJIT
     jit = ''
     amalg = ''
-    deployment_target = "-DIPHONEOS_DEPLOYMENT_TARGET=#{ENV['DEPLOYMENT_TARGET']}"
   else
     jit = 'JIT'
     amalg = '-DURHO3D_LUAJIT_AMALG=1'
-    deployment_target = "-DCMAKE_OSX_DEPLOYMENT_TARGET=#{ENV['DEPLOYMENT_TARGET']}"
   end
-  system "./cmake_macosx.sh ../Build -DIOS=$IOS #{deployment_target} #{$build_options} -DURHO3D_DATABASE_SQLITE=1 -DURHO3D_LUA#{jit}=1 #{amalg} -DURHO3D_SAMPLES=1 -DURHO3D_TOOLS=1 -DURHO3D_EXTRAS=1 -DURHO3D_TESTING=#{$testing}" or abort 'Failed to configure Urho3D library build'
+  system "./cmake_macosx.sh ../Build -DIOS=$IOS #{$build_options} -DURHO3D_DATABASE_SQLITE=1 -DURHO3D_LUA#{jit}=1 #{amalg} -DURHO3D_SAMPLES=1 -DURHO3D_TOOLS=1 -DURHO3D_EXTRAS=1 -DURHO3D_TESTING=#{$testing}" or abort 'Failed to configure Urho3D library build'
   xcode_build(ENV['IOS'], '../Build/Urho3D.xcodeproj') or abort 'Failed to build or test Urho3D library'
   unless ENV['CI'] && ENV['IOS'] && ENV['PACKAGE_UPLOAD']   # Skip scaffolding test when packaging for iOS
     # Create a new project on the fly that uses newly built Urho3D library in the build tree
     scaffolding "../Build/generated/UsingBuildTree"
-    system "cd ../Build/generated/UsingBuildTree && echo '\nExternal project referencing Urho3D library in its build tree' && ./cmake_macosx.sh . -DIOS=$IOS #{deployment_target} #{$build_options} -DURHO3D_HOME=../.. -DURHO3D_LUA#{jit}=1 -DURHO3D_TESTING=#{$testing}" or abort 'Failed to configure temporary project using Urho3D as external library'
+    system "cd ../Build/generated/UsingBuildTree && echo '\nExternal project referencing Urho3D library in its build tree' && ./cmake_macosx.sh . -DIOS=$IOS #{$build_options} -DURHO3D_HOME=../.. -DURHO3D_LUA#{jit}=1 -DURHO3D_TESTING=#{$testing}" or abort 'Failed to configure temporary project using Urho3D as external library'
     xcode_build(ENV['IOS'], '../Build/generated/UsingBuildTree/Scaffolding.xcodeproj') or abort 'Failed to build/test temporary project using Urho3D as external library'
     ENV['DESTDIR'] = ENV['HOME'] || Dir.home
     wait_for_block("\nInstalling Urho3D SDK to #{ENV['DESTDIR']}/usr/local...") { Thread.current[:exit_code] = xcode_build(ENV['IOS'], '../Build/Urho3D.xcodeproj', 'install', '>/dev/null') } or abort 'Failed to install Urho3D SDK'
     # Create a new project on the fly that uses newly installed Urho3D SDK
     scaffolding "../Build/generated/UsingSDK"
-    system "export URHO3D_HOME=~/usr/local && cd ../Build/generated/UsingSDK && echo '\nExternal project referencing Urho3D SDK' && ./cmake_macosx.sh . -DIOS=$IOS #{deployment_target} #{$build_options} -DURHO3D_LUA#{jit}=1 -DURHO3D_TESTING=#{$testing}" or abort 'Failed to configure temporary project using Urho3D as external library'
+    system "export URHO3D_HOME=~/usr/local && cd ../Build/generated/UsingSDK && echo '\nExternal project referencing Urho3D SDK' && ./cmake_macosx.sh . -DIOS=$IOS #{$build_options} -DURHO3D_LUA#{jit}=1 -DURHO3D_TESTING=#{$testing}" or abort 'Failed to configure temporary project using Urho3D as external library'
     xcode_build(ENV['IOS'], '../Build/generated/UsingSDK/Scaffolding.xcodeproj') or abort 'Failed to build/test temporary project using Urho3D as external library'
   end
 end
@@ -749,12 +803,10 @@ def bump_version version, index
 end
 
 def setup_digital_keys
-  system 'mkdir -p ~/.ssh && chmod 700 ~/.ssh' or abort 'Failed to create ~/.ssh directory'
-  system 'cat <<EOF >>~/.ssh/known_hosts
-frs.sourceforge.net,216.34.181.57 ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA2uifHZbNexw6cXbyg1JnzDitL5VhYs0E65Hk/tLAPmcmm5GuiGeUoI/B0eUSNFsbqzwgwrttjnzKMKiGLN5CWVmlN1IXGGAfLYsQwK6wAu7kYFzkqP4jcwc5Jr9UPRpJdYIK733tSEmzab4qc5Oq8izKQKIaxXNe7FgmL15HjSpatFt9w/ot/CHS78FUAr3j3RwekHCm/jhPeqhlMAgC+jUgNJbFt3DlhDaRMa0NYamVzmX8D47rtmBbEDU3ld6AezWBPUR5Lh7ODOwlfVI58NAf/aYNlmvl2TZiauBCTa7OPYSyXJnIPbQXg6YQlDknNCr0K769EjeIlAfY87Z4tw==
-EOF' or abort 'Failed to append frs.sourceforge.net server public key to known_hosts'
+  system "bash -c 'mkdir -p ~/.ssh && chmod 700 ~/.ssh'" or abort 'Failed to create ~/.ssh directory'
+  system "bash -c 'ssh-keyscan frs.sourceforge.net >>~/.ssh/known_hosts 2>/dev/null'" or abort 'Failed to append frs.sourceforge.net server public key to known_hosts'
   # Workaround travis encryption key size limitation. Rather than using the solution in their FAQ (using AES to encrypt/decrypt the file and check in the encrypted file into repo), our solution is more pragmatic. The private key below is incomplete. Only the missing portion is encrypted. Much less secure than the original 2048-bit RSA has to offer but good enough for our case.
-  system 'cat <<EOF >~/.ssh/id_rsa
+  system "bash -c 'cat <<EOF >~/.ssh/id_rsa
 -----BEGIN RSA PRIVATE KEY-----
 MIIEpQIBAAKCAQEAnZGzFEypdXKY3KDT0Q3NLY4Bv74yKgJ4LIgbXothx8w4CfM0
 VeWBL/AE2iRISEWGB07LruM9y+U/wt58WlCVu001GuJuvXwWenlljsvH8qQlErYi
@@ -782,8 +834,8 @@ cl9eTLchxLGr15b5SOeNrQ1TCO4qZM3M6Wgv+bRI0h2JW+c0ABpTIBzehOvXcwZq
 32a54xZxlsBw8T5P4BDy40OR7fu+6miUfL+WxUdII4fD3grlIPw6bpNE0bCDykv5
 RLq28S11hDrKf/ZetXNuIprfTlhl6ISBy+oWQibhXmFZSxEiXNV6hCQ=
 -----END RSA PRIVATE KEY-----
-EOF' or abort 'Failed to create user private key to id_rsa'
-  system 'chmod 600 ~/.ssh/id_rsa' or abort 'Failed to change id_rsa file permission'
+EOF'" or abort 'Failed to create user private key to id_rsa'
+  system "bash -c 'chmod 600 ~/.ssh/id_rsa'" or abort 'Failed to change id_rsa file permission'
 end
 
 # Load custom rake scripts

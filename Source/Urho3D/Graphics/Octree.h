@@ -161,7 +161,7 @@ class URHO3D_API Octree : public Component, public Octant
 {
     friend void RaycastDrawablesWork(const WorkItem* item, unsigned threadIndex);
 
-    OBJECT(Octree);
+    URHO3D_OBJECT(Octree, Component);
 
 public:
     /// Construct.
@@ -212,12 +212,8 @@ private:
     PODVector<Drawable*> drawableReinsertions_;
     /// Mutex for octree reinsertions.
     Mutex octreeMutex_;
-    /// Current threaded ray query.
-    mutable RayOctreeQuery* rayQuery_;
-    /// Drawable list for threaded ray query.
+    /// Ray query temporary list of drawables.
     mutable PODVector<Drawable*> rayQueryDrawables_;
-    /// Threaded ray query intermediate results.
-    mutable Vector<PODVector<RayQueryResult> > rayQueryResults_;
     /// Subdivision level.
     unsigned numLevels_;
 };

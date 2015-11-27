@@ -24,14 +24,17 @@
 #include <clang/Tooling/CommonOptionsParser.h>
 #include <clang/Tooling/Refactoring.h>
 
+#include <unordered_map>
+#include <unordered_set>
+
 using namespace clang;
 using namespace clang::ast_matchers;
 using namespace clang::driver;
 using namespace clang::tooling;
 using namespace llvm;
 
-static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
-static cl::extrahelp MoreHelp(
+static cl::extrahelp commonHelp(CommonOptionsParser::HelpMessage);
+static cl::extrahelp moreHelp(
     "\tFor example, to run Annotator on all files in a subtree of the\n"
     "\tsource tree, use:\n"
     "\n"
@@ -45,47 +48,149 @@ static cl::extrahelp MoreHelp(
     "\n"
 );
 
-static cl::OptionCategory AnnotatorCategory("Annotator options");
+static cl::OptionCategory annotatorCategory("Annotator options");
 
-class BindingCallback : public MatchFinder::MatchCallback
+// ClangTool only takes a reference to the array list without owning it, so we need to keep the filtered list ourselves
+class PathFilter
+{
+public:
+    template <typename Fn> PathFilter(const std::vector<std::string> sourcePaths, Fn fn)
+    {
+        std::copy_if(sourcePaths.begin(), sourcePaths.end(), std::back_inserter(pathList_), fn);
+    }
+
+    std::vector<std::string> GetPathList() {
+        return pathList_;
+    }
+
+private:
+    std::vector<std::string> pathList_;
+};
+
+struct Data
+{
+    std::unordered_set<std::string> exposedSymbols_;
+    std::unordered_set<std::string> annotatedSymbols_;
+};
+
+static const std::string categories_[] = {"class", "enum"};
+static std::unordered_map<std::string, Data> categoryData_;
+
+class ExtractCallback : public MatchFinder::MatchCallback
 {
 public :
     virtual void run(const MatchFinder::MatchResult& result)
     {
-        ASTContext* context = result.Context;
-        const StringLiteral* stringLiteral = result.Nodes.getNodeAs<StringLiteral>("StringLiteral");
-        if (stringLiteral)
-            // TODO: Store the exposed class name in a global hashset
-            outs() << stringLiteral->getString() << "\n";
+        for (auto& i: categories_)
+        {
+            auto symbol = result.Nodes.getNodeAs<StringLiteral>(i);
+            if (symbol)
+                categoryData_[i].exposedSymbols_.insert(symbol->getString());
+        }
     }
 
     virtual void onStartOfTranslationUnit()
     {
-        outs() << '.';
+        static unsigned count = sizeof("Extracting") / sizeof(char) - 1;
+        outs() << '.' << (++count % 100 ? "" : "\n");   // Sending a heart beat
     }
+};
+
+class AnnotateCallback : public MatchFinder::MatchCallback
+{
+public :
+    AnnotateCallback(Replacements& replacements) :
+        replacements_(replacements)
+    {
+    }
+
+    virtual void run(const MatchFinder::MatchResult& result)
+    {
+        for (auto& i: categories_)
+        {
+            auto symbol = result.Nodes.getNodeAs<NamedDecl>(i);
+            if (symbol)
+            {
+                auto& data = categoryData_[i];
+                if (data.annotatedSymbols_.find(symbol->getName()) == data.annotatedSymbols_.end() &&
+                    data.exposedSymbols_.find(symbol->getName()) == data.exposedSymbols_.end())
+                {
+                    replacements_.insert(Replacement(*result.SourceManager, symbol->getLocation(), 0, "NONSCRIPTABLE "));
+                    data.annotatedSymbols_.insert(symbol->getName());
+                }
+            }
+        }
+    }
+
+    virtual void onStartOfTranslationUnit()
+    {
+        static unsigned count = sizeof("Annotating") / sizeof(char) - 1;
+        outs() << '.' << (++count % 100 ? "" : "\n");
+    }
+
+private:
+    Replacements& replacements_;
 };
 
 int main(int argc, const char** argv)
 {
-    CommonOptionsParser OptionsParser(argc, argv, AnnotatorCategory);
-    ClangTool bindingExtractor(OptionsParser.getCompilations(), OptionsParser.getSourcePathList());
-    RefactoringTool annotator(OptionsParser.getCompilations(), OptionsParser.getSourcePathList());
-    BindingCallback bindingCallback;
+    // Parse the arguments and pass them to the the internal sub-tools
+    CommonOptionsParser optionsParser(argc, argv, annotatorCategory);
+    PathFilter bindingPathFilter
+        (optionsParser.getSourcePathList(), [](const std::string& path) { return path.find("API.cpp") != std::string::npos; });
+    PathFilter nonBindingPathFilter
+        (optionsParser.getSourcePathList(), [](const std::string& path) { return path.find("API.cpp") == std::string::npos; });
+    ClangTool bindingExtractor(optionsParser.getCompilations(), bindingPathFilter.GetPathList());
+    RefactoringTool annotator(optionsParser.getCompilations(), nonBindingPathFilter.GetPathList());
+
+    // Setup finder to match against AST nodes from existing AngelScript binding source files
+    ExtractCallback extractCallback;
     MatchFinder bindingFinder;
+    // Find exposed classes (they are registered through RegisterObjectType(), RegisterRefCounted(), RegisterObject(), etc)
     bindingFinder.addMatcher(
         memberCallExpr(
             callee(
                 methodDecl(hasName("RegisterObjectType"))),
-            hasArgument(0, stringLiteral().bind("StringLiteral"))), &bindingCallback);
+            hasArgument(0, stringLiteral().bind("class"))), &extractCallback);
     bindingFinder.addMatcher(
         callExpr(
             hasDeclaration(
                 functionDecl(hasParameter(1, hasName("className")))),
-            hasArgument(1, stringLiteral().bind("StringLiteral"))), &bindingCallback);
+            hasArgument(1, stringLiteral().bind("class"))), &extractCallback);
+    // Find exposed enums
+    bindingFinder.addMatcher(
+        memberCallExpr(
+            callee(
+                methodDecl(hasName("RegisterEnum"))),
+            hasArgument(0, stringLiteral().bind("enum"))), &extractCallback);
+
+    // Setup finder to match against AST nodes for annotating Urho3D library source files
+    AnnotateCallback annotateCallback(annotator.getReplacements());
     MatchFinder annotateFinder;
+    // Find exported class declarations with Urho3D namespace
+    annotateFinder.addMatcher(
+        recordDecl(
+            unless(hasAttr(attr::Annotate)),
+#ifndef _MSC_VER
+            hasAttr(attr::Visibility),
+#else
+            hasAttr(attr::DLLExport),
+#endif
+            matchesName("^::Urho3D::")).bind("class"), &annotateCallback);
+    // Find enum declarations with Urho3D namespace
+    annotateFinder.addMatcher(
+        enumDecl(
+            unless(hasAttr(attr::Annotate)),
+            matchesName("^::Urho3D::")).bind("enum"), &annotateCallback);
+
+    // Unbuffered stdout stream to keep the Travis-CI's log flowing and thus prevent it from killing a potentially long running job
+    outs().SetUnbuffered();
+
+    // Success when both sub-tools are run successfully
     return (outs() << "Extracting", true) &&
            bindingExtractor.run(newFrontendActionFactory(&bindingFinder).get()) == EXIT_SUCCESS &&
            (outs() << "\nAnnotating", true) &&
            annotator.runAndSave(newFrontendActionFactory(&annotateFinder).get()) == EXIT_SUCCESS &&
-           (outs() << "\n", true) ? EXIT_SUCCESS : EXIT_FAILURE;
+           (outs() << "\n", true) ?
+        EXIT_SUCCESS : EXIT_FAILURE;
 }
