@@ -56,6 +56,16 @@ namespace Urho3D
 - %Time : Float
 - %Data : User-defined data type
 
+### AnimationFinished
+- %Node : Node pointer
+- %Animation : Animation pointer
+- %Name : String
+- %Looped : Bool
+
+### ParticleEffectFinished
+- %Node : Node pointer
+- %Effect : ParticleEffect pointer
+
 ### TerrainCreated
 - %Node : Node pointer
 
@@ -8952,6 +8962,7 @@ Methods:
 - float GetAttributeAnimationTime(const String&) const
 - WrapMode GetAttributeAnimationWrapMode(const String&) const
 - Variant GetAttributeDefault(const String&) const
+- RigidBody@[]@ GetCollidingBodies(RigidBody@)
 - bool GetInterceptNetworkUpdate(const String&) const
 - RigidBody@[]@ GetRigidBodies(RigidBody@)
 - RigidBody@[]@ GetRigidBodies(const BoundingBox&, uint = 0xffff)
@@ -12631,6 +12642,8 @@ Methods:
 - bool SaveLayout(VectorBuffer&, UIElement@)
 - void SendEvent(const String&, VariantMap& = VariantMap ( ))
 - void SetFocusElement(UIElement@, bool = false)
+- void SetHeight(float)
+- void SetWidth(float)
 - const UIElement@[]@ GetDragElements()
 
 Properties:
@@ -12651,6 +12664,7 @@ Properties:
 - bool nonFocusedMouseWheel
 - int refs // readonly
 - UIElement@ root // readonly
+- float scale
 - StringHash type // readonly
 - String typeName // readonly
 - bool useMutableGlyphs
@@ -13501,6 +13515,8 @@ Methods:
 - double GetDouble(const String&) const
 - float GetFloat(const String&) const
 - int GetInt(const String&) const
+- IntRect GetIntRect(const String&) const
+- IntVector2 GetIntVector2(const String&) const
 - Matrix3 GetMatrix3(const String&) const
 - Matrix3x4 GetMatrix3x4(const String&) const
 - Matrix4 GetMatrix4(const String&) const
@@ -13535,6 +13551,8 @@ Methods:
 - bool SetDouble(const String&, double)
 - bool SetFloat(const String&, float)
 - bool SetInt(const String&, int)
+- bool SetIntRect(const String&, const IntRect&)
+- bool SetIntVector2(const String&, const IntVector2&)
 - bool SetMatrix3(const String&, const Matrix3&)
 - bool SetMatrix3x4(const String&, const Matrix3x4&)
 - bool SetMatrix4(const String&, const Matrix4&)

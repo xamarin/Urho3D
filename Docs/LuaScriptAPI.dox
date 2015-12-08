@@ -4212,6 +4212,7 @@ Methods:
 - const PODVector<RigidBody*>& GetRigidBodies(const Sphere& sphere, unsigned collisionMask = M_MAX_UNSIGNED)
 - const PODVector<RigidBody*>& GetRigidBodies(const BoundingBox& box, unsigned collisionMask = M_MAX_UNSIGNED)
 - const PODVector<RigidBody*>& GetRigidBodies(const RigidBody* body)
+- const PODVector<RigidBody*>& GetCollidingBodies(const RigidBody* body)
 - void DrawDebugGeometry(bool depthTest)
 - void RemoveCachedGeometry(Model* model)
 - Vector3 GetGravity() const
@@ -6242,6 +6243,9 @@ Methods:
 - void SetUseScreenKeyboard(bool enable)
 - void SetUseMutableGlyphs(bool enable)
 - void SetForceAutoHint(bool enable)
+- void SetScale(float scale)
+- void SetWidth(float size)
+- void SetHeight(float size)
 - UIElement* GetRoot() const
 - UIElement* GetRootModalElement() const
 - Cursor* GetCursor() const
@@ -6264,6 +6268,7 @@ Methods:
 - bool GetForceAutoHint() const
 - bool HasModalElement() const
 - bool IsDragging() const
+- float GetScale() const
 
 Properties:
 
@@ -6285,6 +6290,7 @@ Properties:
 - bool useMutableGlyphs
 - bool forceAutoHint
 - bool modalElement (readonly)
+- float scale
 
 <a name="Class_UIElement"></a>
 ### UIElement : Animatable
