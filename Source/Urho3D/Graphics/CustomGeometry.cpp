@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2015 the Urho3D project.
+// Copyright (c) 2008-2016 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -340,6 +340,9 @@ void CustomGeometry::Commit()
         for (unsigned j = 0; j < vertices_[i].Size(); ++j)
             boundingBox_.Merge(vertices_[i][j].position_);
     }
+
+    // Make sure world-space bounding box will be updated
+    OnMarkedDirty(node_);
 
     // Resize (recreate) the vertex buffer only if necessary
     if (vertexBuffer_->GetVertexCount() != totalVertices || vertexBuffer_->GetElementMask() != elementMask_ ||

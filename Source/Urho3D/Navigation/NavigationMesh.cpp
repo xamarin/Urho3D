@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2015 the Urho3D project.
+// Copyright (c) 2008-2016 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -525,8 +525,19 @@ Vector3 NavigationMesh::MoveAlongSurface(const Vector3& start, const Vector3& en
 void NavigationMesh::FindPath(PODVector<Vector3>& dest, const Vector3& start, const Vector3& end, const Vector3& extents,
     const dtQueryFilter* filter)
 {
-    URHO3D_PROFILE(FindPath);
+    PODVector<NavigationPathPoint> navPathPoints;
+    FindPath(navPathPoints, start, end, extents, filter);
 
+    dest.Clear();
+    for (int i = 0; i < navPathPoints.Size(); ++i)
+        dest.Push(navPathPoints[i].position_);
+}
+
+void NavigationMesh::FindPath(PODVector<NavigationPathPoint>& dest, const Vector3& start, const Vector3& end,
+    const Vector3& extents,
+    const dtQueryFilter* filter)
+{
+    URHO3D_PROFILE(FindPath);
     dest.Clear();
 
     if (!InitializeQuery())
@@ -567,7 +578,14 @@ void NavigationMesh::FindPath(PODVector<Vector3>& dest, const Vector3& start, co
 
     // Transform path result back to world space
     for (int i = 0; i < numPathPoints; ++i)
-        dest.Push(transform * pathData_->pathPoints_[i]);
+    {
+        NavigationPathPoint pt;
+        pt.position_ = transform * pathData_->pathPoints_[i];
+        pt.flag_ = (NavigationPathPointFlag)pathData_->pathFlags_[i];
+        pt.areaID_ = pathData_->pathAreras_[i];
+
+        dest.Push(pt);
+    }
 }
 
 Vector3 NavigationMesh::GetRandomPoint(const dtQueryFilter* filter, dtPolyRef* randomRef)

@@ -179,7 +179,8 @@ void LoadConfig()
     XMLElement varNamesElem = configElem.GetChild("varnames");
     XMLElement soundTypesElem = configElem.GetChild("soundtypes");
     XMLElement cubeMapElem = configElem.GetChild("cubegen");
-
+    XMLElement defaultTagsElem = configElem.GetChild("tags");
+    
     if (!cameraElem.isNull)
     {
         if (cameraElem.HasAttribute("nearclip")) viewNearClip = cameraElem.GetFloat("nearclip");
@@ -240,7 +241,7 @@ void LoadConfig()
         if (renderingElem.HasAttribute("texturequality")) renderer.textureQuality = renderingElem.GetInt("texturequality");
         if (renderingElem.HasAttribute("materialquality")) renderer.materialQuality = renderingElem.GetInt("materialquality");
         if (renderingElem.HasAttribute("shadowresolution")) SetShadowResolution(renderingElem.GetInt("shadowresolution"));
-        if (renderingElem.HasAttribute("shadowquality")) renderer.shadowQuality = renderingElem.GetInt("shadowquality");
+        if (renderingElem.HasAttribute("shadowquality")) renderer.shadowQuality = ShadowQuality(renderingElem.GetInt("shadowquality"));
         if (renderingElem.HasAttribute("maxoccludertriangles")) renderer.maxOccluderTriangles = renderingElem.GetInt("maxoccludertriangles");
         if (renderingElem.HasAttribute("specularlighting")) renderer.specularLighting = renderingElem.GetBool("specularlighting");
         if (renderingElem.HasAttribute("dynamicinstancing")) renderer.dynamicInstancing = renderingElem.GetBool("dynamicinstancing");
@@ -309,6 +310,11 @@ void LoadConfig()
         cubeMapGen_Path = cubemapDefaultOutputPath;
         cubeMapGen_Size = 128;
     }
+    
+    if (!defaultTagsElem.isNull)
+    {
+        if (defaultTagsElem.HasAttribute("tags")) defaultTags = defaultTagsElem.GetAttribute("tags");
+    }
 }
 
 void SaveConfig()
@@ -327,6 +333,7 @@ void SaveConfig()
     XMLElement varNamesElem = configElem.CreateChild("varnames");
     XMLElement soundTypesElem = configElem.CreateChild("soundtypes");
     XMLElement cubeGenElem = configElem.CreateChild("cubegen");
+    XMLElement defaultTagsElem = configElem.CreateChild("tags");
 
     cameraElem.SetFloat("nearclip", viewNearClip);
     cameraElem.SetFloat("farclip", viewFarClip);
@@ -367,7 +374,7 @@ void SaveConfig()
         renderingElem.SetInt("shadowresolution", GetShadowResolution());
         renderingElem.SetInt("maxoccludertriangles", renderer.maxOccluderTriangles);
         renderingElem.SetBool("specularlighting", renderer.specularLighting);
-        renderingElem.SetInt("shadowquality", renderer.shadowQuality);
+        renderingElem.SetInt("shadowquality", int(renderer.shadowQuality));
         renderingElem.SetBool("dynamicinstancing", renderer.dynamicInstancing);
     }
 
@@ -407,6 +414,8 @@ void SaveConfig()
     cubeGenElem.SetAttribute("path", cubeMapGen_Path);
     cubeGenElem.SetAttribute("size", cubeMapGen_Size);
 
+    defaultTagsElem.SetAttribute("tags", defaultTags);
+    
     SaveSoundTypes(soundTypesElem);
 
     config.Save(File(configFileName, FILE_WRITE));

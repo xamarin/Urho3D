@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2015 the Urho3D project.
+// Copyright (c) 2008-2016 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -269,6 +269,26 @@ void ScriptFile::RemoveEventHandlersExcept(const PODVector<StringHash>& exceptio
         if (!i->second_->HasEventHandlers())
             eventInvokers_.Erase(i);
     }
+}
+
+bool ScriptFile::HasEventHandler(StringHash eventType) const
+{
+    asIScriptObject* receiver = static_cast<asIScriptObject*>(asGetActiveContext()->GetThisPointer());
+    HashMap<asIScriptObject*, SharedPtr<ScriptEventInvoker> >::ConstIterator i = eventInvokers_.Find(receiver);
+    if (i != eventInvokers_.End())
+        return i->second_->HasSubscribedToEvent(eventType);
+    else
+        return false;
+}
+
+bool ScriptFile::HasEventHandler(Object* sender, StringHash eventType) const
+{
+    asIScriptObject* receiver = static_cast<asIScriptObject*>(asGetActiveContext()->GetThisPointer());
+    HashMap<asIScriptObject*, SharedPtr<ScriptEventInvoker> >::ConstIterator i = eventInvokers_.Find(receiver);
+    if (i != eventInvokers_.End())
+        return i->second_->HasSubscribedToEvent(sender, eventType);
+    else
+        return false;
 }
 
 bool ScriptFile::Execute(const String& declaration, const VariantVector& parameters, bool unprepare)

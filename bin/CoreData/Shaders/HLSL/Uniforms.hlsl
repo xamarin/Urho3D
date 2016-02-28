@@ -22,6 +22,8 @@ uniform float4 cGBufferOffsets;
 uniform float3 cLightDir;
 uniform float4 cLightPos;
 uniform float4x3 cModel;
+uniform float4x3 cView;
+uniform float4x3 cViewInv;
 uniform float4x4 cViewProj;
 uniform float4 cUOffset;
 uniform float4 cVOffset;
@@ -62,6 +64,9 @@ uniform float2 cShadowIntensity;
 uniform float2 cShadowMapInvSize;
 uniform float4 cShadowSplits;
 uniform float4x4 cLightMatricesPS[4];
+#ifdef VSM_SHADOW
+uniform float2 cVSMShadowParams;
+#endif
 #endif
 
 #else
@@ -86,6 +91,8 @@ cbuffer CameraVS : register(b1)
     float4 cDepthMode;
     float3 cFrustumSize;
     float4 cGBufferOffsets;
+    float4x3 cView;
+    float4x3 cViewInv;
     float4x4 cViewProj;
     float4 cClipPlane;
 }
@@ -163,6 +170,7 @@ cbuffer LightPS : register(b3)
     float2 cShadowIntensity;
     float2 cShadowMapInvSize;
     float4 cShadowSplits;
+    float2 cVSMShadowParams;
     float4x4 cLightMatricesPS[4];
 }
 

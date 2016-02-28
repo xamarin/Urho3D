@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2015 the Urho3D project.
+// Copyright (c) 2008-2016 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -378,7 +378,7 @@ bool Engine::Initialize(const VariantMap& parameters)
 
         renderer->SetDrawShadows(GetParameter(parameters, "Shadows", true).GetBool());
         if (renderer->GetDrawShadows() && GetParameter(parameters, "LowQualityShadows", false).GetBool())
-            renderer->SetShadowQuality(SHADOWQUALITY_LOW_16BIT);
+            renderer->SetShadowQuality(SHADOWQUALITY_SIMPLE_16BIT);
         renderer->SetMaterialQuality(GetParameter(parameters, "MaterialQuality", QUALITY_HIGH).GetInt());
         renderer->SetTextureQuality(GetParameter(parameters, "TextureQuality", QUALITY_HIGH).GetInt());
         renderer->SetTextureFilterMode((TextureFilterMode)GetParameter(parameters, "TextureFilterMode", FILTER_TRILINEAR).GetInt());

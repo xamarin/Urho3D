@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2015 the Urho3D project.
+// Copyright (c) 2008-2016 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -32,6 +32,7 @@
 #include "../IO/Serializer.h"
 #include "../Resource/ResourceCache.h"
 #include "../Resource/XMLFile.h"
+#include "../Resource/JSONFile.h"
 
 #include "../DebugNew.h"
 
@@ -184,6 +185,36 @@ bool Animation::BeginLoad(Deserializer& source)
         }
 
         memoryUse += triggers_.Size() * sizeof(AnimationTriggerPoint);
+        SetMemoryUse(memoryUse);
+        return true;
+    }
+
+    // Optionally read triggers from a JSON file
+    String jsonName = ReplaceExtension(GetName(), ".json");
+
+    SharedPtr<JSONFile> jsonFile(cache->GetTempResource<JSONFile>(jsonName, false));
+    if (jsonFile)
+    {
+        const JSONValue& rootVal = jsonFile->GetRoot();
+        JSONArray triggerArray = rootVal.Get("triggers").GetArray();
+
+        for (unsigned i = 0; i < triggerArray.Size(); i++)
+        {
+            const JSONValue& triggerValue = triggerArray.At(i);
+            JSONValue normalizedTimeValue = triggerValue.Get("normalizedTime");
+            if (!normalizedTimeValue.IsNull())
+                AddTrigger(normalizedTimeValue.GetFloat(), true, triggerValue.GetVariant());
+            else
+            {
+                JSONValue timeVal = triggerValue.Get("time");
+                if (!timeVal.IsNull())
+                    AddTrigger(timeVal.GetFloat(), false, triggerValue.GetVariant());
+            }
+        }
+
+        memoryUse += triggers_.Size() * sizeof(AnimationTriggerPoint);
+        SetMemoryUse(memoryUse);
+        return true;
     }
 
     SetMemoryUse(memoryUse);

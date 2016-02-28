@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2015 the Urho3D project.
+// Copyright (c) 2008-2016 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -23,6 +23,7 @@
 #include "../Precompiled.h"
 
 #include "../Resource/XMLElement.h"
+#include "../Resource/JSONFile.h"
 #include "../Urho2D/TileMapDefs2D.h"
 
 #include "../DebugNew.h"

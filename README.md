@@ -14,6 +14,7 @@ Urho3D development, contributions and bugfixes by:
 - Lasse Öörni (loorni@gmail.com, AgentC at GameDev.net)
 - Wei Tjong Yao
 - Aster Jian
+- Vivienne Anthony
 - Colin Barrett
 - Erik Beran
 - Danny Boisvert
@@ -32,14 +33,16 @@ Urho3D development, contributions and bugfixes by:
 - Ali Kämäräinen
 - Pete Leigh
 - Thorbjørn Lindeijer
+- Xavier Maupeu
 - Jonne Nauha
 - Paul Noome
 - David Palacios
 - Alex Parlett
 - Jordan Patterson
+- Anton Petrov
 - Vladimir Pobedinsky
+- Pranjal Raihan
 - Nick Royer
-- Jonathan Sandusky
 - Miika Santala
 - Hualin Song
 - James Thomas
@@ -50,6 +53,7 @@ Urho3D development, contributions and bugfixes by:
 - AGreatFish
 - Enhex
 - Firegorilla
+- Lumak
 - Magic.Lixin
 - Mike3D
 - Modanung
@@ -57,6 +61,7 @@ Urho3D development, contributions and bugfixes by:
 - Newb I the Newbd
 - OvermindDL1
 - Skrylar
+- TheComet93
 - 1vanK
 - andmar1x
 - amadeus_osa
@@ -75,6 +80,7 @@ Urho3D development, contributions and bugfixes by:
 - reattiva
 - rifai
 - skaiware
+- svifylabs
 - szamq
 - thebluefish
 - tommy3
@@ -113,11 +119,11 @@ Urho3D uses the following third-party libraries:
 - kNet (https://github.com/juj/kNet)
 - libcpuid 0.2.0 (http://libcpuid.sourceforge.net/)
 - Lua 5.1 (http://www.lua.org)
-- LuaJIT 2.0.3 (http://www.luajit.org)
+- LuaJIT 2.1.0+ (http://www.luajit.org)
 - LZ4 (http://code.google.com/p/lz4/)
 - MojoShader (http://icculus.org/mojoshader/)
 - Mustache 1.0 (http://mustache.github.io/, https://github.com/kainjow/Mustache)
-- nanodbc 2.2.2 (http://lexicalunit.github.io/nanodbc/)
+- nanodbc 2.11.3+ (http://lexicalunit.github.io/nanodbc/)
 - Open Asset Import Library (http://assimp.sourceforge.net/)
 - pugixml 1.5 (http://pugixml.org/)
 - rapidjson 0.11 (https://code.google.com/p/rapidjson/)

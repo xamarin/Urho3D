@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2015 the Urho3D project.
+// Copyright (c) 2008-2016 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -65,5 +65,9 @@ URHO3D_API String GetPlatform();
 URHO3D_API unsigned GetNumPhysicalCPUs();
 /// Return the number of logical CPUs (different from physical if hyperthreading is used.)
 URHO3D_API unsigned GetNumLogicalCPUs();
+/// Set minidump write location as an absolute path. If empty, uses default (UserProfile/AppData/Roaming/urho3D/crashdumps) Minidumps are only supported on MSVC compiler.
+URHO3D_API void SetMiniDumpDir(const String& pathName);
+/// Return minidump write location.
+URHO3D_API String GetMiniDumpDir();
 
 }

@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2015 the Urho3D project.
+// Copyright (c) 2008-2016 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,17 +20,40 @@
 // THE SOFTWARE.
 //
 
-#include "Precompiled.h"
+#include "../Precompiled.h"
 
-#include "Revision.h"
-#include "librevision.h"
+#include "../Math/Matrix2.h"
+
+#include <cstdio>
+
+#include "../DebugNew.h"
 
 namespace Urho3D
 {
 
-const char* GetRevision()
+const Matrix2 Matrix2::ZERO(
+    0.0f, 0.0f,
+    0.0f, 0.0f);
+
+const Matrix2 Matrix2::IDENTITY;
+
+Matrix2 Matrix2::Inverse() const
 {
-    return revision;
+    float det = m00_ * m11_ -
+                m01_ * m10_;
+
+    float invDet = 1.0f / det;
+
+    return Matrix2(
+        m11_, -m01_,
+        -m10_, m00_
+    ) * invDet;
 }
 
+String Matrix2::ToString() const
+{
+    char tempBuffer[MATRIX_CONVERSION_BUFFER_LENGTH];
+    sprintf(tempBuffer, "%g %g %g %g", m00_, m01_, m10_, m11_);
+    return String(tempBuffer);
+}
 }

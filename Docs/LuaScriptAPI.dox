@@ -185,6 +185,7 @@ namespace Urho3D
 <a href="#Class_Text3D"><b>Text3D</b></a>
 <a href="#Class_Texture"><b>Texture</b></a>
 <a href="#Class_Texture2D"><b>Texture2D</b></a>
+<a href="#Class_Texture3D"><b>Texture3D</b></a>
 <a href="#Class_TextureCube"><b>TextureCube</b></a>
 <a href="#Class_TextureFrame"><b>TextureFrame</b></a>
 <a href="#Class_Tile2D"><b>Tile2D</b></a>
@@ -273,6 +274,7 @@ Methods:
 - float GetMorphWeight(StringHash nameHash) const
 - float GetMorphWeight(unsigned index) const
 - bool IsMaster() const
+- void UpdateBoneBoundingBox()
 
 Properties:
 
@@ -3144,6 +3146,8 @@ Methods:
 - void UnsubscribeFromEvents(Object* sender)
 - void UnsubscribeFromAllEvents()
 - void UnsubscribeFromAllEventsExcept(const Vector<String>& exceptionNames)
+- bool HasSubscribedToEvent(const String eventName)
+- bool HasSubscribedToEvent(Object* sender, const String eventName)
 - LuaFile* GetScriptFile() const
 - const String GetScriptObjectType() const
 
@@ -3660,7 +3664,12 @@ Methods:
 - Node* new()
 - void delete()
 - bool SaveXML(File* dest, const String indentation = "\t") const
+- bool SaveJSON(File* dest, const String indentation = "\t") const
 - void SetName(const String name)
+- void AddTag(const String tag)
+- void AddTags(const String tags, char separator)
+- bool RemoveTag(const String tag)
+- void RemoveAllTags()
 - void SetPosition(const Vector3& position)
 - void SetPosition2D(const Vector2& position)
 - void SetPosition2D(float x, float y)
@@ -3790,8 +3799,12 @@ Methods:
 - const PODVector<Node*>& GetChildrenWithComponent(const String type, bool recursive = false)
 - bool Load(Deserializer& source, SceneResolver& resolver, bool loadChildren = true, bool rewriteIDs = false, CreateMode mode = REPLICATED)
 - bool LoadXML(const XMLElement& source, SceneResolver& resolver, bool loadChildren = true, bool rewriteIDs = false, CreateMode mode = REPLICATED)
+- bool LoadJSON(const JSONValue& source, SceneResolver& resolver, bool loadChildren = true, bool rewriteIDs = false, CreateMode mode = REPLICATED)
 - Node* CreateChild(unsigned id, CreateMode mode)
 - void AddComponent(Component* component, unsigned id, CreateMode mode)
+- bool HasTag(const String tag) const
+- const StringVector& GetTags() const
+- const PODVector<Node*>& GetChildrenWithTag(const String tag, bool recursive = false) const
 
 Properties:
 
@@ -3836,6 +3849,8 @@ Methods:
 - const String GetTypeName() const
 - const String GetCategory() const
 - void SendEvent(const String eventName, VariantMap* eventData = 0)
+- bool HasSubscribedToEvent(const String eventName) const
+- bool HasSubscribedToEvent(Object* sender, const String eventName) const
 
 Properties:
 
@@ -4145,15 +4160,44 @@ Properties:
 
 Methods:
 
+- void SetBlendMode(BlendMode mode)
+- void SetDepthTestMode(CompareMode mode)
+- void SetLightingMode(PassLightingMode mode)
+- void SetDepthWrite(bool enable)
+- void SetAlphaMask(bool enable)
+- void SetIsDesktop(bool enable)
+- void SetVertexShader(const String name)
+- void SetPixelShader(const String name)
+- void SetVertexShaderDefines(const String defines)
+- void SetPixelShaderDefines(const String defines)
+- void ReleaseShaders()
+- const String GetName() const
+- unsigned GetIndex() const
+- BlendMode GetBlendMode() const
+- CompareMode GetDepthTestMode() const
+- PassLightingMode GetLightingMode() const
+- bool GetDepthWrite() const
+- bool GetAlphaMask() const
 - bool IsDesktop() const
 - const String GetVertexShader() const
 - const String GetPixelShader() const
+- const String GetVertexShaderDefines() const
+- const String GetPixelShaderDefines() const
 
 Properties:
 
+- String name (readonly)
+- unsigned index (readonly)
+- BlendMode blendMode
+- CompareMode depthTestMode
+- PassLightingMode lightingMode
+- bool depthWrite
+- bool alphaMask
 - bool desktop (readonly)
-- const String vertexShader (readonly)
-- const String pixelShader (readonly)
+- String vertexShader
+- String pixelShader
+- String vertexShaderDefines
+- String pixelShaderDefines
 
 <a name="Class_PhysicsRaycastResult"></a>
 ### PhysicsRaycastResult
@@ -4170,6 +4214,7 @@ Properties:
 - Vector3 position
 - Vector3 normal
 - float distance
+- float hitFraction
 - RigidBody* body
 
 <a name="Class_PhysicsRaycastResult2D"></a>
@@ -4207,6 +4252,7 @@ Methods:
 - void SetMaxNetworkAngularVelocity(float velocity)
 - const PODVector<PhysicsRaycastResult>& Raycast(const Ray& ray, float maxDistance, unsigned collisionMask = M_MAX_UNSIGNED)
 - PhysicsRaycastResult RaycastSingle(const Ray& ray, float maxDistance, unsigned collisionMask = M_MAX_UNSIGNED)
+- PhysicsRaycastResult RaycastSingleSegmented(const Ray& ray, float maxDistance, float segmentDistance, unsigned collisionMask = M_MAX_UNSIGNED)
 - PhysicsRaycastResult SphereCast(const Ray& ray, float radius, float maxDistance, unsigned collisionMask = M_MAX_UNSIGNED)
 - PhysicsRaycastResult ConvexCast(CollisionShape* shape, const Vector3& startPos, const Quaternion& startRot, const Vector3& endPos, const Quaternion& endRot, unsigned collisionMask = M_MAX_UNSIGNED)
 - const PODVector<RigidBody*>& GetRigidBodies(const Sphere& sphere, unsigned collisionMask = M_MAX_UNSIGNED)
@@ -4698,7 +4744,9 @@ Methods:
 - void SetMaterialQuality(int quality)
 - void SetDrawShadows(bool enable)
 - void SetShadowMapSize(int size)
-- void SetShadowQuality(int quality)
+- void SetShadowQuality(ShadowQuality quality)
+- void SetShadowSoftness(float shadowSoftness)
+- void SetVSMShadowParameters(float minVariance, float lightBleedingReduction)
 - void SetReuseShadowMaps(bool enable)
 - void SetMaxShadowMaps(int shadowMaps)
 - void SetDynamicInstancing(bool enable)
@@ -4722,7 +4770,9 @@ Methods:
 - int GetTextureQuality() const
 - int GetMaterialQuality() const
 - int GetShadowMapSize() const
-- int GetShadowQuality() const
+- ShadowQuality GetShadowQuality() const
+- float GetShadowSoftness() const
+- Vector2 GetVSMShadowParameters() const
 - bool GetReuseShadowMaps() const
 - int GetMaxShadowMaps() const
 - bool GetDynamicInstancing() const
@@ -4759,7 +4809,8 @@ Properties:
 - int textureQuality
 - int materialQuality
 - int shadowMapSize
-- int shadowQuality
+- ShadowQuality shadowQuality
+- float shadowSoftness
 - bool reuseShadowMaps
 - int maxShadowMaps
 - bool dynamicInstancing
@@ -5058,6 +5109,10 @@ Methods:
 - bool SaveXML(File* dest, const String indentation = "\t") const
 - bool LoadXML(const String fileName)
 - bool SaveXML(const String fileName, const String indentation = "\t") const
+- bool LoadJSON(File* source)
+- bool SaveJSON(File* dest, const String indentation = "\t") const
+- bool LoadJSON(const String fileName)
+- bool SaveJSON(const String fileName, const String indentation = "\t") const
 - Node* Instantiate(File* source, const Vector3& position, const Quaternion& rotation, CreateMode mode = REPLICATED)
 - Node* Instantiate(const String fileName, const Vector3& position, const Quaternion& rotation, CreateMode mode = REPLICATED)
 - Node* InstantiateXML(File* source, const Vector3& position, const Quaternion& rotation, CreateMode mode = REPLICATED)
@@ -5105,6 +5160,7 @@ Methods:
 - void MarkNetworkUpdate(Node* node)
 - void MarkNetworkUpdate(Component* component)
 - void MarkReplicationDirty(Node* node)
+- const PODVector<Node*>& GetNodesWithTag(const String tag) const
 
 Properties:
 
@@ -5704,6 +5760,11 @@ Properties:
 
 Methods:
 
+- void SetIsDesktop(bool enable)
+- Pass* CreatePass(const String passName)
+- void RemovePass(const String passName)
+- void ReleaseShaders()
+- Technique* Clone(const String cloneName = String::EMPTY) const
 - bool HasPass(const String type) const
 - Pass* GetPass(const String type) const
 - Pass* GetSupportedPass(const String type) const
@@ -6025,6 +6086,17 @@ Methods:
 Properties:
 
 - RenderSurface* renderSurface (readonly)
+
+<a name="Class_Texture3D"></a>
+### Texture3D : Texture
+
+Methods:
+
+- Texture3D() (GC)
+- Texture3D* new()
+- void delete()
+- bool SetSize(int width, int height, int depth, unsigned format, TextureUsage usage = TEXTURE_STATIC)
+- bool SetData(Image* image, bool useAlpha = false)
 
 <a name="Class_TextureCube"></a>
 ### TextureCube : Texture
@@ -6377,6 +6449,10 @@ Methods:
 - void SetInternal(bool enable)
 - void SetTraversalMode(TraversalMode traversalMode)
 - void SetElementEventSender(bool flag)
+- void AddTag(const String tag)
+- void AddTags(const String tags, char separator)
+- bool RemoveTag(const String tag)
+- void RemoveAllTags()
 - const String GetName() const
 - const IntVector2& GetPosition() const
 - const IntVector2& GetSize() const
@@ -6432,6 +6508,9 @@ Methods:
 - const Color& GetDerivedColor() const
 - const Variant& GetVar(StringHash key) const
 - const VariantMap& GetVars() const
+- bool HasTag(const String tag) const
+- const StringVector& GetTags() const
+- const PODVector<UIElement*>& GetChildrenWithTag(const String tag, bool recursive = false) const
 - IntVector2 ScreenToElement(const IntVector2& screenPosition)
 - IntVector2 ElementToScreen(const IntVector2& position)
 - bool IsInside(IntVector2 position, bool isScreen)
@@ -6626,6 +6705,7 @@ Methods:
 - float LengthSquared() const
 - float DotProduct(const Vector2& rhs) const
 - float AbsDotProduct(const Vector2& rhs) const
+- float Angle(const Vector2& rhs) const
 - Vector2 Abs() const
 - Vector2 Lerp(const Vector2& rhs, float t) const
 - bool Equals(const Vector2& rhs) const
@@ -7288,6 +7368,7 @@ Properties:
 - int FC_ROTATE_Y
 - int FC_LOOKAT_XYZ
 - int FC_LOOKAT_Y
+- int FC_DIRECTION
 
 ### FileMode
 
@@ -7492,6 +7573,15 @@ Properties:
 - int VS
 - int PS
 
+### ShadowQuality
+
+- int SHADOWQUALITY_SIMPLE_16BIT
+- int SHADOWQUALITY_SIMPLE_24BIT
+- int SHADOWQUALITY_PCF_16BIT
+- int SHADOWQUALITY_PCF_24BIT
+- int SHADOWQUALITY_VSM
+- int SHADOWQUALITY_BLUR_VSM
+
 ### ShapeType
 
 - int SHAPE_BOX
@@ -7629,6 +7719,7 @@ Properties:
 - int ELEMENT_INSTANCEMATRIX1
 - int ELEMENT_INSTANCEMATRIX2
 - int ELEMENT_INSTANCEMATRIX3
+- int ELEMENT_OBJECTINDEX
 - int MAX_VERTEX_ELEMENTS
 
 ### VerticalAlignment
@@ -7707,6 +7798,7 @@ Properties:
 - String GetInternalPath(const String pathName)
 - Localization* GetLocalization()
 - Log* GetLog()
+- String GetMiniDumpDir()
 - String GetNativePath(const String pathName)
 - Network* GetNetwork()
 - unsigned GetNumLogicalCPUs()
@@ -7718,6 +7810,8 @@ Properties:
 - Renderer* GetRenderer()
 - Time* GetTime()
 - UI* GetUI()
+- bool HasSubscribedToEvent(const String eventName)
+- bool HasSubscribedToEvent(Object* sender, const String eventName)
 - bool IsAbsolutePath(const String pathName)
 - bool IsAlpha(unsigned ch)
 - bool IsDigit(unsigned ch)
@@ -7734,16 +7828,17 @@ Properties:
 - int Rand()
 - float RandStandardNormal()
 - float Random()
-- float Random(float range)
 - float Random(float min, float max)
-- int RandomInt(int range)
+- float Random(float range)
 - int RandomInt(int min, int max)
+- int RandomInt(int range)
 - float RandomNormal(float meanValue, float variance)
 - String RemoveTrailingSlash(const String pathName)
 - String ReplaceExtension(const String fullPath, const String newExtension)
 - unsigned SDBMHash(unsigned hash, char c)
 - void SendEvent(const String eventName, VariantMap& eventData)
 - void SetExecuteConsoleCommands(bool enable)
+- void SetMiniDumpDir(const String pathName)
 - void SetRandomSeed(unsigned seed)
 - float Sign(float value)
 - float Sin(float angle)
@@ -7772,8 +7867,8 @@ Properties:
 - Vector4 ToVector4(const String source, bool allowMissingCoords = false)
 - void UnsubscribeFromAllEvents()
 - void UnsubscribeFromAllEventsExcept(const Vector<String>& exceptionNames)
-- void UnsubscribeFromEvent(const String eventName)
 - void UnsubscribeFromEvent(Object* sender, const String eventName)
+- void UnsubscribeFromEvent(const String eventName)
 - void UnsubscribeFromEvents(Object* sender)
 
 
@@ -7981,6 +8076,7 @@ Properties:
 - unsigned MASK_INSTANCEMATRIX3
 - unsigned MASK_NONE
 - unsigned MASK_NORMAL
+- unsigned MASK_OBJECTINDEX
 - unsigned MASK_POSITION
 - unsigned MASK_TANGENT
 - unsigned MASK_TEXCOORD1
@@ -8263,10 +8359,6 @@ Properties:
 - unsigned SCAN_DIRS
 - unsigned SCAN_FILES
 - unsigned SCAN_HIDDEN
-- int SHADOWQUALITY_HIGH_16BIT
-- int SHADOWQUALITY_HIGH_24BIT
-- int SHADOWQUALITY_LOW_16BIT
-- int SHADOWQUALITY_LOW_24BIT
 - String SOUND_AMBIENT
 - String SOUND_EFFECT
 - String SOUND_MASTER

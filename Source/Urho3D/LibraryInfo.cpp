@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2015 the Urho3D project.
+// Copyright (c) 2008-2016 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,18 +20,42 @@
 // THE SOFTWARE.
 //
 
-#pragma once
+#include "Precompiled.h"
 
-#ifdef URHO3D_IS_BUILDING
-#include "Urho3D.h"
-#else
-#include <Urho3D/Urho3D.h>
-#endif
+#include "LibraryInfo.h"
+#include "librevision.h"
 
 namespace Urho3D
 {
 
-/// Return subversion revision number as of the library build time.
-URHO3D_API const char* GetRevision();
+const char* GetRevision()
+{
+    return revision;
+}
+
+const char* GetCompilerDefines()
+{
+    return ""
+#ifdef URHO3D_OPENGL
+    "#define URHO3D_OPENGL\n"
+#elif defined(URHO3D_D3D11)
+    "#define URHO3D_D3D11\n"
+#endif
+#ifdef URHO3D_SSE
+    "#define URHO3D_SSE\n"
+#endif
+#ifdef URHO3D_DATABASE_ODBC
+    "#define URHO3D_DATABASE_ODBC\n"
+#elif defined(URHO3D_DATABASE_SQLITE)
+    "#define URHO3D_DATABASE_SQLITE\n"
+#endif
+#ifdef URHO3D_LUAJIT
+    "#define URHO3D_LUAJIT\n"
+#endif
+#ifdef URHO3D_TESTING
+    "#define URHO3D_TESTING\n"
+#endif
+    ;
+}
 
 }

@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2015 the Urho3D project.
+// Copyright (c) 2008-2016 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -29,9 +29,8 @@
 #include "../Core/Profiler.h"
 #include "../IO/Log.h"
 #include "../IO/MemoryBuffer.h"
-#ifdef URHO3D_PHYSICS
+#if defined(URHO3D_PHYSICS) || defined(URHO3D_URHO2D)
 #include "../Physics/PhysicsEvents.h"
-#include "../Physics/PhysicsWorld.h"
 #endif
 #include "../Resource/ResourceCache.h"
 #include "../Resource/ResourceEvents.h"
@@ -363,6 +362,16 @@ void ScriptInstance::RemoveEventHandlersExcept(const PODVector<StringHash>& exce
     UnsubscribeFromAllEventsExcept(exceptions, true);
 }
 
+bool ScriptInstance::HasEventHandler(StringHash eventType) const
+{
+    return HasSubscribedToEvent(eventType);
+}
+
+bool ScriptInstance::HasEventHandler(Object* sender, StringHash eventType) const
+{
+    return HasSubscribedToEvent(sender, eventType);
+}
+
 bool ScriptInstance::IsA(const String& className) const
 {
     // Early out for the easiest case where that's what we are
@@ -491,7 +500,7 @@ void ScriptInstance::OnSceneSet(Scene* scene)
     {
         UnsubscribeFromEvent(E_SCENEUPDATE);
         UnsubscribeFromEvent(E_SCENEPOSTUPDATE);
-#ifdef URHO3D_PHYSICS
+#if defined(URHO3D_PHYSICS) || defined(URHO3D_URHO2D)
         UnsubscribeFromEvent(E_PHYSICSPRESTEP);
         UnsubscribeFromEvent(E_PHYSICSPOSTSTEP);
 #endif
@@ -690,10 +699,11 @@ void ScriptInstance::UpdateEventSubscription()
             if (methods_[METHOD_POSTUPDATE])
                 SubscribeToEvent(scene, E_SCENEPOSTUPDATE, URHO3D_HANDLER(ScriptInstance, HandleScenePostUpdate));
 
-#ifdef URHO3D_PHYSICS
+#if defined(URHO3D_PHYSICS) || defined(URHO3D_URHO2D)
             if (methods_[METHOD_FIXEDUPDATE] || methods_[METHOD_FIXEDPOSTUPDATE])
             {
-                PhysicsWorld* world = scene->GetOrCreateComponent<PhysicsWorld>();
+                Component* world = GetFixedUpdateSource();
+
                 if (world)
                 {
                     if (methods_[METHOD_FIXEDUPDATE])
@@ -722,8 +732,9 @@ void ScriptInstance::UpdateEventSubscription()
         if (subscribedPostFixed_)
         {
             UnsubscribeFromEvent(scene, E_SCENEPOSTUPDATE);
-#ifdef URHO3D_PHYSICS
-            PhysicsWorld* world = scene->GetComponent<PhysicsWorld>();
+
+#if defined(URHO3D_PHYSICS) || defined(URHO3D_URHO2D)
+            Component* world = GetFixedUpdateSource();
             if (world)
             {
                 UnsubscribeFromEvent(world, E_PHYSICSPRESTEP);
@@ -798,7 +809,7 @@ void ScriptInstance::HandleScenePostUpdate(StringHash eventType, VariantMap& eve
     scriptFile_->Execute(scriptObject_, methods_[METHOD_POSTUPDATE], parameters);
 }
 
-#ifdef URHO3D_PHYSICS
+#if defined(URHO3D_PHYSICS) || defined(URHO3D_URHO2D)
 
 void ScriptInstance::HandlePhysicsPreStep(StringHash eventType, VariantMap& eventData)
 {

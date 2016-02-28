@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2008-2015 the Urho3D project.
+# Copyright (c) 2008-2016 the Urho3D project.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -96,9 +96,18 @@ if (NOT EXISTS ${CMAKE_CURRENT_BINARY_DIR}/librevision.h)
     execute_process (COMMAND ${CMAKE_COMMAND} -DFILENAME=${CMAKE_CURRENT_BINARY_DIR}/librevision.h -P CMake/Modules/GetUrho3DRevision.cmake
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} OUTPUT_QUIET ERROR_QUIET)
 endif ()
+set (URHO3D_DEPS ${STATIC_LIBRARY_TARGETS})
+if (TARGET LuaJIT_universal)
+    list (REMOVE_ITEM URHO3D_DEPS LuaJIT)
+    set (LuaJIT_universal_symbolic LuaJIT_universal_symbolic)
+    add_custom_command (OUTPUT ${LuaJIT_universal_symbolic}
+        COMMAND xcodebuild ARCHS="$(ARCHS)" -target LuaJIT_universal -configuration $(CONFIGURATION)
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+    set_source_files_properties (${LuaJIT_universal_symbolic} PROPERTIES SYMBOLIC TRUE)
+endif ()
 add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/librevision.h
     COMMAND ${CMAKE_COMMAND} -DFILENAME=${CMAKE_CURRENT_BINARY_DIR}/librevision.h -P CMake/Modules/GetUrho3DRevision.cmake
-    DEPENDS ${STATIC_LIBRARY_TARGETS} ${CMAKE_SOURCE_DIR}/CMake/Modules/GetUrho3DRevision.cmake
+    DEPENDS ${URHO3D_DEPS} ${CMAKE_SOURCE_DIR}/CMake/Modules/GetUrho3DRevision.cmake
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     COMMENT "Generating GIT revision number (tag + last commit SHA-1)")
 
@@ -131,15 +140,15 @@ if (URHO3D_BINDINGS)
 endif ()
 if (URHO3D_LUA)
     # The host tool must be built natively
-    if (CMAKE_CROSSCOMPILING OR IOS)
-        # When cross-compiling, build the host tool as external project
+    if (CMAKE_CROSSCOMPILING OR URHO3D_LUAJIT)
+        # When cross-compiling or using LuaJIT, build the tolua++ host tool as external project using normal Lua (there is not much point using LuaJIT for the tool building even when technically it can)
         include (ExternalProject)
         if (IOS)
             set (IOS_FIX CMAKE_COMMAND /usr/bin/env -i PATH=$ENV{PATH} ${CMAKE_COMMAND} BUILD_COMMAND bash -c "sed -i '' 's/EFFECTIVE_PLATFORM_NAME//g' CMakeScripts/install_postBuildPhase.make*")
         endif ()
         ExternalProject_Add (tolua++
             SOURCE_DIR ${CMAKE_SOURCE_DIR}/Source/ThirdParty/toluapp/src/bin
-            CMAKE_ARGS -DURHO3D_LUAJIT=${URHO3D_LUAJIT} -DDEST_RUNTIME_DIR=${CMAKE_BINARY_DIR}/bin/tool -DBAKED_CMAKE_SOURCE_DIR=${CMAKE_SOURCE_DIR} ${IOS_FIX})
+            CMAKE_ARGS -DDEST_RUNTIME_DIR=${CMAKE_BINARY_DIR}/bin/tool -DBAKED_CMAKE_SOURCE_DIR=${CMAKE_SOURCE_DIR} ${IOS_FIX})
     else ()
         # Otherwise, build it internally as per normal
         add_subdirectory (../ThirdParty/toluapp/src/bin ../ThirdParty/toluapp/src/bin)
@@ -172,9 +181,7 @@ if (MSVC)
     set (PRE_EXPORT_HEADER "\n#pragma warning(disable: 4251)\n#pragma warning(disable: 4275)\n")
 endif ()
 if (URHO3D_CLANG_TOOLS)
-    set (POST_EXPORT_HEADER "\n#define NONSCRIPTABLE __attribute__((annotate(\"nonscriptable\")))\n")
-else ()
-    set (POST_EXPORT_HEADER "\n#define NONSCRIPTABLE\n")
+    set (ANNOTATE_NONSCRIPTABLE "__attribute__((annotate(\"nonscriptable\")))")
 endif ()
 generate_export_header (${TARGET_NAME} ${URHO3D_LIB_TYPE} EXPORT_MACRO_NAME URHO3D_API EXPORT_FILE_NAME Urho3D.h.new)
 execute_process (COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/Urho3D.h.new ${CMAKE_CURRENT_BINARY_DIR}/Urho3D.h)
@@ -211,7 +218,7 @@ if (MSVC AND URHO3D_LIB_TYPE STREQUAL SHARED)   # MSVC linker does not have forc
 endif ()
 
 # Aggregate all source files
-list (APPEND SOURCE_FILES ${GEN_CPP_FILES} ${ALL_OBJ_FILES} librevision.h Urho3D.h)
+list (APPEND SOURCE_FILES ${GEN_CPP_FILES} ${ALL_OBJ_FILES} librevision.h Urho3D.h ${LuaJIT_universal_symbolic})
 
 # Define dependency libs
 # Add include directories to find the precompiled header, export header, and installed headers from thirdparty libs
@@ -240,8 +247,11 @@ endif ()
 set_output_directories (${OUTPUT_PATH} ARCHIVE LIBRARY)
 
 # Setup target
-setup_library (${URHO3D_LIB_TYPE})
-if (NOT ANDROID AND NOT EMSCRIPTEN)
+if (IOS)
+    set (EXCLUDE_FROM_ALL EXCLUDE_FROM_ALL)
+endif ()
+setup_library (${URHO3D_LIB_TYPE} ${EXCLUDE_FROM_ALL})
+if (NOT ANDROID AND NOT WEB)
     file (READ .soversion SOVERSION)
     string (STRIP ${SOVERSION} SOVERSION)
     string (REGEX MATCH "([^.]+)\\.([^.]+)\\.(.+)" MATCHED ${SOVERSION})
@@ -250,31 +260,27 @@ if (NOT ANDROID AND NOT EMSCRIPTEN)
     else ()
         message (FATAL_ERROR "The .soversion file is corrupted. It should contain a version number with this format major(0xFFFF).minor(0xFF).patch-level(0xFF). e.g.: 0.1.2")
     endif ()
-elseif (EMSCRIPTEN)
+elseif (WEB)
     # Emscripten does not support generation of shared library in a conventional sense, it just produces "linked" LLVM bitcode
     set (CMAKE_SHARED_LIBRARY_SUFFIX ".bc")
 endif ()
-install (TARGETS ${TARGET_NAME} RUNTIME DESTINATION ${DEST_RUNTIME_DIR} LIBRARY DESTINATION ${DEST_LIBRARY_DIR} ARCHIVE DESTINATION ${DEST_LIBRARY_DIR})
+if (IOS)
+    # Add a custom target to build Mach-O universal binary consisting of iphoneos (universal ARM archs including 'arm64' if 64-bit is enabled) and iphonesimulator (i386 arch and also x86_64 arch if 64-bit is enabled)
+    add_custom_target (${TARGET_NAME}_universal ALL
+        COMMAND if [ '$(CONFIGURATION)' != 'Debug' ]\; then if lipo -info $<TARGET_FILE:${TARGET_NAME}> 2>/dev/null |egrep -cq 'i386.*armv7|armv7.*i386|x86_64.*arm64|arm64.*x86_64'\; then echo $<TARGET_FILE:${TARGET_NAME}> is already a Mach-O universal binary consisting of both iphoneos and iphonesimulator archs\; else mv $<TARGET_FILE:${TARGET_NAME}>{,.ori} && if lipo -info $<TARGET_FILE:${TARGET_NAME}>.ori 2>/dev/null |egrep -cq 'i386|x86_64'\; then sdk=iphoneos\; else sdk=iphonesimulator\; fi && xcodebuild -target ${TARGET_NAME} -configuration $(CONFIGURATION) -sdk $$sdk 2>&1 && mv $<TARGET_FILE:${TARGET_NAME}>{,.new} && lipo -create -output $<TARGET_FILE:${TARGET_NAME}>{,.ori,.new} && rm $<TARGET_FILE:${TARGET_NAME}>{.ori,.new}\; fi\; fi
+        DEPENDS ${TARGET_NAME}
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        COMMENT "Creating Mach-O universal binary library consisting of both iphoneos and iphonesimulator archs")
+    install (FILES $<TARGET_FILE:${TARGET_NAME}> DESTINATION ${DEST_LIBRARY_DIR})
+else ()
+    install (TARGETS ${TARGET_NAME} RUNTIME DESTINATION ${DEST_RUNTIME_DIR} LIBRARY DESTINATION ${DEST_LIBRARY_DIR} ARCHIVE DESTINATION ${DEST_LIBRARY_DIR})
+endif ()
 if (WIN32 AND URHO3D_LIB_TYPE STREQUAL SHARED)
     set (URHO3D_DLL_INSTALLED TRUE)
 endif ()
 
 # Setup dependency frameworks and libraries
 if (APPLE)
-    if (IOS)
-        setup_ios_linker_flags (LINKER_FLAGS)
-        # Add a custom target to build Mach-O universal binary consisting of iphoneos (universal ARM archs including 'arm64' if 64-bit is enabled) and iphonesimulator (i386 arch and also x86_64 arch if 64-bit is enabled)
-        add_custom_target (${TARGET_NAME}_universal
-            COMMAND if lipo -info $<TARGET_FILE:${TARGET_NAME}> 2>/dev/null |grep -cq 'i386.*armv7'\; then echo $<TARGET_FILE:${TARGET_NAME}> is already a Mach-O universal binary consisting of both iphoneos and iphonesimulator archs\; else mv $<TARGET_FILE:${TARGET_NAME}>{,.ori} && if lipo -info $<TARGET_FILE:${TARGET_NAME}>.ori 2>/dev/null |grep -cq i386\; then sdk=iphoneos\; else sdk=iphonesimulator\; fi && xcodebuild -target ${TARGET_NAME} -configuration $(CONFIGURATION) -sdk $$sdk 2>&1 && mv $<TARGET_FILE:${TARGET_NAME}>{,.new} && lipo -create -output $<TARGET_FILE:${TARGET_NAME}>{,.ori,.new} && rm $<TARGET_FILE:${TARGET_NAME}>{.ori,.new}\; fi
-            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-            COMMENT "Creating Mach-O universal binary library consisting of both iphoneos and iphonesimulator archs")
-    else ()
-        # Intentionally use built-in CMAKE_EXE_LINKER_FLAGS here although CMake does not use it when building library, but the variable would be used later when configuring Urho3D.pc for MacOSX platform
-        setup_macosx_linker_flags (CMAKE_EXE_LINKER_FLAGS)
-        # LuaJIT 64-bit specific - replace EXE linker flags with flags for building shared library (adapted from LuaJIT's original Makefile)
-        string (REPLACE "-pagezero_size 10000 -image_base 100000000" "-image_base 7fff04c4a000" LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS})
-    endif ()
-    set_target_properties (${TARGET_NAME} PROPERTIES LINK_FLAGS ${LINKER_FLAGS})
     set (FORCE_LOAD -force_load)
 elseif (NOT MSVC)
     set_property (TARGET ${TARGET_NAME} APPEND PROPERTY LINK_LIBRARIES -Wl,--whole-archive)
@@ -312,7 +318,7 @@ if (NOT XCODE AND NOT MSVC)
                 COMMAND libtool -static $<TARGET_FILE:${TARGET_NAME}>.engine ${ARCHIVES} -o $<TARGET_FILE:${TARGET_NAME}>
                 COMMAND rm $<TARGET_FILE:${TARGET_NAME}>.engine
                 COMMENT "Merging all archives into a single static library using libtool")
-        elseif (EMSCRIPTEN OR CMAKE_BINARY_DIR MATCHES " ")
+        elseif (WEB OR CMAKE_BINARY_DIR MATCHES " ")
             # Do it the hard way by first extracting the object (bitcode) files and appending them to final archive:
             # a) For Emscripten build as Emscripten emar (llvm-ar) neither takes archives directly as input nor supports MRI-style script
             # b) When the build tree path contains spaces because MRI script does not support spaces in path even with proper escape
@@ -378,7 +384,7 @@ endif ()
 # Use PIC on platforms that support it (shared library type has this property set to true by default, so we only have to deal with those static ones that the shared library links against)
 if (URHO3D_LIB_TYPE STREQUAL SHARED)
     set_target_properties (${STATIC_LIBRARY_TARGETS} PROPERTIES POSITION_INDEPENDENT_CODE true)
-    if (NOT MSVC AND NOT (CMAKE_CROSSCOMPILING AND MINGW) AND CMAKE_VERSION VERSION_LESS 2.8.9)  # todo: Remove this when CMake minimum version is 2.8.9
+    if (NOT MSVC AND NOT (MINGW AND CMAKE_CROSSCOMPILING) AND CMAKE_VERSION VERSION_LESS 2.8.9)  # todo: Remove this when CMake minimum version is 2.8.9
         set_property (TARGET ${STATIC_LIBRARY_TARGETS} APPEND PROPERTY COMPILE_FLAGS -fPIC)
     endif ()
 endif ()
@@ -414,23 +420,23 @@ else ()
     set (LIB_DIR "-L\"\${libdir}\"")
     string (REPLACE ";" " -l" URHO3D_LIBS "-l${LIB_NAME};${LIBS}")
 endif ()
-string (REPLACE ";" " ${DASH}D" URHO3D_COMPILE_DEFINITIONS ";${URHO3D_COMPILE_DEFINITIONS}")
+string (REPLACE ";" " ${DASH}D" URHO3D_COMPILE_DEFINITIONS "${DASH}D${URHO3D_COMPILE_DEFINITIONS}")
 get_directory_property (GLOBAL_INCLUDE_DIRS DIRECTORY ${CMAKE_SOURCE_DIR} INCLUDE_DIRECTORIES)
 if (GLOBAL_INCLUDE_DIRS)
     string (REPLACE ";" "\" ${DASH}I\"" GLOBAL_INCLUDE_DIRS "${DASH}I\"${GLOBAL_INCLUDE_DIRS}\"")
     string (REPLACE "${SYSROOT}" "" GLOBAL_INCLUDE_DIRS ${GLOBAL_INCLUDE_DIRS})
 endif ()
-set (ENGINE_INCLUDE_DIRS "${DASH}I\"\${includedir}\" ${DASH}I\"\${includedir}/${PATH_SUFFIX}/ThirdParty\"")
+set (ENGINE_INCLUDE_DIRS "${DASH}I\"\${includedir}\" ${DASH}I\"\${includedir}/Urho3D/ThirdParty\"")
 if (URHO3D_PHYSICS)
     # Bullet library depends on its own include dir to be added in the header search path
     # This is more practical than patching its header files in many places to make them work with relative path
-    set (ENGINE_INCLUDE_DIRS "${ENGINE_INCLUDE_DIRS} ${DASH}I\"\${includedir}/${PATH_SUFFIX}/ThirdParty/Bullet\"")
+    set (ENGINE_INCLUDE_DIRS "${ENGINE_INCLUDE_DIRS} ${DASH}I\"\${includedir}/Urho3D/ThirdParty/Bullet\"")
 endif ()
 if (URHO3D_LUA)
     # ditto for Lua/LuaJIT
-    set (ENGINE_INCLUDE_DIRS "${ENGINE_INCLUDE_DIRS} ${DASH}I\"\${includedir}/${PATH_SUFFIX}/ThirdParty/Lua${JIT}\"")
+    set (ENGINE_INCLUDE_DIRS "${ENGINE_INCLUDE_DIRS} ${DASH}I\"\${includedir}/Urho3D/ThirdParty/Lua${JIT}\"")
 endif ()
-# todo: Reevaluate the command below when the CMake minimum required version is set to 2.8.12 (and remove only when the deprected add_compiler_export_flags() is not used anymore)
+# todo: Reevaluate the command below when the CMake minimum required version is set to 2.8.12 (and remove only when the deprecated add_compiler_export_flags() is not used anymore)
 string (REGEX REPLACE " -fvisibility[^ ]+" "" CLEANED_CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})   # Remove visibility compiler options that are only used for building the library
 configure_file (${CMAKE_CURRENT_SOURCE_DIR}/Urho3D.pc.in ${CMAKE_CURRENT_BINARY_DIR}/Urho3D.pc${PC_SUFFIX} @ONLY)
 if (MSVC)

@@ -1,6 +1,6 @@
 //
 
-// Copyright (c) 2008-2015 the Urho3D project.
+// Copyright (c) 2008-2016 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -448,10 +448,9 @@ void Drawable::RemoveFromOctree()
 bool WriteDrawablesToOBJ(PODVector<Drawable*> drawables, File* outputFile, bool asZUp, bool asRightHanded, bool writeLightmapUV)
 {
     // Must track indices independently to deal with potential mismatching of drawables vertex attributes (ie. one with UV, another without, then another with)
-    // Using long because 65,535 isn't enough as OBJ indices do not reset the count with each new object
-    unsigned long currentPositionIndex = 1;
-    unsigned long currentUVIndex = 1;
-    unsigned long currentNormalIndex = 1;
+    unsigned currentPositionIndex = 1;
+    unsigned currentUVIndex = 1;
+    unsigned currentNormalIndex = 1;
     bool anythingWritten = false;
 
     // Write the common "I came from X" comment
@@ -467,6 +466,9 @@ bool WriteDrawablesToOBJ(PODVector<Drawable*> drawables, File* outputFile, bool 
 
         Node* node = drawable->GetNode();
         Matrix3x4 transMat = drawable->GetNode()->GetWorldTransform();
+        Matrix3x4 n = transMat.Inverse();
+        Matrix3 normalMat = Matrix3(n.m00_, n.m01_, n.m02_, n.m10_, n.m11_, n.m12_, n.m20_, n.m21_, n.m22_);
+        normalMat = normalMat.Transpose();
 
         const Vector<SourceBatch>& batches = drawable->GetBatches();
         for (unsigned geoIndex = 0; geoIndex < batches.Size(); ++geoIndex)
@@ -527,8 +529,8 @@ bool WriteDrawablesToOBJ(PODVector<Drawable*> drawables, File* outputFile, bool 
                     const unsigned normalOffset = VertexBuffer::GetElementOffset(elementMask, ELEMENT_NORMAL);
                     for (unsigned j = 0; j < vertexCount; ++j)
                     {
-                        Vector3 vertexNormal = *((const Vector3*)(&vertexData[(vertexStart + j) * elementSize + positionOffset]));
-                        vertexNormal = transMat * vertexNormal;
+                        Vector3 vertexNormal = *((const Vector3*)(&vertexData[(vertexStart + j) * elementSize + normalOffset]));
+                        vertexNormal = normalMat * vertexNormal;
                         vertexNormal.Normalize();
 
                         if (asRightHanded)
@@ -572,8 +574,8 @@ bool WriteDrawablesToOBJ(PODVector<Drawable*> drawables, File* outputFile, bool 
 
                 for (unsigned indexIdx = indexStart; indexIdx < indexStart + indexCount; indexIdx += 3)
                 {
-                    // Deal with 16 or 32 bit indices, converting to long
-                    unsigned long longIndices[3];
+                    // Deal with 16 or 32 bit indices
+                    unsigned longIndices[3];
                     if (indexSize == 2)
                     {
                         //16 bit indices

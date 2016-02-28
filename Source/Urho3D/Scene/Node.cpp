@@ -1,5 +1,5 @@
 ﻿//
-// Copyright (c) 2008-2015 the Urho3D project.
+// Copyright (c) 2008-2016 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -27,6 +27,7 @@
 #include "../IO/Log.h"
 #include "../IO/MemoryBuffer.h"
 #include "../Resource/XMLFile.h"
+#include "../Resource/JSONFile.h"
 #include "../Scene/Component.h"
 #include "../Scene/ObjectAnimation.h"
 #include "../Scene/ReplicationState.h"
@@ -92,6 +93,7 @@ void Node::RegisterObject(Context* context)
 
     URHO3D_ACCESSOR_ATTRIBUTE("Is Enabled", IsEnabled, SetEnabled, bool, true, AM_DEFAULT);
     URHO3D_ACCESSOR_ATTRIBUTE("Name", GetName, SetName, String, String::EMPTY, AM_DEFAULT);
+    URHO3D_ACCESSOR_ATTRIBUTE("Tags", GetTags, SetTags, StringVector, Variant::emptyStringVector, AM_DEFAULT);
     URHO3D_ACCESSOR_ATTRIBUTE("Position", GetPosition, SetPosition, Vector3, Vector3::ZERO, AM_FILE);
     URHO3D_ACCESSOR_ATTRIBUTE("Rotation", GetRotation, SetRotation, Quaternion, Quaternion::IDENTITY, AM_FILE);
     URHO3D_ACCESSOR_ATTRIBUTE("Scale", GetScale, SetScale, Vector3, Vector3::ONE, AM_DEFAULT);
@@ -183,6 +185,25 @@ bool Node::LoadXML(const XMLElement& source, bool setInstanceDefault)
     return success;
 }
 
+bool Node::LoadJSON(const JSONValue& source, bool setInstanceDefault)
+{
+    SceneResolver resolver;
+
+    // Read own ID. Will not be applied, only stored for resolving possible references
+    unsigned nodeID = source.Get("id").GetUInt();
+    resolver.AddNode(nodeID, this);
+
+    // Read attributes, components and child nodes
+    bool success = LoadJSON(source, resolver);
+    if (success)
+    {
+        resolver.Resolve();
+        ApplyAttributes();
+    }
+
+    return success;
+}
+
 bool Node::SaveXML(XMLElement& dest) const
 {
     // Write node ID
@@ -218,6 +239,50 @@ bool Node::SaveXML(XMLElement& dest) const
         if (!node->SaveXML(childElem))
             return false;
     }
+
+    return true;
+}
+
+bool Node::SaveJSON(JSONValue& dest) const
+{
+    // Write node ID
+    dest.Set("id", id_);
+
+    // Write attributes
+    if (!Animatable::SaveJSON(dest))
+        return false;
+
+    // Write components
+    JSONArray componentsArray;
+    componentsArray.Reserve(components_.Size());
+    for (unsigned i = 0; i < components_.Size(); ++i)
+    {
+        Component* component = components_[i];
+        if (component->IsTemporary())
+            continue;
+
+        JSONValue compVal;
+        if (!component->SaveJSON(compVal))
+            return false;
+        componentsArray.Push(compVal);
+    }
+    dest.Set("components", componentsArray);
+
+    // Write child nodes
+    JSONArray childrenArray;
+    childrenArray.Reserve(children_.Size());
+    for (unsigned i = 0; i < children_.Size(); ++i)
+    {
+        Node* node = children_[i];
+        if (node->IsTemporary())
+            continue;
+
+        JSONValue childVal;
+        if (!node->SaveJSON(childVal))
+            return false;
+        childrenArray.Push(childVal);
+    }
+    dest.Set("children", childrenArray);
 
     return true;
 }
@@ -258,6 +323,17 @@ bool Node::SaveXML(Serializer& dest, const String& indentation) const
     return xml->Save(dest, indentation);
 }
 
+bool Node::SaveJSON(Serializer& dest, const String& indentation) const
+{
+    SharedPtr<JSONFile> json(new JSONFile(context_));
+    JSONValue& rootElem = json->GetRoot();
+
+    if (!SaveJSON(rootElem))
+        return false;
+
+    return json->Save(dest, indentation);
+}
+
 void Node::SetName(const String& name)
 {
     if (name != name_)
@@ -279,6 +355,101 @@ void Node::SetName(const String& name)
             scene_->SendEvent(E_NODENAMECHANGED, eventData);
         }
     }
+}
+
+void Node::SetTags(const StringVector& tags)
+{
+    RemoveAllTags();
+    AddTags(tags);
+    // MarkNetworkUpdate() already called in RemoveAllTags() / AddTags()
+}
+
+void Node::AddTag(const String& tag)
+{
+    // Check if tag empty or already added
+    if (tag.Empty() || HasTag(tag))
+        return;
+    
+    // Add tag
+    tags_.Push(tag);
+
+    // Cache
+    scene_->NodeTagAdded(this, tag);
+
+    // Send event
+    using namespace NodeTagAdded;
+    VariantMap& eventData = GetEventDataMap();
+    eventData[P_SCENE] = scene_;
+    eventData[P_NODE] = this;
+    eventData[P_TAG] = tag;
+    scene_->SendEvent(E_NODETAGADDED, eventData);
+
+    // Sync
+    MarkNetworkUpdate();
+}
+
+void Node::AddTags(const String& tags, char separator)
+{
+    StringVector tagVector = tags.Split(separator);
+    AddTags(tagVector);
+}
+
+void Node::AddTags(const StringVector& tags)
+{
+    // This is OK, as MarkNetworkUpdate() early-outs when called multiple times
+    for (unsigned i = 0; i < tags.Size(); ++i)
+        AddTag(tags[i]);
+}
+
+bool Node::RemoveTag(const String& tag)
+{
+    bool removed = tags_.Remove(tag);
+
+    // Nothing to do
+    if (!removed)
+        return false;
+
+    // Scene cache update
+    if (scene_)
+    {
+        scene_->NodeTagRemoved(this, tag);
+        // Send event
+        using namespace NodeTagRemoved;
+        VariantMap& eventData = GetEventDataMap();
+        eventData[P_SCENE] = scene_;
+        eventData[P_NODE] = this;
+        eventData[P_TAG] = tag;
+        scene_->SendEvent(E_NODETAGREMOVED, eventData);
+    }
+    
+    // Sync
+    MarkNetworkUpdate();
+    return true;
+}
+
+void Node::RemoveAllTags()
+{
+    // Clear old scene cache
+    if (scene_)
+    {
+        for (unsigned i = 0; i < tags_.Size(); ++i)
+        {
+            scene_->NodeTagRemoved(this, tags_[i]);
+
+            // Send event
+            using namespace NodeTagRemoved;
+            VariantMap& eventData = GetEventDataMap();
+            eventData[P_SCENE] = scene_;
+            eventData[P_NODE] = this;
+            eventData[P_TAG] = tags_[i];
+            scene_->SendEvent(E_NODETAGREMOVED, eventData);
+        }
+    }
+
+    tags_.Clear();
+
+    // Sync
+    MarkNetworkUpdate();
 }
 
 void Node::SetPosition(const Vector3& position)
@@ -1053,6 +1224,22 @@ void Node::GetChildrenWithComponent(PODVector<Node*>& dest, StringHash type, boo
         GetChildrenWithComponentRecursive(dest, type);
 }
 
+void Node::GetChildrenWithTag(PODVector<Node*>& dest, const String& tag, bool recursive /*= true*/) const
+{
+    dest.Clear();
+
+    if (!recursive)
+    {
+        for (Vector<SharedPtr<Node> >::ConstIterator i = children_.Begin(); i != children_.End(); ++i)
+        {
+            if ((*i)->HasTag(tag))
+                dest.Push(*i);
+        }
+    }
+    else
+        GetChildrenWithTagRecursive(dest, tag);
+}
+
 Node* Node::GetChild(unsigned index) const
 {
     return index < children_.Size() ? children_[index].Get() : 0;
@@ -1122,6 +1309,11 @@ bool Node::HasComponent(StringHash type) const
             return true;
     }
     return false;
+}
+
+bool Node::HasTag(const String& tag) const
+{
+    return tags_.Contains(tag);
 }
 
 const Variant& Node::GetVar(StringHash key) const
@@ -1371,6 +1563,50 @@ bool Node::LoadXML(const XMLElement& source, SceneResolver& resolver, bool readC
     return true;
 }
 
+bool Node::LoadJSON(const JSONValue& source, SceneResolver& resolver, bool readChildren, bool rewriteIDs, CreateMode mode)
+{
+    // Remove all children and components first in case this is not a fresh load
+    RemoveAllChildren();
+    RemoveAllComponents();
+
+    if (!Animatable::LoadJSON(source))
+        return false;
+
+    const JSONArray& componentsArray = source.Get("components").GetArray();
+
+    for (unsigned i = 0; i < componentsArray.Size(); i++)
+    {
+        const JSONValue& compVal = componentsArray.At(i);
+        String typeName = compVal.Get("type").GetString();
+        unsigned compID = compVal.Get("id").GetUInt();
+        Component* newComponent = SafeCreateComponent(typeName, StringHash(typeName),
+            (mode == REPLICATED && compID < FIRST_LOCAL_ID) ? REPLICATED : LOCAL, rewriteIDs ? 0 : compID);
+        if (newComponent)
+        {
+            resolver.AddComponent(compID, newComponent);
+            if (!newComponent->LoadJSON(compVal))
+                return false;
+        }
+    }
+
+    if (!readChildren)
+        return true;
+
+    const JSONArray& childrenArray = source.Get("children").GetArray();
+    for (unsigned i = 0; i < childrenArray.Size(); i++)
+    {
+        const JSONValue& childVal = childrenArray.At(i);
+
+        unsigned nodeID = childVal.Get("id").GetUInt();
+        Node* newNode = CreateChild(rewriteIDs ? 0 : nodeID, (mode == REPLICATED && nodeID < FIRST_LOCAL_ID) ? REPLICATED :
+            LOCAL);
+        resolver.AddNode(nodeID, newNode);
+        if (!newNode->LoadJSON(childVal, resolver, readChildren, rewriteIDs, mode))
+            return false;
+    }
+
+    return true;
+}
 
 void Node::PrepareNetworkUpdate()
 {
@@ -1852,6 +2088,18 @@ void Node::GetComponentsRecursive(PODVector<Component*>& dest, StringHash type) 
     }
     for (Vector<SharedPtr<Node> >::ConstIterator i = children_.Begin(); i != children_.End(); ++i)
         (*i)->GetComponentsRecursive(dest, type);
+}
+
+void Node::GetChildrenWithTagRecursive(PODVector<Node*>& dest, const String& tag) const
+{
+    for (Vector<SharedPtr<Node> >::ConstIterator i = children_.Begin(); i != children_.End(); ++i)
+    {
+        Node* node = *i;
+        if (node->HasTag(tag))
+            dest.Push(node);
+        if (!node->children_.Empty())
+            node->GetChildrenWithTagRecursive(dest, tag);
+    }
 }
 
 Node* Node::CloneRecursive(Node* parent, SceneResolver& resolver, CreateMode mode)

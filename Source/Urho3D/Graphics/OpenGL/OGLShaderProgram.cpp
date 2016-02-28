@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2015 the Urho3D project.
+// Copyright (c) 2008-2016 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -132,6 +132,7 @@ bool ShaderProgram::Link()
     glBindAttribLocation(object_, 11, "iInstanceMatrix2");
     glBindAttribLocation(object_, 12, "iInstanceMatrix3");
 #endif
+    glBindAttribLocation(object_, 13, "iObjectIndex");
 
     glAttachShader(object_, vertexShader_->GetGPUObject());
     glAttachShader(object_, pixelShader_->GetGPUObject());

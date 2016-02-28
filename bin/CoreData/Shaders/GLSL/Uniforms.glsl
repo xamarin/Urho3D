@@ -6,7 +6,7 @@
 // OpenGL 2 uniforms (no constant buffers)
 
 #ifdef COMPILEVS
-          
+
 // Vertex shader uniforms
 uniform vec3 cAmbientStartColor;
 uniform vec3 cAmbientEndColor;
@@ -23,6 +23,8 @@ uniform vec4 cGBufferOffsets;
 uniform vec3 cLightDir;
 uniform vec4 cLightPos;
 uniform mat4 cModel;
+uniform mat4 cView;
+uniform mat4 cViewInv;
 uniform mat4 cViewProj;
 uniform vec4 cUOffset;
 uniform vec4 cVOffset;
@@ -73,7 +75,9 @@ uniform vec2 cShadowIntensity;
 uniform vec2 cShadowMapInvSize;
 uniform vec4 cShadowSplits;
 uniform mat4 cLightMatricesPS[4];
-
+#ifdef VSM_SHADOW
+uniform vec2 cVSMShadowParams;
+#endif
 #endif
 
 #else
@@ -97,6 +101,8 @@ uniform CameraVS
     vec4 cDepthMode;
     vec3 cFrustumSize;
     vec4 cGBufferOffsets;
+    mat4 cView;
+    mat4 cViewInv;
     mat4 cViewProj;
     vec4 cClipPlane;
 };
@@ -176,6 +182,9 @@ uniform LightPS
     vec2 cShadowMapInvSize;
     vec4 cShadowSplits;
     mat4 cLightMatricesPS[4];
+#ifdef VSM_SHADOW
+    vec2 cVSMShadowParams;
+#endif
 };
 
 #ifndef CUSTOM_MATERIAL_CBUFFER
