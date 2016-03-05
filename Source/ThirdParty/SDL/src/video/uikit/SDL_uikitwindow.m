@@ -155,7 +155,7 @@ UIKit_CreateWindow(_THIS, SDL_Window *window)
     SDL_assert(_this->windows == window);
 
     /* We currently only handle a single window per display on iOS */
-    if (window->next != NULL) {
+    if (window->next != NULL && urhoPlaceholderWindow == NULL) {
         return SDL_SetError("Only one window allowed per display.");
     }
 
