@@ -86,7 +86,9 @@ static int SetupWindowData(_THIS, SDL_Window *window, UIWindow *uiwindow, SDL_bo
         window->y = 0;
 
         CGRect bounds;
-        if (window->flags & (SDL_WINDOW_FULLSCREEN|SDL_WINDOW_BORDERLESS)) {
+        if (urhoPlaceholderView != NULL) {
+            bounds = [urhoPlaceholderView bounds];
+        } else if (window->flags & (SDL_WINDOW_FULLSCREEN|SDL_WINDOW_BORDERLESS)) {
             bounds = [displaydata->uiscreen bounds];
         } else {
             bounds = [displaydata->uiscreen applicationFrame];
