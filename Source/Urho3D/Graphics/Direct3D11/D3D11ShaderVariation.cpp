@@ -342,7 +342,7 @@ void ShaderVariation::ParseParameters(unsigned char* bufData, unsigned bufSize)
     ID3D11ShaderReflection* reflection = 0;
     D3D11_SHADER_DESC shaderDesc;
 
-    HRESULT hr = D3DReflect(bufData, bufSize, IID_ID3D11ShaderReflection, (void**)&reflection);
+    HRESULT hr = D3DReflect(bufData, bufSize, __uuidof(ID3D11ShaderReflection), (void**)&reflection);
     if (FAILED(hr) || !reflection)
     {
         URHO3D_SAFE_RELEASE(reflection);

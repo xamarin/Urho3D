@@ -426,7 +426,9 @@ bool Graphics::SetMode(int width, int height, bool fullscreen, bool borderless, 
         }
     }
 
+#if !defined(UWP)
     AdjustWindow(width, height, fullscreen, borderless);
+#endif
 
     if (maximize)
     {
@@ -2220,6 +2222,11 @@ void Graphics::AdjustWindow(int& newWidth, int& newHeight, bool& newFullscreen, 
 
 bool Graphics::CreateDevice(int width, int height, int multiSample)
 {
+#if defined(UWP)
+    HRESULT uwphr = SDL_UWP_CreateWinrtSwapChain(width, height, multiSample, &impl_->device_, &impl_->swapChain_, &impl_->deviceContext_);
+    multiSample_ = multiSample;
+    return true;
+#endif
     // Device needs only to be created once
     if (!impl_->device_)
     {
@@ -2338,7 +2345,7 @@ bool Graphics::UpdateSwapChain(int width, int height)
 
     // Create default rendertarget view representing the backbuffer
     ID3D11Texture2D* backbufferTexture;
-    HRESULT hr = impl_->swapChain_->GetBuffer(0, IID_ID3D11Texture2D, (void**)&backbufferTexture);
+    HRESULT hr = impl_->swapChain_->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backbufferTexture);
     if (FAILED(hr))
     {
         URHO3D_SAFE_RELEASE(backbufferTexture);

@@ -47,13 +47,17 @@ void RunFrame(void* data)
 }
 #endif
 
+#if defined(UWP)
+extern "C" void SDL_UWP_StartRenderLoop(Engine* engine);
+#endif
+
 Application::Application(Context* context) :
     Object(context),
     exitCode_(EXIT_SUCCESS)
 {
     engineParameters_ = Engine::ParseParameters(GetArguments());
 
-    // Create the Engine, but do not initialize it yet. Subsystems except Graphics & Renderer are registered at this point
+    // Create the Engine, but do not initialize it yet. Sub¸systems except Graphics & Renderer are registered at this point
     engine_ = new Engine(context);
 
     // Subscribe to log messages so that can show errors if ErrorExit() is called with empty message
@@ -81,8 +85,8 @@ int Application::Run()
         if (exitCode_)
             return exitCode_;
 
-        // Platforms other than iOS and Emscripten run a blocking main loop
-#if !defined(IOS) && !defined(__EMSCRIPTEN__)
+        // Platforms other than iOS, Emscripten and UWP run a blocking main loop
+#if !defined(IOS) && !defined(__EMSCRIPTEN__) && !defined(UWP)
         while (!engine_->IsExiting())
             engine_->RunFrame();
 
@@ -94,6 +98,8 @@ int Application::Run()
         SDL_iPhoneSetAnimationCallback(GetSubsystem<Graphics>()->GetImpl()->GetWindow(), 1, &RunFrame, engine_);
 #elif defined(__EMSCRIPTEN__)
         emscripten_set_main_loop_arg(RunFrame, engine_, 0, 1);
+#elif defined(UWP)
+        SDL_UWP_StartRenderLoop(engine_);
 #endif
 #endif
 

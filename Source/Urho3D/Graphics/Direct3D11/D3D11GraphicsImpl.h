@@ -29,6 +29,10 @@
 #include <dxgi.h>
 #include <SDL/SDL.h>
 
+#if defined(UWP)
+extern "C" HRESULT SDL_UWP_CreateWinrtSwapChain(int width, int height, int multiSample, ID3D11Device** device, IDXGISwapChain** sc, ID3D11DeviceContext** dc);
+#endif
+
 namespace Urho3D
 {
 

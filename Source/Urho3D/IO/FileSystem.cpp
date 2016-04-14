@@ -73,6 +73,9 @@ void SDL_Android_FreeFileList(char*** array, int* count);
 #elif IOS
 const char* SDL_IOS_GetResourceDir();
 const char* SDL_IOS_GetDocumentsDir();
+#elif UWP
+const wchar_t* SDL_UWP_GetResourceDir();
+int SDL_UWP_MoveFile(const wchar_t* src, const wchar_t* dst);
 #endif
 }
 
@@ -138,8 +141,9 @@ int DoSystemCommand(const String& commandLine, bool redirectToLog, Context* cont
 int DoSystemRun(const String& fileName, const Vector<String>& arguments)
 {
     String fixedFileName = GetNativePath(fileName);
-
-#ifdef _WIN32
+#if defined(UWP)
+    return -1;
+#elif defined(_WIN32)
     // Add .exe extension if no extension defined
     if (GetExtension(fixedFileName).Empty())
         fixedFileName += ".exe";
@@ -436,8 +440,9 @@ bool FileSystem::SystemOpen(const String& fileName, const String& mode)
             URHO3D_LOGERROR("File or directory " + fileName + " not found");
             return false;
         }
-
-#ifdef _WIN32
+#if defined(UWP)
+        bool success = false;
+#elif defined(_WIN32)
         bool success = (size_t)ShellExecuteW(0, !mode.Empty() ? WString(mode).CString() : 0,
             GetWideNativePath(fileName).CString(), 0, 0, SW_SHOW) > 32;
 #else
@@ -502,8 +507,9 @@ bool FileSystem::Rename(const String& srcFileName, const String& destFileName)
         URHO3D_LOGERROR("Access denied to " + destFileName);
         return false;
     }
-
-#ifdef _WIN32
+#if defined (UWP)
+    return SDL_UWP_MoveFile(GetWideNativePath(srcFileName).CString(), GetWideNativePath(destFileName).CString()) != 0;
+#elif defined(_WIN32)
     return MoveFileW(GetWideNativePath(srcFileName).CString(), GetWideNativePath(destFileName).CString()) != 0;
 #else
     return rename(GetNativePath(srcFileName).CString(), GetNativePath(destFileName).CString()) == 0;
@@ -604,7 +610,7 @@ bool FileSystem::FileExists(const String& fileName) const
 
     String fixedName = GetNativePath(RemoveTrailingSlash(fileName));
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(UWP)
     DWORD attributes = GetFileAttributesW(WString(fixedName).CString());
     if (attributes == INVALID_FILE_ATTRIBUTES || attributes & FILE_ATTRIBUTE_DIRECTORY)
         return false;
@@ -658,7 +664,7 @@ bool FileSystem::DirExists(const String& pathName) const
     }
 #endif
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(UWP)
     DWORD attributes = GetFileAttributesW(WString(fixedName).CString());
     if (attributes == INVALID_FILE_ATTRIBUTES || !(attributes & FILE_ATTRIBUTE_DIRECTORY))
         return false;
@@ -695,6 +701,9 @@ String FileSystem::GetProgramDir() const
     return programDir_;
 #elif defined(IOS)
     programDir_ = AddTrailingSlash(SDL_IOS_GetResourceDir());
+    return programDir_;
+#elif defined(UWP)
+    programDir_ = AddTrailingSlash(SDL_UWP_GetResourceDir());
     return programDir_;
 #elif defined(_WIN32)
     wchar_t exeName[MAX_PATH];
@@ -736,6 +745,8 @@ String FileSystem::GetUserDocumentsDir() const
     return AddTrailingSlash(SDL_Android_GetFilesDir());
 #elif defined(IOS)
     return AddTrailingSlash(SDL_IOS_GetDocumentsDir());
+#elif defined(UWP)
+    return AddTrailingSlash(SDL_UWP_GetResourceDir());
 #elif defined(_WIN32)
     wchar_t pathName[MAX_PATH];
     pathName[0] = 0;
@@ -845,7 +856,7 @@ void FileSystem::ScanDirInternal(Vector<String>& result, String path, const Stri
         return;
     }
 #endif
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(UWP)
     WIN32_FIND_DATAW info;
     HANDLE handle = FindFirstFileW(WString(path + "*").CString(), &info);
     if (handle != INVALID_HANDLE_VALUE)
@@ -875,7 +886,7 @@ void FileSystem::ScanDirInternal(Vector<String>& result, String path, const Stri
 
         FindClose(handle);
     }
-#else
+#elif !defined(UWP)
     DIR* dir;
     struct dirent* de;
     struct stat st;

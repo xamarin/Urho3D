@@ -117,7 +117,7 @@ static void GetCPUData(struct cpu_id_t* data)
 
 void InitFPU()
 {
-#if !defined(URHO3D_LUAJIT) && !defined(ANDROID) && !defined(IOS) && !defined(RPI) && !defined(__x86_64__) && !defined(_M_AMD64) && !defined(__EMSCRIPTEN__)
+#if !defined(URHO3D_LUAJIT) && !defined(ANDROID) && !defined(IOS) && !defined(RPI) && !defined(__x86_64__) && !defined(_M_AMD64) && !defined(__EMSCRIPTEN__) && !defined(UWP)
     // Make sure FPU is in round-to-nearest, single precision mode
     // This ensures Direct3D and OpenGL behave similarly, and all threads behave similarly
 #ifdef _MSC_VER
@@ -148,7 +148,7 @@ void ErrorExit(const String& message, int exitCode)
 
 void OpenConsoleWindow()
 {
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(UWP)
     if (consoleOpened)
         return;
 
@@ -163,7 +163,7 @@ void OpenConsoleWindow()
 
 void PrintUnicode(const String& str, bool error)
 {
-#if !defined(ANDROID) && !defined(IOS)
+#if !defined(ANDROID) && !defined(IOS) && !defined(UWP)
 #ifdef _WIN32
     // If the output stream has been redirected, use fprintf instead of WriteConsoleW,
     // though it means that proper Unicode output will not work
@@ -285,7 +285,7 @@ String GetConsoleInput()
     return ret;
 #endif
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(UWP)
     HANDLE input = GetStdHandle(STD_INPUT_HANDLE);
     HANDLE output = GetStdHandle(STD_OUTPUT_HANDLE);
     if (input == INVALID_HANDLE_VALUE || output == INVALID_HANDLE_VALUE)
@@ -334,7 +334,7 @@ String GetConsoleInput()
             }
         }
     }
-#elif !defined(ANDROID) && !defined(IOS)
+#elif !defined(ANDROID) && !defined(IOS) && !defined(UWP)
     int flags = fcntl(STDIN_FILENO, F_GETFL);
     fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK);
     for (;;)
