@@ -68,7 +68,7 @@ void Clock::InitClockData()
 
 	if (appStartTime == 0)
 	{
-#if WINVER >= 0x0600 && !defined(KNET_ENABLE_WINXP_SUPPORT)
+#if WINVER >= 0x0600 && (!defined(KNET_ENABLE_WINXP_SUPPORT) || defined(UWP))
 		appStartTime = (tick_t)GetTickCount64();
 #else
 		appStartTime = (tick_t)GetTickCount();
@@ -178,7 +178,7 @@ int Clock::Sec()
 unsigned long Clock::SystemTime()
 {
 #ifdef _WIN32
-#if WINVER >= 0x0600 && !defined(KNET_ENABLE_WINXP_SUPPORT)
+#if WINVER >= 0x0600 && (!defined(KNET_ENABLE_WINXP_SUPPORT) || defined(UWP))
 	return (unsigned long)GetTickCount64();
 #else
 	return (unsigned long)GetTickCount();

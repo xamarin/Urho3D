@@ -68,6 +68,7 @@ HttpRequest::~HttpRequest()
 
 void HttpRequest::ThreadFunction()
 {
+#ifndef UWP //TODO: fix UWP
     String protocol = "http";
     String host;
     String path = "/";
@@ -194,6 +195,7 @@ void HttpRequest::ThreadFunction()
         MutexLock lock(mutex_);
         state_ = HTTP_CLOSED;
     }
+#endif
 }
 
 unsigned HttpRequest::Read(void* dest, unsigned size)

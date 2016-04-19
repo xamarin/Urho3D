@@ -103,7 +103,9 @@ void Thread::Stop()
 
 	if (threadHandle != NULL)
 	{
+#ifndef UWP //TODO: fix 
 		TerminateThread(threadHandle, (DWORD)-1);
+#endif
 //		CloseHandle(threadHandle);
 		KNET_LOG(LogError, "Warning: Had to forcibly terminate thread!");
 	}

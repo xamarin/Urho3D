@@ -50,7 +50,7 @@ const int cMaxUDPSendSize = 1400;
 
 std::string Network::GetErrorString(int error)
 {
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(UWP)
 	void *lpMsgBuf = 0;
 
 	HRESULT hresult = HRESULT_FROM_WIN32(error);
