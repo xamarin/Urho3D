@@ -376,8 +376,8 @@ bool Graphics::SetMode(int width, int height, bool fullscreen, bool borderless, 
         else
         {
             maximize = resizable;
-            width = 1024;
-            height = 768;
+            width = 512;
+            height = 400;
         }
     }
 
@@ -2341,7 +2341,11 @@ bool Graphics::UpdateSwapChain(int width, int height)
         impl_->renderTargetViews_[i] = 0;
     renderTargetsDirty_ = true;
 
-    impl_->swapChain_->ResizeBuffers(1, (UINT)width, (UINT)height, DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
+    UINT buffersCount = 1;
+#if UWP
+    buffersCount = 2;
+#endif
+    impl_->swapChain_->ResizeBuffers(buffersCount, (UINT)width, (UINT)height, DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
 
     // Create default rendertarget view representing the backbuffer
     ID3D11Texture2D* backbufferTexture;
