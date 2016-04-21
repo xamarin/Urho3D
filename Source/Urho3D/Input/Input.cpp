@@ -248,7 +248,6 @@ Input::~Input()
 
 void Input::Update()
 {
-    return;
     assert(initialized_);
 
     URHO3D_PROFILE(UpdateInput);
