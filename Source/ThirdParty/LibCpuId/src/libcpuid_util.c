@@ -32,6 +32,7 @@
 #include "libcpuid.h"
 #include "libcpuid_util.h"
 
+
 int _current_verboselevel;
 
 void match_features(const struct feature_map_t* matchtable, int count, uint32_t reg, struct cpu_id_t* data)
@@ -52,6 +53,11 @@ libcpuid_warn_fn_t _warn_fun = default_warn;
 #if defined(_MSC_VER)
 #	define vsnprintf _vsnprintf
 #endif
+
+#if UWP
+#define strdup _strdup
+#endif
+
 void warnf(const char* format, ...)
 {
 	char buff[1024];

@@ -94,6 +94,9 @@ int cpu_clock_by_mark(struct cpu_mark_t* mark)
 #ifdef _WIN32
 int cpu_clock_by_os(void)
 {
+#ifdef UWP
+	return 1;//TODO
+#else
 	HKEY key;
 	DWORD result;
 	DWORD size = 4;
@@ -108,6 +111,7 @@ int cpu_clock_by_os(void)
 	RegCloseKey(key);
 	
 	return (int)result;
+#endif
 }
 #else
 #ifdef __APPLE__

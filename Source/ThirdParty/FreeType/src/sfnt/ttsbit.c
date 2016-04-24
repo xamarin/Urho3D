@@ -956,7 +956,7 @@
       goto Fail;
 
     {
-      TT_SBitDecoder_LoadFunc  loader;
+      TT_SBitDecoder_LoadFunc  loader = NULL;
 
 
       switch ( glyph_format )
