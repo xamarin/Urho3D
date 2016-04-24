@@ -20,7 +20,7 @@
 // THE SOFTWARE.
 //
 
-#if defined(_MSC_VER) && defined(URHO3D_MINIDUMPS)
+#if defined(_MSC_VER) && defined(URHO3D_MINIDUMPS) && !defined(UWP)
 
 #include "../Precompiled.h"
 
