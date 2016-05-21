@@ -27,6 +27,7 @@
 #include "../Core/CoreEvents.h"
 #include "../Core/ProcessUtils.h"
 #include "../Core/Profiler.h"
+#include "../Core/EventProfiler.h"
 #include "../Core/WorkQueue.h"
 #include "../Engine/Console.h"
 #include "../Engine/DebugHud.h"
@@ -63,6 +64,7 @@
 #endif
 
 #include "../DebugNew.h"
+
 
 #if defined(_MSC_VER) && defined(_DEBUG)
 // From dbgint.h
@@ -331,7 +333,12 @@ bool Engine::Initialize(const VariantMap& parameters)
             }
         }
 
-        if (!autoLoadPathExist)
+        // The following debug message is confusing when user is not aware of the autoload feature
+        // Especially because the autoload feature is enabled by default without user intervention
+        // The following extra conditional check below is to suppress unnecessary debug log entry under such default situation
+        // The cleaner approach is to not enable the autoload by default, i.e. do not use 'Autoload' as default value for 'AutoloadPaths' engine parameter
+        // However, doing so will break the existing applications that rely on this
+        if (!autoLoadPathExist && (autoLoadPaths.Size() > 1 || autoLoadPaths[0] != "Autoload"))
             URHO3D_LOGDEBUGF(
                 "Skipped autoload path '%s' as it does not exist, check the documentation on how to set the 'resource prefix path'",
                 autoLoadPaths[i].CString());
@@ -365,6 +372,7 @@ bool Engine::Initialize(const VariantMap& parameters)
             GetParameter(parameters, "FullScreen", true).GetBool(),
             GetParameter(parameters, "Borderless", false).GetBool(),
             GetParameter(parameters, "WindowResizable", false).GetBool(),
+            GetParameter(parameters, "HighDPI", false).GetBool(),
             GetParameter(parameters, "VSync", false).GetBool(),
             GetParameter(parameters, "TripleBuffer", false).GetBool(),
             GetParameter(parameters, "MultiSample", 1).GetInt()
@@ -416,7 +424,13 @@ bool Engine::Initialize(const VariantMap& parameters)
             SharedPtr<Object> object = i->second_->CreateObject();
     }
 #endif
-
+#ifdef URHO3D_PROFILING
+    if (GetParameter(parameters, "EventProfiler", true).GetBool())
+    {
+        context_->RegisterSubsystem(new EventProfiler(context_));
+        EventProfiler::SetActive(true);
+    }
+#endif
     frameTimer_.Reset();
 
     URHO3D_LOGINFO("Initialized engine");
@@ -440,6 +454,15 @@ void Engine::RunFrame()
     Time* time = GetSubsystem<Time>();
     Input* input = GetSubsystem<Input>();
     Audio* audio = GetSubsystem<Audio>();
+
+#ifdef URHO3D_PROFILING
+    if (EventProfiler::IsActive())
+    {
+        EventProfiler* eventProfiler = GetSubsystem<EventProfiler>();
+        if (eventProfiler)
+            eventProfiler->BeginFrame();
+    }
+#endif
 
     time->BeginFrame(timeStep_);
 
@@ -667,7 +690,7 @@ void Engine::ApplyFrameLimit()
     if (!initialized_)
         return;
 
-    int maxFps = maxFps_;
+    unsigned maxFps = maxFps_;
     Input* input = GetSubsystem<Input>();
     if (input && !input->HasFocus())
         maxFps = Min(maxInactiveFps_, maxFps);
@@ -785,10 +808,12 @@ VariantMap Engine::ParseParameters(const Vector<String>& arguments)
                 ret["TripleBuffer"] = true;
             else if (argument == "w")
                 ret["FullScreen"] = false;
-            else if (argument == "s")
-                ret["WindowResizable"] = true;
             else if (argument == "borderless")
                 ret["Borderless"] = true;
+            else if (argument == "s")
+                ret["WindowResizable"] = true;
+            else if (argument == "hd")
+                ret["HighDPI"] = true;
             else if (argument == "q")
                 ret["LogQuiet"] = true;
             else if (argument == "log" && !value.Empty())

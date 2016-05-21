@@ -56,6 +56,8 @@ public:
     void SetHotSpot(const Vector2& hotSpot);
     /// Set offset.
     void SetOffset(const IntVector2& offset);
+    /// Set texture edge offset in pixels. This affects the left/right and top/bottom edges equally to prevent edge sampling artifacts. Default 0.
+    void SetTextureEdgeOffset(float offset);
     /// Set sprite sheet.
     void SetSpriteSheet(SpriteSheet2D* spriteSheet);
 
@@ -71,8 +73,12 @@ public:
     /// Return offset.
     const IntVector2& GetOffset() const { return offset_; }
 
+    /// Return texture edge offset.
+    float GetTextureEdgeOffset() const { return edgeOffset_; }
+
     /// Return sprite sheet.
     SpriteSheet2D* GetSpriteSheet() const { return spriteSheet_; }
+
 
     /// Return draw rectangle.
     bool GetDrawRectangle(Rect& rect, bool flipX = false, bool flipY = false) const;
@@ -99,6 +105,8 @@ private:
     WeakPtr<SpriteSheet2D> spriteSheet_;
     /// Texture used while loading.
     SharedPtr<Texture2D> loadTexture_;
+    /// Offset to fix texture edge bleeding.
+    float edgeOffset_;
 };
 
 }

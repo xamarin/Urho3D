@@ -6,6 +6,7 @@ class Renderer
     void SetViewport(unsigned index, Viewport* viewport);
     void SetDefaultRenderPath(RenderPath* renderPath);
     void SetDefaultRenderPath(XMLFile* file);
+    void SetDefaultTechnique(Technique* technique);
     void SetHDRRendering(bool enable);
     void SetSpecularLighting(bool enable);
     void SetTextureAnisotropy(int level);
@@ -28,11 +29,13 @@ class Renderer
     void SetThreadedOcclusion(bool enable);
     void SetMobileShadowBiasMul(float mul);
     void SetMobileShadowBiasAdd(float add);
+    void SetMobileNormalOffsetMul(float mul);
     void ReloadShaders();
     
     unsigned GetNumViewports() const;
     Viewport* GetViewport(unsigned index) const;
     RenderPath* GetDefaultRenderPath() const;
+    Technique* GetDefaultTechnique() const;
     bool GetHDRRendering() const;
     bool GetSpecularLighting() const;
     bool GetDrawShadows() const;
@@ -55,6 +58,7 @@ class Renderer
     bool GetThreadedOcclusion() const;
     float GetMobileShadowBiasMul() const;
     float GetMobileShadowBiasAdd() const;
+    float GetMobileNormalOffsetMul() const;
     unsigned GetNumViews() const;
     unsigned GetNumPrimitives() const;
     unsigned GetNumBatches() const;
@@ -71,6 +75,7 @@ class Renderer
 
     tolua_property__get_set unsigned numViewports;
     tolua_property__get_set RenderPath* defaultRenderPath;
+    tolua_property__get_set Technique* defaultTechnique;
     tolua_property__get_set bool HDRRendering;
     tolua_property__get_set bool specularLighting;
     tolua_property__get_set bool drawShadows;
@@ -92,6 +97,7 @@ class Renderer
     tolua_property__get_set bool threadedOcclusion;
     tolua_property__get_set float mobileShadowBiasMul;
     tolua_property__get_set float mobileShadowBiasAdd;
+    tolua_property__get_set float mobileNormalOffsetMul;
     tolua_readonly tolua_property__get_set unsigned numViews;
     tolua_readonly tolua_property__get_set unsigned numPrimitives;
     tolua_readonly tolua_property__get_set unsigned numBatches;

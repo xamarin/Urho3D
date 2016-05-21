@@ -72,7 +72,6 @@ URHO3D_EVENT(E_KEYDOWN, KeyDown)
 {
     URHO3D_PARAM(P_KEY, Key);                      // int
     URHO3D_PARAM(P_SCANCODE, Scancode);            // int
-    URHO3D_PARAM(P_RAW, Raw);                      // uint
     URHO3D_PARAM(P_BUTTONS, Buttons);              // int
     URHO3D_PARAM(P_QUALIFIERS, Qualifiers);        // int
     URHO3D_PARAM(P_REPEAT, Repeat);                // bool
@@ -83,7 +82,6 @@ URHO3D_EVENT(E_KEYUP, KeyUp)
 {
     URHO3D_PARAM(P_KEY, Key);                      // int
     URHO3D_PARAM(P_SCANCODE, Scancode);            // int
-    URHO3D_PARAM(P_RAW, Raw);                      // uint
     URHO3D_PARAM(P_BUTTONS, Buttons);              // int
     URHO3D_PARAM(P_QUALIFIERS, Qualifiers);        // int
 }
@@ -215,6 +213,7 @@ URHO3D_EVENT(E_MOUSEVISIBLECHANGED, MouseVisibleChanged)
 URHO3D_EVENT(E_MOUSEMODECHANGED, MouseModeChanged)
 {
     URHO3D_PARAM(P_MODE, Mode);                    // MouseMode
+    URHO3D_PARAM(P_MOUSELOCKED, MouseLocked);      // bool
 }
 
 /// Application exit requested.

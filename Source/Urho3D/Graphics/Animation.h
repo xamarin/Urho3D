@@ -134,8 +134,6 @@ public:
     bool RemoveTrack(const String& name);
     /// Remove all tracks. This is unsafe if the animation is currently used in playback.
     void RemoveAllTracks();
-    /// Set all animation tracks.
-    void SetTracks(const HashMap<StringHash, AnimationTrack>& tracks);
     /// Set a trigger point at index.
     void SetTrigger(unsigned index, const AnimationTriggerPoint& trigger);
     /// Add a trigger point.
@@ -148,6 +146,8 @@ public:
     void RemoveAllTriggers();
     /// Resize trigger point vector.
     void SetNumTriggers(unsigned num);
+    /// Clone the animation.
+    SharedPtr<Animation> Clone(const String& cloneName = String::EMPTY) const;
 
     /// Return animation name.
     const String& GetAnimationName() const { return animationName_; }

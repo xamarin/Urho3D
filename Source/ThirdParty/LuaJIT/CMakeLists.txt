@@ -27,6 +27,8 @@ if (NOT CMAKE_PROJECT_NAME STREQUAL Urho3D)
     # Set CMake minimum version and CMake policy required by Urho3D-CMake-common module
     if (APPLE)
         cmake_minimum_required (VERSION 3.4.1)
+    elseif (WIN32)
+        cmake_minimum_required (VERSION 3.2.3)
     else ()
         cmake_minimum_required (VERSION 2.8.6)
     endif ()
@@ -266,6 +268,12 @@ if (NOT LUAJIT_CACHE STREQUAL "${URHO3D_64BIT}-${LUAJIT_DISABLE_FFI}-${LUAJIT_DI
 
     # Makefile: Files and pathnames
     set (DASM_ARCH ${TARGET_LJARCH})
+    find_string ("LJ_LE (1)" LITTLE_ENDIAN)
+    if (LITTLE_ENDIAN)
+        set (DASM_AFLAGS ${DASM_AFLAGS} -D ENDIAN_LE)
+    else ()
+        set (DASM_AFLAGS ${DASM_AFLAGS} -D ENDIAN_BE)
+    endif ()
     find_string ("LJ_ARCH_BITS ([^\\n]*)" ARCH_BITS)    # Workaround for "LJ_ARCH_BITS (.*?)\\n" as CMake does not understand non-greedy quantifier
     if (ARCH_BITS EQUAL 64)
         set (DASM_AFLAGS ${DASM_AFLAGS} -D P64)
@@ -423,7 +431,7 @@ if (WIN32)
 else ()
     set (LJVM_BOUT lj_vm.S)
     enable_language (ASM)
-    if (URHO3D_DEFAULT_64BIT AND NOT URHO3D_64BIT)  # Not the compiler native ABI, this could only happen on multilib-capable compilers
+    if (NATIVE_64BIT AND NOT URHO3D_64BIT)  # Not the compiler native ABI, this could only happen on multilib-capable compilers
         set (CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} -m32")
     endif ()
     if (APPLE)
@@ -448,7 +456,7 @@ else ()
     set (LJCORE_C src/lj_gc.c src/lj_err.c src/lj_char.c src/lj_bc.c src/lj_obj.c src/lj_buf.c
         src/lj_str.c src/lj_tab.c src/lj_func.c src/lj_udata.c src/lj_meta.c src/lj_debug.c
         src/lj_state.c src/lj_dispatch.c src/lj_vmevent.c src/lj_vmmath.c src/lj_strscan.c
-        src/lj_strfmt.c src/lj_api.c src/lj_profile.c
+        src/lj_strfmt.c src/lj_strfmt_num.c src/lj_api.c src/lj_profile.c
         src/lj_lex.c src/lj_parse.c src/lj_bcread.c src/lj_bcwrite.c src/lj_load.c
         src/lj_ir.c src/lj_opt_mem.c src/lj_opt_fold.c src/lj_opt_narrow.c
         src/lj_opt_dce.c src/lj_opt_loop.c src/lj_opt_split.c src/lj_opt_sink.c

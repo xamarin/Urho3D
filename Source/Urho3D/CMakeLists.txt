@@ -40,6 +40,21 @@ if (URHO3D_CLANG_TOOLS OR URHO3D_BINDINGS)
     endif ()
 endif ()
 
+# Check sincosf support
+if (NOT MSVC)   # There is no chance MSVC would pass this one as it does not have libm
+    include (CheckLibraryExists)
+    check_library_exists (m sincosf "" HAVE_SINCOSF)
+endif ()
+if (HAVE_SINCOSF)
+    add_definitions (-DHAVE_SINCOSF)
+else ()
+    include (CheckFunctionExists)
+    check_function_exists (__sincosf HAVE_UNDERSCORE_SINCOSF)
+    if (HAVE_UNDERSCORE_SINCOSF)
+        add_definitions (-DHAVE_UNDERSCORE_SINCOSF)
+    endif ()
+endif ()
+
 add_definitions (-DURHO3D_IS_BUILDING)
 if (ODBC_VERSION AND NOT ODBC_VERSION VERSION_LESS 3)
     add_definitions (-DODBC_3_OR_LATER)
@@ -103,13 +118,24 @@ if (TARGET LuaJIT_universal)
     add_custom_command (OUTPUT ${LuaJIT_universal_symbolic}
         COMMAND xcodebuild ARCHS="$(ARCHS)" -target LuaJIT_universal -configuration $(CONFIGURATION)
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
-    set_source_files_properties (${LuaJIT_universal_symbolic} PROPERTIES SYMBOLIC TRUE)
+    list (APPEND SYMBOLIC_SOURCES ${LuaJIT_universal_symbolic})
 endif ()
 add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/librevision.h
     COMMAND ${CMAKE_COMMAND} -DFILENAME=${CMAKE_CURRENT_BINARY_DIR}/librevision.h -P CMake/Modules/GetUrho3DRevision.cmake
     DEPENDS ${URHO3D_DEPS} ${CMAKE_SOURCE_DIR}/CMake/Modules/GetUrho3DRevision.cmake
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     COMMENT "Generating GIT revision number (tag + last commit SHA-1)")
+if (EMSCRIPTEN)
+    # Emscripten will attempt to generate system libraries in LLVM bitcode (libcxxabi, gl, libc, and dlmalloc) when linking for the very first time
+    # However, currently it does so without any locking resulting in potentially multiple same generation with build system that supports concurrent build processes such as ours
+    # Workaround that by calling Emscripten builder to generate all the required system libraries (in case it is the very first time) ahead of time in an orderly fashion
+    set (EMBUILDER_SYSTEM_LIBS_symbolic EMBUILDER_SYSTEM_LIBS_symbolic)
+    list (APPEND EMSCRIPTEN_SYSTEM_LIBS dlmalloc libc libcxxabi gl)
+    add_custom_command (OUTPUT ${EMBUILDER_SYSTEM_LIBS_symbolic}
+        COMMAND ${EMBUILDER} build ${EMSCRIPTEN_SYSTEM_LIBS})
+    list (APPEND SYMBOLIC_SOURCES ${EMBUILDER_SYSTEM_LIBS_symbolic})
+endif ()
+set_source_files_properties (${SYMBOLIC_SOURCES} PROPERTIES SYMBOLIC TRUE)
 
 # Use the AutoBinder tool to generate source files for binding script subsystems
 if (URHO3D_BINDINGS)
@@ -148,7 +174,7 @@ if (URHO3D_LUA)
         endif ()
         ExternalProject_Add (tolua++
             SOURCE_DIR ${CMAKE_SOURCE_DIR}/Source/ThirdParty/toluapp/src/bin
-            CMAKE_ARGS -DDEST_RUNTIME_DIR=${CMAKE_BINARY_DIR}/bin/tool -DBAKED_CMAKE_SOURCE_DIR=${CMAKE_SOURCE_DIR} ${IOS_FIX})
+            CMAKE_ARGS -DDEST_RUNTIME_DIR=${CMAKE_BINARY_DIR}/bin/tool -DBAKED_CMAKE_SOURCE_DIR=${CMAKE_SOURCE_DIR} -DURHO3D_UPDATE_SOURCE_TREE=${URHO3D_UPDATE_SOURCE_TREE} ${IOS_FIX})
     else ()
         # Otherwise, build it internally as per normal
         add_subdirectory (../ThirdParty/toluapp/src/bin ../ThirdParty/toluapp/src/bin)
@@ -197,14 +223,19 @@ if (MSVC AND URHO3D_LIB_TYPE STREQUAL SHARED)   # MSVC linker does not have forc
             get_filename_component (INT_DIR ${INT_DIR} PATH)
             if (CMAKE_GENERATOR MATCHES 2008)
                 string (REPLACE /$(OutDir) /${TARGET}.dir/$(ConfigurationName) INT_DIR ${INT_DIR})
-            else ()
+            elseif (VS)
                 string (REPLACE /$(Configuration) /${TARGET}.dir/$(ConfigurationName) INT_DIR ${INT_DIR})
             endif ()
             foreach (SOURCE ${SOURCES})
                 get_filename_component (NAME ${SOURCE} NAME)
                 if (NAME MATCHES \\.c.*$|\\.mm?$|\\.S$|\\.s$)
-                    string (REGEX REPLACE \\.c.*$|\\.mm?$|\\.S$|\\.s$ "" NAME ${NAME})
-                    list (APPEND OBJ_FILES ${INT_DIR}/${NAME}.obj)
+                    if (VS)
+                        string (REGEX REPLACE \\.c.*$|\\.mm?$|\\.S$|\\.s$ "" NAME "${NAME}")
+                        list (APPEND OBJ_FILES ${INT_DIR}/${NAME}.obj)
+                    else ()
+                        string (REGEX REPLACE ^.*/ThirdParty/${TARGET}/ "" SOURCE "${SOURCE}")
+                        list (APPEND OBJ_FILES ${INT_DIR}/CMakeFiles/${TARGET}.dir/${SOURCE}.obj)
+                    endif ()
                 elseif (NAME MATCHES \\.o.*$)
                     list (APPEND OBJ_FILES ${SOURCE})
                 endif ()
@@ -218,7 +249,7 @@ if (MSVC AND URHO3D_LIB_TYPE STREQUAL SHARED)   # MSVC linker does not have forc
 endif ()
 
 # Aggregate all source files
-list (APPEND SOURCE_FILES ${GEN_CPP_FILES} ${ALL_OBJ_FILES} librevision.h Urho3D.h ${LuaJIT_universal_symbolic})
+list (APPEND SOURCE_FILES ${GEN_CPP_FILES} ${ALL_OBJ_FILES} librevision.h Urho3D.h ${SYMBOLIC_SOURCES})
 
 # Define dependency libs
 # Add include directories to find the precompiled header, export header, and installed headers from thirdparty libs
@@ -260,7 +291,7 @@ if (NOT ANDROID AND NOT WEB)
     else ()
         message (FATAL_ERROR "The .soversion file is corrupted. It should contain a version number with this format major(0xFFFF).minor(0xFF).patch-level(0xFF). e.g.: 0.1.2")
     endif ()
-elseif (WEB)
+elseif (EMSCRIPTEN)
     # Emscripten does not support generation of shared library in a conventional sense, it just produces "linked" LLVM bitcode
     set (CMAKE_SHARED_LIBRARY_SUFFIX ".bc")
 endif ()
@@ -280,6 +311,10 @@ if (WIN32 AND URHO3D_LIB_TYPE STREQUAL SHARED)
 endif ()
 
 # Setup dependency frameworks and libraries
+if (MINGW)
+    set (CMAKE_C_STANDARD_LIBRARIES "${CMAKE_C_STANDARD_LIBRARIES_INIT} -lwinmm")
+    set (CMAKE_CXX_STANDARD_LIBRARIES "${CMAKE_C_STANDARD_LIBRARIES_INIT} -lwinmm")
+endif ()
 if (APPLE)
     set (FORCE_LOAD -force_load)
 elseif (NOT MSVC)
@@ -318,7 +353,7 @@ if (NOT XCODE AND NOT MSVC)
                 COMMAND libtool -static $<TARGET_FILE:${TARGET_NAME}>.engine ${ARCHIVES} -o $<TARGET_FILE:${TARGET_NAME}>
                 COMMAND rm $<TARGET_FILE:${TARGET_NAME}>.engine
                 COMMENT "Merging all archives into a single static library using libtool")
-        elseif (WEB OR CMAKE_BINARY_DIR MATCHES " ")
+        elseif (EMSCRIPTEN OR CMAKE_BINARY_DIR MATCHES " ")
             # Do it the hard way by first extracting the object (bitcode) files and appending them to final archive:
             # a) For Emscripten build as Emscripten emar (llvm-ar) neither takes archives directly as input nor supports MRI-style script
             # b) When the build tree path contains spaces because MRI script does not support spaces in path even with proper escape
@@ -396,7 +431,7 @@ install_header_files (FILES ${CMAKE_CURRENT_BINARY_DIR}/librevision.h ${CMAKE_CU
 # Generate platform specific pkg-config file for the benefit of Urho3D library users via SDK without CMake
 get_directory_property (URHO3D_COMPILE_DEFINITIONS DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} COMPILE_DEFINITIONS)
 # Remove those defines that are only used for building the library and not needed by library user
-list (REMOVE_ITEM URHO3D_COMPILE_DEFINITIONS HAVE_STDINT_H GLEW_STATIC GLEW_NO_GLU URHO3D_IS_BUILDING ODBC_3_OR_LATER ASSET_DIR_INDICATOR)
+list (REMOVE_ITEM URHO3D_COMPILE_DEFINITIONS HAVE_STDINT_H GLEW_STATIC GLEW_NO_GLU HAVE_SINCOSF HAVE_UNDERSCORE_SINCOSF URHO3D_IS_BUILDING ODBC_3_OR_LATER ASSET_DIR_INDICATOR)
 if (ABSOLUTE_PATH_LIBS)
     string (REPLACE ";" "\" \"" URHO3D_ABS_PATH_LIBS "\"${ABSOLUTE_PATH_LIBS}\"")   # Note: need to always "stringify" a variable in list context for replace to work correctly, besides the list could be empty
     string (REPLACE "${SYSROOT}" "\${pc_sysrootdir}" URHO3D_ABS_PATH_LIBS "${URHO3D_ABS_PATH_LIBS}")
