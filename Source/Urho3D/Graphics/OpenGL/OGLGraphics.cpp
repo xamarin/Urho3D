@@ -345,7 +345,8 @@ bool Graphics::SetMode(int width, int height, bool fullscreen, bool borderless, 
 
 #if defined(IOS) || defined(TVOS)
     // iOS and tvOS app always take the fullscreen (and with status bar hidden)
-    fullscreen = true;
+    // fullscreen = true;
+    // UrhoSharp: NO! we want it to be displayed in a smaller view!
 #endif
 
     // Fullscreen or Borderless can not be resizable

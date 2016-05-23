@@ -156,6 +156,9 @@ UIKit_IsSystemVersionAtLeast(double version)
 CGRect
 UIKit_ComputeViewFrame(SDL_Window *window, UIScreen *screen)
 {
+    if (urhoPlaceholderView != NULL)
+        return urhoPlaceholderView.bounds;
+    
     BOOL hasiOS7 = UIKit_IsSystemVersionAtLeast(7.0);
 
     if (hasiOS7 || (window->flags & (SDL_WINDOW_BORDERLESS|SDL_WINDOW_FULLSCREEN))) {

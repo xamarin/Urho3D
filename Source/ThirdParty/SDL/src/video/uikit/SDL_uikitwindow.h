@@ -25,6 +25,10 @@
 #import "SDL_uikitvideo.h"
 #import "SDL_uikitview.h"
 #import "SDL_uikitviewcontroller.h"
+#import <UIKit/UIKit.h>
+
+UIView *urhoPlaceholderView;
+UIWindow *urhoPlaceholderWindow;
 
 extern int UIKit_CreateWindow(_THIS, SDL_Window * window);
 extern void UIKit_SetWindowTitle(_THIS, SDL_Window * window);

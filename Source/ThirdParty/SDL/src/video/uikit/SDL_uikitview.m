@@ -101,8 +101,12 @@
          * explicitly re-set it to make sure the view is properly attached to
          * the window. Just adding the sub-view if the root view controller is
          * already correct causes orientation issues on iOS 7 and below. */
-        data.uiwindow.rootViewController = nil;
-        data.uiwindow.rootViewController = data.viewcontroller;
+        if (urhoPlaceholderView != NULL){
+            [urhoPlaceholderView addSubview:self];
+        } else {
+            data.uiwindow.rootViewController = nil;
+            data.uiwindow.rootViewController = data.viewcontroller;
+        }
 
         /* The view's bounds may not be correct until the next event cycle. That
          * might happen after the current dimensions are queried, so we force a
