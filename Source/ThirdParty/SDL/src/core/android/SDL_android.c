@@ -801,21 +801,23 @@ fallback:
                 "open", "(Ljava/lang/String;I)Ljava/io/InputStream;");
         inputStream = (*mEnv)->CallObjectMethod(mEnv, assetManager, mid, fileNameJString, 1 /* ACCESS_RANDOM */);
         if (Android_JNI_ExceptionOccurred(SDL_FALSE)) {
+			//UrhoSharp: temporarily is not supported 
             /* Try fallback to APK expansion files */
-            mid = (*mEnv)->GetMethodID(mEnv, (*mEnv)->GetObjectClass(mEnv, context),
-                "openAPKExpansionInputStream", "(Ljava/lang/String;)Ljava/io/InputStream;");
-            if (!mid) {
-                SDL_SetError("No openAPKExpansionInputStream() in Java class");
-                goto failure; /* Java class is missing the required method */
-            }
-            inputStream = (*mEnv)->CallObjectMethod(mEnv, context, mid, fileNameJString);
+            //mid = (*mEnv)->GetMethodID(mEnv, (*mEnv)->GetObjectClass(mEnv, context),
+            //    "openAPKExpansionInputStream", "(Ljava/lang/String;)Ljava/io/InputStream;");
+            //if (!mid) {
+            //    SDL_SetError("No openAPKExpansionInputStream() in Java class");
+            //    goto failure; /* Java class is missing the required method */
+            //}
+            //inputStream = (*mEnv)->CallObjectMethod(mEnv, context, mid, fileNameJString);
 
             /* Exception is checked first because it always needs to be cleared.
              * If no exception occurred then the last SDL error message is kept.
              */
-            if (Android_JNI_ExceptionOccurred(SDL_FALSE) || !inputStream) {
-                goto failure;
-            }
+            //if (Android_JNI_ExceptionOccurred(SDL_FALSE) || !inputStream) {
+            //    goto failure;
+            //}
+			goto failure;
         }
 
         ctx->hidden.androidio.inputStreamRef = (*mEnv)->NewGlobalRef(mEnv, inputStream);
