@@ -84,6 +84,8 @@ namespace Urho3D
 
 int DoSystemCommand(const String& commandLine, bool redirectToLog, Context* context)
 {
+#ifndef UWP
+
 #if !defined(NO_POPEN) && !defined(MINI_URHO)
     if (!redirectToLog)
 #endif
@@ -134,6 +136,9 @@ int DoSystemCommand(const String& commandLine, bool redirectToLog, Context* cont
 
     return exitCode;
 #endif
+#else
+	return -1;
+#endif // !UWP
 }
 
 int DoSystemRun(const String& fileName, const Vector<String>& arguments)

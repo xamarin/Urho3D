@@ -758,9 +758,11 @@ VariantMap Engine::ParseParameters(const Vector<String>& arguments)
 {
     VariantMap ret;
 
-    // Pre-initialize the parameters with environment variable values when they are set
-    if (const char* paths = getenv("URHO3D_PREFIX_PATH"))
-        ret["ResourcePrefixPaths"] = paths;
+#ifndef UWP
+	// Pre-initialize the parameters with environment variable values when they are set
+	if (const char* paths = getenv("URHO3D_PREFIX_PATH"))
+		ret["ResourcePrefixPaths"] = paths;
+#endif // !UWP
 
     for (unsigned i = 0; i < arguments.Size(); ++i)
     {

@@ -50,6 +50,7 @@ if not "%~1" == "" (
     if "%~1" == "-DURHO3D_64BIT" if "%~2" == "1" set "arch= Win64"
     if "%~1" == "-DURHO3D_64BIT" if "%~2" == "0" set "arch="
     if "%~1" == "-VS" set "OPTS=-G "Visual Studio %~2%arch%""
+    if "%~1" == "-UWP" set "OPTS=-G "Visual Studio 14%arch%" -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0"
     if "%~1" == "-G" set "OPTS=%OPTS% %~1 %2"
     set "ARG1=%~1"
     set "ARG2=%~2"
