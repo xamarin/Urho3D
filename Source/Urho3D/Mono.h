@@ -18,7 +18,7 @@ enum CallbackType
 class Mono
 {
 public:
-    static void Callback(CallbackType type, void* target = nullptr, void* param1 = nullptr, void* param2 = nullptr, void* param3 = nullptr, void* param4 = nullptr);
+    static void Callback(CallbackType type, void* target = 0, void* param1 = 0, void* param2 = 0, void* param3 = 0, void* param4 = 0);
 };
 
 }
