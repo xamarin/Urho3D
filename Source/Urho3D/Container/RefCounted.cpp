@@ -43,7 +43,7 @@ RefCounted::~RefCounted()
     assert(refCount_->refs_ == 0);
     assert(refCount_->weakRefs_ > 0);
 
-    Mono::Callback(CallbackType::RefCounted_Delete, this);
+    Mono::Callback(RefCounted_Delete, this);
     // Mark object as expired, release the self weak ref and delete the refcount if no other weak refs exist
     refCount_->refs_ = -1;
     (refCount_->weakRefs_)--;
@@ -57,7 +57,7 @@ void RefCounted::AddRef()
 {
     assert(refCount_->refs_ >= 0);
     (refCount_->refs_)++;
-    Mono::Callback(CallbackType::RefCounted_AddRef, this);
+    Mono::Callback(RefCounted_AddRef, this);
 }
 
 void RefCounted::ReleaseRef()

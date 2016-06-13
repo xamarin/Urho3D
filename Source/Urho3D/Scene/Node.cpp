@@ -212,7 +212,7 @@ bool Node::SaveXML(XMLElement& dest) const
         XMLElement compElem = dest.CreateChild("component");
         if (!component->SaveXML(compElem))
             return false;
-        Mono::Callback(CallbackType::Component_SaveXml, component, &compElem);
+        Mono::Callback(Component_SaveXml, component, &compElem);
     }
 
     // Write child nodes
@@ -1524,7 +1524,7 @@ bool Node::LoadXML(const XMLElement& source, SceneResolver& resolver, bool readC
             resolver.AddComponent(compID, newComponent);
             if (!newComponent->LoadXML(compElem))
                 return false;
-            Mono::Callback(CallbackType::Component_LoadXml, newComponent, &compElem);
+            Mono::Callback(Component_LoadXml, newComponent, &compElem);
         }
 
         compElem = compElem.GetNext("component");
@@ -1784,7 +1784,7 @@ void Node::AddComponent(Component* component, unsigned id, CreateMode mode)
 
         scene_->SendEvent(E_COMPONENTADDED, eventData);
     }
-    Mono::Callback(CallbackType::Component_AttachedToNode, component);
+    Mono::Callback(Component_AttachedToNode, component);
 }
 
 unsigned Node::GetNumPersistentChildren() const
@@ -1926,7 +1926,7 @@ void Node::SetEnabled(bool enable, bool recursive, bool storeSelf)
             if (*i)
             {
                 (*i)->OnNodeSetEnabled(this);
-                Mono::Callback(CallbackType::Component_OnNodeSetEnabled, *i);
+                Mono::Callback(Component_OnNodeSetEnabled, *i);
                 ++i;
             }
             // If listener has expired, erase from list

@@ -1048,7 +1048,7 @@ void Scene::ComponentAdded(Component* component)
     }
 
     component->OnSceneSet(this);
-    Mono::Callback(CallbackType::Component_OnSceneSet, component, this);
+    Mono::Callback(Component_OnSceneSet, component, this);
 }
 
 void Scene::ComponentRemoved(Component* component)
@@ -1064,7 +1064,7 @@ void Scene::ComponentRemoved(Component* component)
 
     component->SetID(0);
     component->OnSceneSet(0);
-    Mono::Callback(CallbackType::Component_OnSceneSet, component);
+    Mono::Callback(Component_OnSceneSet, component);
 }
 
 void Scene::SetVarNamesAttr(const String& value)
