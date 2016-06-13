@@ -51,12 +51,6 @@ enum TransformSpace
     TS_WORLD
 };
 
-//MONO: callbacks for SaveXML/LoadXML/Attached to node. TODO: binary Save/Load
-//TODO: re-implement it via Urho events system (add new custom events)
-enum MonoComponentCallbackType { SaveXml, LoadXml, AttachedToNode, SceneSet };
-typedef void(*MonoComponentCallback)(Component *, XMLElement * element, Scene * scene, MonoComponentCallbackType);
-MonoComponentCallback monoComponentCallback;
-
 /// %Scene node that may contain components and child nodes.
 class URHO3D_API Node : public Animatable
 {

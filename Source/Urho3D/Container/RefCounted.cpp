@@ -25,22 +25,10 @@
 #include "../Container/RefCounted.h"
 
 #include "../DebugNew.h"
+#include "Mono.h"
 
 namespace Urho3D
 {
-
-//MONO: we need these callbacks to implement toggle ref mechanism 
-enum RefCountedEvent { RCE_DELETE, RCE_ADDREF };
-typedef void(*MonoRefCountedCallback)(void *, RefCountedEvent);
-MonoRefCountedCallback monoRefCountedCallback;
-extern "C"
-#ifdef _MSC_VER
-__declspec(dllexport)
-#endif
-void RegisterMonoRefCountedCallback(MonoRefCountedCallback callback)
-{
-    monoRefCountedCallback = callback;
-}
 
 RefCounted::RefCounted() :
     refCount_(new RefCount())
@@ -55,8 +43,7 @@ RefCounted::~RefCounted()
     assert(refCount_->refs_ == 0);
     assert(refCount_->weakRefs_ > 0);
 
-    if (monoRefCountedCallback)
-        monoRefCountedCallback(this, RCE_DELETE);
+    Mono::Callback(CallbackType::RefCounted_Delete, this);
     // Mark object as expired, release the self weak ref and delete the refcount if no other weak refs exist
     refCount_->refs_ = -1;
     (refCount_->weakRefs_)--;
@@ -70,8 +57,7 @@ void RefCounted::AddRef()
 {
     assert(refCount_->refs_ >= 0);
     (refCount_->refs_)++;
-    if (monoRefCountedCallback)
-        monoRefCountedCallback(this, RCE_ADDREF);
+    Mono::Callback(CallbackType::RefCounted_AddRef, this);
 }
 
 void RefCounted::ReleaseRef()
