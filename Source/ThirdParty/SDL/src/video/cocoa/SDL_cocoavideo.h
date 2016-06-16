@@ -40,6 +40,9 @@
 #include "SDL_cocoaopengl.h"
 #include "SDL_cocoawindow.h"
 
+
+NSView *urhoPlaceholderView;
+
 /* Private display data */
 
 @class SDLTranslatorResponder;

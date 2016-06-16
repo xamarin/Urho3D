@@ -514,6 +514,10 @@ SetWindowStyle(SDL_Window * window, unsigned int style)
 
 - (void)windowDidResize:(NSNotification *)aNotification
 {
+    if (urhoPlaceholderView){
+        return;
+    }
+    
     if (inFullscreenTransition) {
         /* We'll take care of this at the end of the transition */
         return;
@@ -1143,6 +1147,7 @@ SetupWindowData(_THIS, SDL_Window * window, NSWindow *nswindow, SDL_bool created
     data->listener = [[Cocoa_WindowListener alloc] init];
 
     /* Fill in the SDL window with the window data */
+    if (!urhoPlaceholderView)
     {
         NSRect rect = [nswindow contentRectForFrameRect:[nswindow frame]];
         ConvertNSRect([nswindow screen], (window->flags & FULLSCREEN_MASK), &rect);
@@ -1150,6 +1155,13 @@ SetupWindowData(_THIS, SDL_Window * window, NSWindow *nswindow, SDL_bool created
         window->y = (int)rect.origin.y;
         window->w = (int)rect.size.width;
         window->h = (int)rect.size.height;
+    } else {
+        window->x = 0;
+        window->y = 0;
+        
+        NSRect rect = [urhoPlaceholderView bounds];
+        window->w = rect.size.width;
+        window->h = rect.size.height;
     }
 
     /* Set up the listener after we create the view */
@@ -1204,6 +1216,12 @@ SetupWindowData(_THIS, SDL_Window * window, NSWindow *nswindow, SDL_bool created
     return 0;
 }}
 
+// UrhoSharp
+void SDL_Cocoa_SetExternalView(NSView* view)
+{
+    urhoPlaceholderView = view;
+}
+
 int
 Cocoa_CreateWindow(_THIS, SDL_Window * window)
 { @autoreleasepool
@@ -1238,41 +1256,49 @@ Cocoa_CreateWindow(_THIS, SDL_Window * window)
             rect.origin.y -= screenRect.origin.y;
         }
     }
-
-    @try {
-        nswindow = [[SDLWindow alloc] initWithContentRect:rect styleMask:style backing:NSBackingStoreBuffered defer:NO screen:screen];
-    }
-    @catch (NSException *e) {
-        return SDL_SetError("%s", [[e reason] UTF8String]);
-    }
-    [nswindow setBackgroundColor:[NSColor blackColor]];
-
-    if (videodata->allow_spaces) {
-        SDL_assert(floor(NSAppKitVersionNumber) > NSAppKitVersionNumber10_6);
-        SDL_assert([nswindow respondsToSelector:@selector(toggleFullScreen:)]);
-        /* we put FULLSCREEN_DESKTOP windows in their own Space, without a toggle button or menubar, later */
-        if (window->flags & SDL_WINDOW_RESIZABLE) {
-            /* resizable windows are Spaces-friendly: they get the "go fullscreen" toggle button on their titlebar. */
-            [nswindow setCollectionBehavior:NSWindowCollectionBehaviorFullScreenPrimary];
+    
+    if (!urhoPlaceholderView)
+    {
+        @try {
+            nswindow = [[SDLWindow alloc] initWithContentRect:rect styleMask:style backing:NSBackingStoreBuffered defer:NO screen:screen];
         }
-    }
-
-    /* Create a default view for this window */
-    rect = [nswindow contentRectForFrameRect:[nswindow frame]];
-    SDLView *contentView = [[SDLView alloc] initWithFrame:rect];
-    [contentView setSDLWindow:window];
-
-    if (window->flags & SDL_WINDOW_ALLOW_HIGHDPI) {
-        if ([contentView respondsToSelector:@selector(setWantsBestResolutionOpenGLSurface:)]) {
-            [contentView setWantsBestResolutionOpenGLSurface:YES];
+        @catch (NSException *e) {
+            return SDL_SetError("%s", [[e reason] UTF8String]);
         }
+        [nswindow setBackgroundColor:[NSColor blackColor]];
+
+        if (videodata->allow_spaces) {
+            SDL_assert(floor(NSAppKitVersionNumber) > NSAppKitVersionNumber10_6);
+            SDL_assert([nswindow respondsToSelector:@selector(toggleFullScreen:)]);
+            /* we put FULLSCREEN_DESKTOP windows in their own Space, without a toggle button or menubar, later */
+            if (window->flags & SDL_WINDOW_RESIZABLE) {
+                /* resizable windows are Spaces-friendly: they get the "go fullscreen" toggle button on their titlebar. */
+                [nswindow setCollectionBehavior:NSWindowCollectionBehaviorFullScreenPrimary];
+            }
+        }
+
+        /* Create a default view for this window */
+        rect = [nswindow contentRectForFrameRect:[nswindow frame]];
+        SDLView *contentView = [[SDLView alloc] initWithFrame:rect];
+        [contentView setSDLWindow:window];
+
+        if (window->flags & SDL_WINDOW_ALLOW_HIGHDPI) {
+            if ([contentView respondsToSelector:@selector(setWantsBestResolutionOpenGLSurface:)]) {
+                [contentView setWantsBestResolutionOpenGLSurface:YES];
+            }
+        }
+
+        [nswindow setContentView: contentView];
+        [contentView release];
+
+        /* Allow files and folders to be dragged onto the window by users */
+        [nswindow registerForDraggedTypes:[NSArray arrayWithObject:(NSString *)kUTTypeFileURL]];
     }
-
-    [nswindow setContentView: contentView];
-    [contentView release];
-
-    /* Allow files and folders to be dragged onto the window by users */
-    [nswindow registerForDraggedTypes:[NSArray arrayWithObject:(NSString *)kUTTypeFileURL]];
+    else
+    {
+        nswindow = [urhoPlaceholderView window];
+    }
+    
 
     if (SetupWindowData(_this, window, nswindow, SDL_TRUE) < 0) {
         [nswindow release];
@@ -1344,7 +1370,11 @@ Cocoa_SetWindowPosition(_THIS, SDL_Window * window)
 
 void
 Cocoa_SetWindowSize(_THIS, SDL_Window * window)
-{ @autoreleasepool
+{
+    if (urhoPlaceholderView) {
+        return;
+    }
+@autoreleasepool
 {
     SDL_WindowData *windata = (SDL_WindowData *) window->driverdata;
     NSWindow *nswindow = windata->nswindow;
@@ -1371,7 +1401,11 @@ Cocoa_SetWindowSize(_THIS, SDL_Window * window)
 
 void
 Cocoa_SetWindowMinimumSize(_THIS, SDL_Window * window)
-{ @autoreleasepool
+{
+    if (urhoPlaceholderView) {
+        return;
+    }
+@autoreleasepool
 {
     SDL_WindowData *windata = (SDL_WindowData *) window->driverdata;
 
@@ -1384,7 +1418,11 @@ Cocoa_SetWindowMinimumSize(_THIS, SDL_Window * window)
 
 void
 Cocoa_SetWindowMaximumSize(_THIS, SDL_Window * window)
-{ @autoreleasepool
+{
+    if (urhoPlaceholderView) {
+        return;
+    }
+@autoreleasepool
 {
     SDL_WindowData *windata = (SDL_WindowData *) window->driverdata;
 
@@ -1438,7 +1476,11 @@ Cocoa_RaiseWindow(_THIS, SDL_Window * window)
 
 void
 Cocoa_MaximizeWindow(_THIS, SDL_Window * window)
-{ @autoreleasepool
+{
+    if (urhoPlaceholderView) {
+        return;
+    }
+@autoreleasepool
 {
     SDL_WindowData *windata = (SDL_WindowData *) window->driverdata;
     NSWindow *nswindow = windata->nswindow;
@@ -1450,7 +1492,11 @@ Cocoa_MaximizeWindow(_THIS, SDL_Window * window)
 
 void
 Cocoa_MinimizeWindow(_THIS, SDL_Window * window)
-{ @autoreleasepool
+{
+    if (urhoPlaceholderView) {
+        return;
+    }
+@autoreleasepool
 {
     SDL_WindowData *data = (SDL_WindowData *) window->driverdata;
     NSWindow *nswindow = data->nswindow;
@@ -1498,7 +1544,11 @@ Cocoa_RebuildWindow(SDL_WindowData * data, NSWindow * nswindow, unsigned style)
 
 void
 Cocoa_SetWindowBordered(_THIS, SDL_Window * window, SDL_bool bordered)
-{ @autoreleasepool
+{
+    if (urhoPlaceholderView) {
+        return;
+    }
+@autoreleasepool
 {
     if (SetWindowStyle(window, GetWindowStyle(window))) {
         if (bordered) {
@@ -1510,7 +1560,9 @@ Cocoa_SetWindowBordered(_THIS, SDL_Window * window, SDL_bool bordered)
 
 void
 Cocoa_SetWindowFullscreen(_THIS, SDL_Window * window, SDL_VideoDisplay * display, SDL_bool fullscreen)
-{ @autoreleasepool
+{
+
+@autoreleasepool
 {
     SDL_WindowData *data = (SDL_WindowData *) window->driverdata;
     NSWindow *nswindow = data->nswindow;
