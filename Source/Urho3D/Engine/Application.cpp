@@ -64,7 +64,7 @@ Application::Application(Context* context) :
     SubscribeToEvent(E_LOGMESSAGE, URHO3D_HANDLER(Application, HandleLogMessage));
 }
 
-int Application::Run()
+int Application::Run(bool autostart)
 {
     // Emscripten-specific: C++ exceptions are turned off by default in -O1 (and above), unless '-s DISABLE_EXCEPTION_CATCHING=0' flag is set
     // Urho3D build configuration uses -O3 (Release), -O2 (RelWithDebInfo), and -O0 (Debug)
@@ -82,7 +82,7 @@ int Application::Run()
         }
 
         Start();
-        if (exitCode_)
+        if (exitCode_ || !autostart)
             return exitCode_;
 
         // Platforms other than iOS, Emscripten and UWP run a blocking main loop
