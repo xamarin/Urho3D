@@ -2427,7 +2427,7 @@ void Graphics::Release(bool clearGPUObjects, bool closeWindow)
         SDL_ShowCursor(SDL_TRUE);
 
         // Do not destroy external window except when shutting down
-        if (!externalWindow_ || clearGPUObjects)
+        if (!externalWindow_ /* || clearGPUObjects */) //UrhoSharp: keep window alive on Exit()
         {
             SDL_DestroyWindow(impl_->window_);
             impl_->window_ = 0;
