@@ -775,6 +775,8 @@ VariantMap Engine::ParseParameters(const Vector<String>& arguments)
                 ret["Headless"] = true;
             else if (argument == "nolimit")
                 ret["FrameLimiter"] = false;
+            else if (argument == "delayedstart")
+                ret["DelayedStart"] = true;
             else if (argument == "flushgpu")
                 ret["FlushGPU"] = true;
             else if (argument == "gl2")
