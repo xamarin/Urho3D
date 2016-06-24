@@ -1309,17 +1309,11 @@ Cocoa_CreateWindow(_THIS, SDL_Window * window)
 
 int
 Cocoa_CreateWindowFrom(_THIS, SDL_Window * window, const void *data)
-{ @autoreleasepool
 {
-    NSWindow *nswindow = (NSWindow *) data;
-    NSString *title;
-
-    /* Query the title from the existing window */
-    title = [nswindow title];
-    if (title) {
-        window->title = SDL_strdup([title UTF8String]);
-    }
-
+    urhoPlaceholderView = (NSView *)data;
+@autoreleasepool
+{
+    NSWindow *nswindow = [urhoPlaceholderView window];
     return SetupWindowData(_this, window, nswindow, SDL_FALSE);
 }}
 
