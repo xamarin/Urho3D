@@ -78,10 +78,8 @@ int main(int argc, char **argv)
 
 // Urho3D: added function
 void SDL_IOS_LogMessage(const char *message)
-{   
-    #ifdef _DEBUG
+{
     NSLog(@"%@", [NSString stringWithUTF8String: message]);
-    #endif
 }
 
 // Urho3D: added function
