@@ -518,7 +518,8 @@ bool Graphics::SetMode(int width, int height, bool fullscreen, bool borderless, 
             }
         }
 
-        CreateWindowIcon();
+        if (!externalWindow_)
+            CreateWindowIcon();
 
         if (maximize)
         {

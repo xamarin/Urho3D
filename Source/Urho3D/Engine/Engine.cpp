@@ -351,9 +351,14 @@ bool Engine::Initialize(const VariantMap& parameters)
         Renderer* renderer = GetSubsystem<Renderer>();
 
         if (HasParameter(parameters, "ExternalWindow"))
+        {
             graphics->SetExternalWindow(GetParameter(parameters, "ExternalWindow").GetVoidPtr());
-        graphics->SetWindowTitle(GetParameter(parameters, "WindowTitle", "Urho3D").GetString());
-        graphics->SetWindowIcon(cache->GetResource<Image>(GetParameter(parameters, "WindowIcon", String::EMPTY).GetString()));
+        }
+        else
+        {
+            graphics->SetWindowTitle(GetParameter(parameters, "WindowTitle", "Urho3D").GetString());
+            graphics->SetWindowIcon(cache->GetResource<Image>(GetParameter(parameters, "WindowIcon", String::EMPTY).GetString()));
+        }
         graphics->SetFlushGPU(GetParameter(parameters, "FlushGPU", false).GetBool());
         graphics->SetOrientations(GetParameter(parameters, "Orientations", "LandscapeLeft LandscapeRight").GetString());
 
