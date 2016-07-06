@@ -973,6 +973,17 @@ Component* Node::CloneComponent(Component* component, CreateMode mode, unsigned 
         cloneComponent->ApplyAttributes();
     }
 
+    {
+        using namespace ComponentCloned;
+
+        VariantMap& eventData = GetEventDataMap();
+        eventData[P_SCENE] = scene_;
+        eventData[P_COMPONENT] = component;
+        eventData[P_CLONECOMPONENT] = cloneComponent;
+
+        scene_->SendEvent(E_COMPONENTCLONED, eventData);
+    }
+
     return cloneComponent;
 }
 
@@ -2129,6 +2140,17 @@ Node* Node::CloneRecursive(Node* parent, SceneResolver& resolver, CreateMode mod
             continue;
 
         node->CloneRecursive(cloneNode, resolver, mode);
+    }
+
+    {
+        using namespace NodeCloned;
+
+        VariantMap& eventData = GetEventDataMap();
+        eventData[P_SCENE] = scene_;
+        eventData[P_NODE] = this;
+        eventData[P_CLONENODE] = cloneNode;
+
+        scene_->SendEvent(E_NODECLONED, eventData);
     }
 
     return cloneNode;

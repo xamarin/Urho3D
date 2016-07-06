@@ -221,13 +221,13 @@ void HugeObjectCount::MoveCamera(float timeStep)
     cameraNode_->SetRotation(Quaternion(pitch_, yaw_, 0.0f));
 
     // Read WASD keys and move the camera scene node to the corresponding direction if they are pressed
-    if (input->GetKeyDown('W'))
+    if (input->GetKeyDown(KEY_W))
         cameraNode_->Translate(Vector3::FORWARD * MOVE_SPEED * timeStep);
-    if (input->GetKeyDown('S'))
+    if (input->GetKeyDown(KEY_S))
         cameraNode_->Translate(Vector3::BACK * MOVE_SPEED * timeStep);
-    if (input->GetKeyDown('A'))
+    if (input->GetKeyDown(KEY_A))
         cameraNode_->Translate(Vector3::LEFT * MOVE_SPEED * timeStep);
-    if (input->GetKeyDown('D'))
+    if (input->GetKeyDown(KEY_D))
         cameraNode_->Translate(Vector3::RIGHT * MOVE_SPEED * timeStep);
 }
 
@@ -256,7 +256,7 @@ void HugeObjectCount::HandleUpdate(StringHash eventType, VariantMap& eventData)
         animate_ = !animate_;
 
     // Toggle grouped / ungrouped mode
-    if (input->GetKeyPress('G'))
+    if (input->GetKeyPress(KEY_G))
     {
         useGroups_ = !useGroups_;
         CreateScene();

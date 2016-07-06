@@ -702,6 +702,7 @@ bool enabled;
 /* readonly */
 bool enabledEffective;
 FaceCameraMode faceCameraMode;
+bool fixedScreenSize;
 /* readonly */
 uint id;
 /* readonly */
@@ -5477,6 +5478,7 @@ int y;
 class JSONFile
 {
 // Methods:
+bool FromString(const String&);
 JSONValue& GetRoot();
 bool HasSubscribedToEvent(Object, const String&);
 bool HasSubscribedToEvent(const String&);
@@ -6669,6 +6671,107 @@ uint useTimer;
 int weakRefs;
 };
 
+class NamedPipe
+{
+// Methods:
+void Close();
+bool HasSubscribedToEvent(Object, const String&);
+bool HasSubscribedToEvent(const String&);
+bool Open(const String&, bool);
+Array<uint8> Read(uint);
+bool ReadBool();
+BoundingBox ReadBoundingBox();
+int8 ReadByte();
+Color ReadColor();
+double ReadDouble();
+String ReadFileID();
+float ReadFloat();
+int ReadInt();
+IntRect ReadIntRect();
+IntVector2 ReadIntVector2();
+String ReadLine();
+Matrix3 ReadMatrix3();
+Matrix3x4 ReadMatrix3x4();
+Matrix4 ReadMatrix4();
+uint ReadNetID();
+Quaternion ReadPackedQuaternion();
+Vector3 ReadPackedVector3(float);
+Quaternion ReadQuaternion();
+int16 ReadShort();
+String ReadString();
+StringHash ReadStringHash();
+uint8 ReadUByte();
+uint ReadUInt();
+uint16 ReadUShort();
+uint ReadVLE();
+Variant ReadVariant();
+VariantMap ReadVariantMap();
+Vector2 ReadVector2();
+Vector3 ReadVector3();
+Vector4 ReadVector4();
+VectorBuffer ReadVectorBuffer(uint);
+uint Seek(uint);
+void SendEvent(const String&, VariantMap& = VariantMap ( ));
+uint Write(Array<uint8>);
+bool WriteBool(bool);
+bool WriteBoundingBox(const BoundingBox&);
+bool WriteByte(int8);
+bool WriteColor(const Color&);
+bool WriteDouble(double);
+bool WriteFileID(const String&);
+bool WriteFloat(float);
+bool WriteInt(int);
+bool WriteIntRect(const IntRect&);
+bool WriteIntVector2(const IntVector2&);
+bool WriteLine(const String&);
+bool WriteMatrix3(const Matrix3&);
+bool WriteMatrix3x4(const Matrix3x4&);
+bool WriteMatrix4(const Matrix4&);
+bool WriteNetID(uint);
+bool WritePackedQuaternion(const Quaternion&);
+bool WritePackedVector3(const Vector3&, float);
+bool WriteQuaternion(const Quaternion&);
+bool WriteShort(int16);
+bool WriteString(const String&);
+bool WriteStringHash(const StringHash&);
+bool WriteUByte(uint8);
+bool WriteUInt(uint);
+bool WriteUShort(uint16);
+bool WriteVLE(uint);
+bool WriteVariant(const Variant&);
+bool WriteVariantMap(const VariantMap&);
+bool WriteVector2(const Vector2&);
+bool WriteVector3(const Vector3&);
+bool WriteVector4(const Vector4&);
+bool WriteVectorBuffer(const VectorBuffer&);
+
+// Properties:
+/* readonly */
+String category;
+/* readonly */
+uint checksum;
+/* readonly */
+bool eof;
+/* readonly */
+String name;
+/* readonly */
+bool open;
+/* readonly */
+uint position;
+/* readonly */
+int refs;
+/* readonly */
+bool server;
+/* readonly */
+uint size;
+/* readonly */
+StringHash type;
+/* readonly */
+String typeName;
+/* readonly */
+int weakRefs;
+};
+
 class NavArea
 {
 // Methods:
@@ -7571,6 +7674,7 @@ float dampingForce;
 Vector3 emitterSize;
 EmitterType emitterType;
 FaceCameraMode faceCameraMode;
+bool fixedScreenSize;
 float inactiveTime;
 Material material;
 Vector3 maxDirection;
@@ -7705,6 +7809,7 @@ bool enabled;
 /* readonly */
 bool enabledEffective;
 FaceCameraMode faceCameraMode;
+bool fixedScreenSize;
 /* readonly */
 uint id;
 /* readonly */
@@ -8271,6 +8376,7 @@ uint clearFlags;
 uint clearStencil;
 String depthStencilName;
 bool enabled;
+String eventName;
 bool markToStencil;
 String metadata;
 uint numOutputs;
@@ -8365,6 +8471,7 @@ float mobileShadowBiasAdd;
 float mobileShadowBiasMul;
 /* readonly */
 uint numBatches;
+int numExtraInstancingBufferElements;
 /* readonly */
 Array<uint> numGeometries;
 /* readonly */
@@ -8513,6 +8620,108 @@ bool empty;
 uint length;
 Array<String> names;
 StringHash type;
+};
+
+class RibbonTrail
+{
+// Methods:
+void ApplyAttributes();
+void Commit();
+void DrawDebugGeometry(DebugRenderer, bool);
+Variant GetAttribute(const String&) const;
+ValueAnimation GetAttributeAnimation(const String&) const;
+float GetAttributeAnimationSpeed(const String&) const;
+float GetAttributeAnimationTime(const String&) const;
+WrapMode GetAttributeAnimationWrapMode(const String&) const;
+Variant GetAttributeDefault(const String&) const;
+bool GetInterceptNetworkUpdate(const String&) const;
+bool HasSubscribedToEvent(Object, const String&);
+bool HasSubscribedToEvent(const String&);
+bool IsInView(Camera) const;
+bool Load(File, bool = false);
+bool Load(VectorBuffer&, bool = false);
+bool LoadJSON(const JSONValue&, bool = false);
+bool LoadXML(const XMLElement&, bool = false);
+void MarkNetworkUpdate() const;
+void Remove();
+void RemoveAttributeAnimation(const String&);
+void RemoveInstanceDefault();
+void RemoveObjectAnimation();
+void ResetToDefault();
+bool Save(File) const;
+bool Save(VectorBuffer&) const;
+bool SaveJSON(JSONValue&) const;
+bool SaveXML(XMLElement&) const;
+void SendEvent(const String&, VariantMap& = VariantMap ( ));
+void SetAnimationTime(float);
+bool SetAttribute(const String&, const Variant&);
+void SetAttributeAnimation(const String&, ValueAnimation, WrapMode = WM_LOOP, float = 1.0f);
+void SetAttributeAnimationSpeed(const String&, float);
+void SetAttributeAnimationTime(const String&, float);
+void SetAttributeAnimationWrapMode(const String&, WrapMode);
+void SetInterceptNetworkUpdate(const String&, bool);
+
+// Properties:
+bool animationEnabled;
+float animationLodBias;
+/* readonly */
+Array<Variant> attributeDefaults;
+/* readonly */
+Array<AttributeInfo> attributeInfos;
+Array<Variant> attributes;
+/* readonly */
+BoundingBox boundingBox;
+bool castShadows;
+/* readonly */
+String category;
+float drawDistance;
+bool emitting;
+bool enabled;
+/* readonly */
+bool enabledEffective;
+Color endColor;
+float endScale;
+/* readonly */
+uint id;
+/* readonly */
+bool inView;
+float lifetime;
+uint lightMask;
+float lodBias;
+Material material;
+uint maxLights;
+/* readonly */
+Node node;
+/* readonly */
+uint numAttributes;
+ObjectAnimation objectAnimation;
+bool occludee;
+bool occluder;
+/* readonly */
+int refs;
+float shadowDistance;
+uint shadowMask;
+bool sorted;
+Color startColor;
+float startScale;
+uint tailColumn;
+bool temporary;
+TrailType trailType;
+/* readonly */
+StringHash type;
+/* readonly */
+String typeName;
+bool updateInvisible;
+float vertexDistance;
+uint viewMask;
+/* readonly */
+int weakRefs;
+float width;
+/* readonly */
+BoundingBox worldBoundingBox;
+/* readonly */
+Zone zone;
+uint zoneMask;
 };
 
 class RigidBody
@@ -11382,6 +11591,9 @@ int dragButtonCount;
 uint dragDropMode;
 bool editable;
 Color effectColor;
+bool effectRoundStroke;
+IntVector2 effectShadowOffset;
+int effectStrokeThickness;
 bool elementEventSender;
 bool enabled;
 /* readonly */
@@ -11541,10 +11753,14 @@ Array<Color> colors;
 float drawDistance;
 Color effectColor;
 float effectDepthBias;
+bool effectRoundStroke;
+IntVector2 effectShadowOffset;
+int effectStrokeThickness;
 bool enabled;
 /* readonly */
 bool enabledEffective;
 FaceCameraMode faceCameraMode;
+bool fixedScreenSize;
 /* readonly */
 Font font;
 /* readonly */
@@ -14018,6 +14234,7 @@ enum Orientation2D
 O_ORTHOGONAL,
 O_ISOMETRIC,
 O_STAGGERED,
+O_HEXAGONAL,
 };
 
 enum PassLightingMode
@@ -14060,6 +14277,7 @@ CMD_QUAD,
 CMD_FORWARDLIGHTS,
 CMD_LIGHTVOLUMES,
 CMD_RENDERUI,
+CMD_SENDEVENT,
 };
 
 enum RenderSurfaceUpdateMode
@@ -14178,6 +14396,12 @@ OT_POLYGON,
 OT_POLYLINE,
 OT_TILE,
 OT_INVALID,
+};
+
+enum TrailType
+{
+TT_FACE_CAMERA,
+TT_BONE,
 };
 
 enum TransformSpace
@@ -14495,7 +14719,7 @@ int KEY_DELETE;
 int KEY_DOWN;
 int KEY_E;
 int KEY_END;
-int KEY_ESC;
+int KEY_ESCAPE;
 int KEY_F;
 int KEY_F1;
 int KEY_F10;

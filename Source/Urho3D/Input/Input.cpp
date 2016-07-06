@@ -30,7 +30,6 @@
 #include "../Core/StringUtils.h"
 #include "../Graphics/Graphics.h"
 #include "../Graphics/GraphicsEvents.h"
-#include "../Graphics/GraphicsImpl.h"
 #include "../Input/Input.h"
 #include "../IO/FileSystem.h"
 #include "../IO/Log.h"
@@ -38,6 +37,8 @@
 #include "../Resource/ResourceCache.h"
 #include "../UI/Text.h"
 #include "../UI/UI.h"
+
+#include <SDL/SDL.h>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten/html5.h>
@@ -48,7 +49,8 @@
 extern "C" int SDL_AddTouch(SDL_TouchID touchID, const char* name);
 
 // Use a "click inside window to focus" mechanism on desktop platforms when the mouse cursor is hidden
-#if defined(_WIN32) || (defined(__APPLE__) && !defined(IOS)) || (defined(__linux__) && !defined(ANDROID) && !defined(RPI))
+// TODO: For now, in this particular case only, treat all the Linux on ARM as "desktop" (e.g. RPI, odroid, etc), revisit this again when we support "mobile" Linux on ARM
+#if defined(_WIN32) || (defined(__APPLE__) && !defined(IOS)) || (defined(__linux__) && !defined(__ANDROID__))
 #define REQUIRE_CLICK_TO_FOCUS
 #endif
 
@@ -67,9 +69,9 @@ const unsigned TOUCHID_MAX = 32;
 int ConvertSDLKeyCode(int keySym, int scanCode)
 {
     if (scanCode == SCANCODE_AC_BACK)
-        return KEY_ESC;
+        return KEY_ESCAPE;
     else
-        return SDL_toupper(keySym);
+        return SDL_tolower(keySym);
 }
 
 UIElement* TouchState::GetTouchedElement()
@@ -352,7 +354,7 @@ Input::Input(Context* context) :
 
     SubscribeToEvent(E_SCREENMODE, URHO3D_HANDLER(Input, HandleScreenMode));
 
-#if defined(ANDROID)
+#if defined(__ANDROID__)
     SDL_SetHint(SDL_HINT_ANDROID_SEPARATE_MOUSE_AND_TOUCH, "1");
 #elif defined(__EMSCRIPTEN__)
     emscriptenInput_ = new EmscriptenInput(this);
@@ -392,7 +394,7 @@ void Input::Update()
 #endif
 
     // Check for focus change this frame
-    SDL_Window* window = graphics_->GetImpl()->GetWindow();
+    SDL_Window* window = graphics_->GetWindow();
     unsigned flags = window ? SDL_GetWindowFlags(window) & (SDL_WINDOW_INPUT_FOCUS | SDL_WINDOW_MOUSE_FOCUS) : 0;
 #ifndef __EMSCRIPTEN__
     if (window)
@@ -771,7 +773,7 @@ void Input::SetMouseModeEmscripten(MouseMode mode, bool suppressEvent)
 void Input::SetMouseGrabbed(bool grab, bool suppressEvent)
 {
 // To not interfere with touch UI operation, never report the mouse as grabbed on Android / iOS
-#if !defined(ANDROID) && !defined(IOS)
+#if !defined(__ANDROID__) && !defined(IOS)
     mouseGrabbed_ = grab;
 
     if (!suppressEvent)
@@ -788,14 +790,14 @@ void Input::ResetMouseGrabbed()
 #ifndef __EMSCRIPTEN__
 void Input::SetMouseModeAbsolute(SDL_bool enable)
 {
-    SDL_Window* const window = graphics_->GetImpl()->GetWindow();
+    SDL_Window* const window = graphics_->GetWindow();
 
     SDL_SetWindowGrab(window, enable);
 }
 
 void Input::SetMouseModeRelative(SDL_bool enable)
 {
-    SDL_Window* const window = graphics_->GetImpl()->GetWindow();
+    SDL_Window* const window = graphics_->GetWindow();
 
     int result = SDL_SetRelativeMouseMode(enable);
     sdlMouseRelative_ = enable && (result == 0);
@@ -817,7 +819,7 @@ void Input::SetMouseMode(MouseMode mode, bool suppressEvent)
         SuppressNextMouseMove();
 
         mouseMode_ = mode;
-        SDL_Window* const window = graphics_->GetImpl()->GetWindow();
+        SDL_Window* const window = graphics_->GetWindow();
 
         UI* const ui = GetSubsystem<UI>();
         Cursor* const cursor = ui->GetCursor();
@@ -1042,7 +1044,7 @@ SDL_JoystickID Input::AddScreenJoystick(XMLFile* layoutFile, XMLFile* styleFile)
             {
                 text->SetVisible(false);
                 String keyBinding = text->GetText();
-                int mappedKeyBinding[4] = {'W', 'S', 'A', 'D'};
+                int mappedKeyBinding[4] = {KEY_W, KEY_S, KEY_A, KEY_D};
                 Vector<String> keyBindings;
                 if (keyBinding.Contains(' '))   // e.g.: "UP DOWN LEFT RIGHT"
                     keyBindings = keyBinding.Split(' ');    // Attempt to split the text using ' ' as separator
@@ -1145,7 +1147,7 @@ void Input::SetScreenKeyboardVisible(bool enable)
 
 void Input::SetTouchEmulation(bool enable)
 {
-#if !defined(ANDROID) && !defined(IOS)
+#if !defined(__ANDROID__) && !defined(IOS)
     if (enable != touchEmulation_)
     {
         if (enable)
@@ -1288,12 +1290,12 @@ String Input::GetScancodeName(int scancode) const
 
 bool Input::GetKeyDown(int key) const
 {
-    return keyDown_.Contains(SDL_toupper(key));
+    return keyDown_.Contains(SDL_tolower(key));
 }
 
 bool Input::GetKeyPress(int key) const
 {
-    return keyPress_.Contains(SDL_toupper(key));
+    return keyPress_.Contains(SDL_tolower(key));
 }
 
 bool Input::GetScancodeDown(int scancode) const
@@ -1445,7 +1447,7 @@ bool Input::IsScreenKeyboardVisible() const
 {
     if (graphics_)
     {
-        SDL_Window* window = graphics_->GetImpl()->GetWindow();
+        SDL_Window* window = graphics_->GetWindow();
         return SDL_IsScreenKeyboardShown(window) != SDL_FALSE;
     }
     else
@@ -1485,7 +1487,7 @@ void Input::Initialize()
     // Set the initial activation
     initialized_ = true;
 #ifndef __EMSCRIPTEN__
-    focusedThisFrame_ = true;
+    GainFocus();
 #else
     // Note: Page visibility and focus are slightly different, however we can't query last focus with Emscripten (1.29.0)
     if (emscriptenInput_->IsVisible())
@@ -1782,7 +1784,7 @@ void Input::SetMousePosition(const IntVector2& position)
     if (!graphics_)
         return;
 
-    SDL_WarpMouseInWindow(graphics_->GetImpl()->GetWindow(), position.x_, position.y_);
+    SDL_WarpMouseInWindow(graphics_->GetWindow(), position.x_, position.y_);
 }
 
 void Input::CenterMousePosition()
@@ -1838,7 +1840,6 @@ void Input::HandleSDLEvent(void* sdlEvent)
     switch (evt.type)
     {
         case SDL_KEYDOWN:
-            // Convert to uppercase to match Win32 virtual key codes
 #ifdef __EMSCRIPTEN__
         SetKey(ConvertSDLKeyCode(evt.key.keysym.sym, evt.key.keysym.scancode), evt.key.keysym.scancode, true);
 #else
@@ -2279,7 +2280,7 @@ void Input::HandleSDLEvent(void* sdlEvent)
 
             case SDL_WINDOWEVENT_MAXIMIZED:
             case SDL_WINDOWEVENT_RESTORED:
-#if defined(IOS) || defined (ANDROID)
+#if defined(IOS) || defined (__ANDROID__)
                 // On iOS we never lose the GL context, but may have done GPU object changes that could not be applied yet. Apply them now
                 // On Android the old GL context may be lost already, restore GPU objects to the new GL context
                 graphics_->Restore();
@@ -2290,11 +2291,11 @@ void Input::HandleSDLEvent(void* sdlEvent)
 
             case SDL_WINDOWEVENT_RESIZED:
                 inResize_ = true;
-                graphics_->WindowResized();
+                graphics_->OnWindowResized();
                 inResize_ = false;
                 break;
             case SDL_WINDOWEVENT_MOVED:
-                graphics_->WindowMoved();
+                graphics_->OnWindowMoved();
                 break;
 
             default: break;
@@ -2329,7 +2330,7 @@ void Input::HandleScreenMode(StringHash eventType, VariantMap& eventData)
 
     // Re-enable cursor clipping, and re-center the cursor (if needed) to the new screen size, so that there is no erroneous
     // mouse move event. Also get new window ID if it changed
-    SDL_Window* window = graphics_->GetImpl()->GetWindow();
+    SDL_Window* window = graphics_->GetWindow();
     windowID_ = SDL_GetWindowID(window);
 
     // If screen mode happens due to mouse drag resize, do not recenter the mouse as that would lead to erratic window sizes
@@ -2419,7 +2420,7 @@ void Input::HandleScreenJoystickTouch(StringHash eventType, VariantMap& eventDat
             if (!keyBindingVar.IsEmpty())
             {
                 evt.type = eventType == E_TOUCHBEGIN ? SDL_KEYDOWN : SDL_KEYUP;
-                evt.key.keysym.sym = keyBindingVar.GetInt();
+                evt.key.keysym.sym = ToLower(keyBindingVar.GetInt());
                 evt.key.keysym.scancode = SDL_SCANCODE_UNKNOWN;
             }
             if (!mouseButtonBindingVar.IsEmpty())
@@ -2462,7 +2463,7 @@ void Input::HandleScreenJoystickTouch(StringHash eventType, VariantMap& eventDat
         }
         else
         {
-            // Hat is binded by 4 integers representing keysyms for 'W', 'S', 'A', 'D' or something similar
+            // Hat is binded by 4 integers representing keysyms for 'w', 's', 'a', 'd' or something similar
             IntRect keyBinding = keyBindingVar.GetIntRect();
 
             if (eventType == E_TOUCHEND)

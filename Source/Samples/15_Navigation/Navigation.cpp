@@ -246,20 +246,20 @@ void Navigation::MoveCamera(float timeStep)
     }
 
     // Read WASD keys and move the camera scene node to the corresponding direction if they are pressed
-    if (input->GetKeyDown('W'))
+    if (input->GetKeyDown(KEY_W))
         cameraNode_->Translate(Vector3::FORWARD * MOVE_SPEED * timeStep);
-    if (input->GetKeyDown('S'))
+    if (input->GetKeyDown(KEY_S))
         cameraNode_->Translate(Vector3::BACK * MOVE_SPEED * timeStep);
-    if (input->GetKeyDown('A'))
+    if (input->GetKeyDown(KEY_A))
         cameraNode_->Translate(Vector3::LEFT * MOVE_SPEED * timeStep);
-    if (input->GetKeyDown('D'))
+    if (input->GetKeyDown(KEY_D))
         cameraNode_->Translate(Vector3::RIGHT * MOVE_SPEED * timeStep);
 
     // Set destination or teleport with left mouse button
     if (input->GetMouseButtonPress(MOUSEB_LEFT))
         SetPathPoint();
     // Add or remove objects with middle mouse button, then rebuild navigation mesh partially
-    if (input->GetMouseButtonPress(MOUSEB_MIDDLE) || input->GetKeyPress('O'))
+    if (input->GetMouseButtonPress(MOUSEB_MIDDLE) || input->GetKeyPress(KEY_O))
         AddOrRemoveObject();
 
     // Toggle debug geometry with space

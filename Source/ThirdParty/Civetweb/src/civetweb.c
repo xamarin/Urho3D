@@ -20,7 +20,7 @@
  * THE SOFTWARE.
  */
 
-// Modified by cosmy1 for Urho3D
+// Modified by cosmy1 and Yao Wei Tjong for Urho3D
 
 #if defined(_WIN32)
 #if !defined(_CRT_SECURE_NO_WARNINGS)
@@ -321,10 +321,7 @@ typedef DWORD clockid_t;
 #define CLOCK_REALTIME (2)
 #endif
 
-// Urho3D: fix VC15 compilation issue
-#if defined(_MSC_VER) && (_MSC_VER >= 1900)
-#define _TIMESPEC_DEFINED
-#endif
+// Urho3D - use CMake auto-detection to avoid hard-coding the exceptional cases
 #ifndef _TIMESPEC_DEFINED
 struct timespec {
 	time_t tv_sec; /* seconds */
@@ -390,7 +387,8 @@ struct pollfd {
 #include <netdb.h>
 typedef const void *SOCK_OPT_TYPE;
 
-#if defined(ANDROID)
+// Urho3D - use __ANDROID__ define emitted by all Android compiler toolchains
+#if defined(__ANDROID__)
 typedef unsigned short int in_port_t;
 #endif
 

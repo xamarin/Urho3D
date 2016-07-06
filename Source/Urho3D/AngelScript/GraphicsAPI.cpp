@@ -41,6 +41,7 @@
 #include "../Graphics/ParticleEmitter.h"
 #include "../Graphics/Renderer.h"
 #include "../Graphics/RenderPath.h"
+#include "../Graphics/RibbonTrail.h"
 #include "../Graphics/StaticModelGroup.h"
 #include "../Graphics/Technique.h"
 #include "../Graphics/Terrain.h"
@@ -315,6 +316,7 @@ static void RegisterRenderPath(asIScriptEngine* engine)
     engine->RegisterEnumValue("RenderCommandType", "CMD_FORWARDLIGHTS", CMD_FORWARDLIGHTS);
     engine->RegisterEnumValue("RenderCommandType", "CMD_LIGHTVOLUMES", CMD_LIGHTVOLUMES);
     engine->RegisterEnumValue("RenderCommandType", "CMD_RENDERUI", CMD_RENDERUI);
+    engine->RegisterEnumValue("RenderCommandType", "CMD_SENDEVENT", CMD_SENDEVENT);
 
     engine->RegisterEnum("RenderCommandSortMode");
     engine->RegisterEnumValue("RenderCommandSortMode", "SORT_FRONTTOBACK", SORT_FRONTTOBACK);
@@ -407,6 +409,7 @@ static void RegisterRenderPath(asIScriptEngine* engine)
     engine->RegisterObjectProperty("RenderPathCommand", "String pixelShaderName", offsetof(RenderPathCommand, pixelShaderName_));
     engine->RegisterObjectProperty("RenderPathCommand", "String vertexShaderDefines", offsetof(RenderPathCommand, vertexShaderDefines_));
     engine->RegisterObjectProperty("RenderPathCommand", "String pixelShaderDefines", offsetof(RenderPathCommand, pixelShaderDefines_));
+    engine->RegisterObjectProperty("RenderPathCommand", "String eventName", offsetof(RenderPathCommand, eventName_));
 
     RegisterRefCounted<RenderPath>(engine, "RenderPath");
     engine->RegisterObjectBehaviour("RenderPath", asBEHAVE_FACTORY, "RenderPath@+ f()", asFUNCTION(ConstructRenderPath), asCALL_CDECL);
@@ -1458,6 +1461,8 @@ static void RegisterBillboardSet(asIScriptEngine* engine)
     engine->RegisterObjectMethod("BillboardSet", "bool get_sorted() const", asMETHOD(BillboardSet, IsSorted), asCALL_THISCALL);
     engine->RegisterObjectMethod("BillboardSet", "void set_scaled(bool)", asMETHOD(BillboardSet, SetScaled), asCALL_THISCALL);
     engine->RegisterObjectMethod("BillboardSet", "bool get_scaled() const", asMETHOD(BillboardSet, IsScaled), asCALL_THISCALL);
+    engine->RegisterObjectMethod("BillboardSet", "void set_fixedScreenSize(bool)", asMETHOD(BillboardSet, SetFixedScreenSize), asCALL_THISCALL);
+    engine->RegisterObjectMethod("BillboardSet", "bool get_fixedScreenSize() const", asMETHOD(BillboardSet, IsFixedScreenSize), asCALL_THISCALL);
     engine->RegisterObjectMethod("BillboardSet", "void set_faceCameraMode(FaceCameraMode)", asMETHOD(BillboardSet, SetFaceCameraMode), asCALL_THISCALL);
     engine->RegisterObjectMethod("BillboardSet", "FaceCameraMode get_faceCameraMode() const", asMETHOD(BillboardSet, GetFaceCameraMode), asCALL_THISCALL);
     engine->RegisterObjectMethod("BillboardSet", "void set_animationLodBias(float)", asMETHOD(BillboardSet, SetAnimationLodBias), asCALL_THISCALL);
@@ -1499,6 +1504,8 @@ static void RegisterParticleEffect(asIScriptEngine* engine)
     engine->RegisterObjectMethod("ParticleEffect", "bool get_sorted() const", asMETHOD(ParticleEffect, IsSorted), asCALL_THISCALL);
     engine->RegisterObjectMethod("ParticleEffect", "void set_scaled(bool)", asMETHOD(ParticleEffect, SetScaled), asCALL_THISCALL);
     engine->RegisterObjectMethod("ParticleEffect", "bool get_scaled() const", asMETHOD(ParticleEffect, IsScaled), asCALL_THISCALL);
+    engine->RegisterObjectMethod("ParticleEffect", "void set_fixedScreenSize(bool)", asMETHOD(ParticleEffect, SetFixedScreenSize), asCALL_THISCALL);
+    engine->RegisterObjectMethod("ParticleEffect", "bool get_fixedScreenSize() const", asMETHOD(ParticleEffect, IsFixedScreenSize), asCALL_THISCALL);
     engine->RegisterObjectMethod("ParticleEffect", "void set_animationLodBias(float)", asMETHOD(ParticleEffect, SetAnimationLodBias), asCALL_THISCALL);
     engine->RegisterObjectMethod("ParticleEffect", "float get_animationLodBias() const", asMETHOD(ParticleEffect, GetAnimationLodBias), asCALL_THISCALL);
     engine->RegisterObjectMethod("ParticleEffect", "void set_emitterType(EmitterType)", asMETHOD(ParticleEffect, SetEmitterType), asCALL_THISCALL);
@@ -1582,6 +1589,8 @@ static void RegisterParticleEmitter(asIScriptEngine* engine)
     engine->RegisterObjectMethod("ParticleEmitter", "bool get_sorted() const", asMETHOD(ParticleEmitter, IsSorted), asCALL_THISCALL);
     engine->RegisterObjectMethod("ParticleEmitter", "void set_scaled(bool)", asMETHOD(ParticleEmitter, SetScaled), asCALL_THISCALL);
     engine->RegisterObjectMethod("ParticleEmitter", "bool get_scaled() const", asMETHOD(ParticleEmitter, IsScaled), asCALL_THISCALL);
+    engine->RegisterObjectMethod("ParticleEmitter", "void set_fixedScreenSize(bool)", asMETHOD(ParticleEmitter, SetFixedScreenSize), asCALL_THISCALL);
+    engine->RegisterObjectMethod("ParticleEmitter", "bool get_fixedScreenSize() const", asMETHOD(ParticleEmitter, IsFixedScreenSize), asCALL_THISCALL);
     engine->RegisterObjectMethod("ParticleEmitter", "void set_faceCameraMode(FaceCameraMode)", asMETHOD(ParticleEmitter, SetFaceCameraMode), asCALL_THISCALL);
     engine->RegisterObjectMethod("ParticleEmitter", "FaceCameraMode get_faceCameraMode() const", asMETHOD(ParticleEmitter, GetFaceCameraMode), asCALL_THISCALL);
     engine->RegisterObjectMethod("ParticleEmitter", "void set_animationLodBias(float)", asMETHOD(ParticleEmitter, SetAnimationLodBias), asCALL_THISCALL);
@@ -1601,6 +1610,46 @@ static void RegisterParticleEmitter(asIScriptEngine* engine)
     engine->RegisterObjectMethod("ParticleEmitter", "void RemoveAllParticles()", asMETHOD(ParticleEmitter, RemoveAllParticles), asCALL_THISCALL);
     engine->RegisterObjectMethod("ParticleEmitter", "void Reset()", asMETHOD(ParticleEmitter, Reset), asCALL_THISCALL);
     engine->RegisterObjectMethod("ParticleEmitter", "void ApplyEffect()", asMETHOD(ParticleEmitter, ApplyEffect), asCALL_THISCALL);
+}
+
+static void RegisterRibbonTrail(asIScriptEngine* engine)
+{
+    engine->RegisterEnum("TrailType");
+    engine->RegisterEnumValue("TrailType", "TT_FACE_CAMERA", TT_FACE_CAMERA);
+    engine->RegisterEnumValue("TrailType", "TT_BONE", TT_BONE);
+
+    RegisterDrawable<RibbonTrail>(engine, "RibbonTrail");
+    engine->RegisterObjectMethod("RibbonTrail", "void Commit()", asMETHOD(RibbonTrail, Commit), asCALL_THISCALL);
+    engine->RegisterObjectMethod("RibbonTrail", "void set_material(Material@+)", asMETHOD(RibbonTrail, SetMaterial), asCALL_THISCALL);
+    engine->RegisterObjectMethod("RibbonTrail", "Material@+ get_material() const", asMETHOD(RibbonTrail, GetMaterial), asCALL_THISCALL);
+    engine->RegisterObjectMethod("RibbonTrail", "void set_vertexDistance(float)", asMETHOD(RibbonTrail, SetVertexDistance), asCALL_THISCALL);
+    engine->RegisterObjectMethod("RibbonTrail", "float get_vertexDistance() const", asMETHOD(RibbonTrail, GetVertexDistance), asCALL_THISCALL);
+    engine->RegisterObjectMethod("RibbonTrail", "void set_width(float)", asMETHOD(RibbonTrail, SetWidth), asCALL_THISCALL);
+    engine->RegisterObjectMethod("RibbonTrail", "float get_width() const", asMETHOD(RibbonTrail, GetWidth), asCALL_THISCALL);
+    engine->RegisterObjectMethod("RibbonTrail", "void set_startColor(const Color&in)", asMETHOD(RibbonTrail, SetStartColor), asCALL_THISCALL);
+    engine->RegisterObjectMethod("RibbonTrail", "const Color& get_startColor() const", asMETHOD(RibbonTrail, GetStartColor), asCALL_THISCALL);
+    engine->RegisterObjectMethod("RibbonTrail", "void set_endColor(const Color&in)", asMETHOD(RibbonTrail, SetEndColor), asCALL_THISCALL);
+    engine->RegisterObjectMethod("RibbonTrail", "const Color& get_endColor() const", asMETHOD(RibbonTrail, GetEndColor), asCALL_THISCALL);
+    engine->RegisterObjectMethod("RibbonTrail", "void set_startScale(float)", asMETHOD(RibbonTrail, SetStartScale), asCALL_THISCALL);
+    engine->RegisterObjectMethod("RibbonTrail", "float get_startScale() const", asMETHOD(RibbonTrail, GetStartScale), asCALL_THISCALL);
+    engine->RegisterObjectMethod("RibbonTrail", "void set_endScale(float)", asMETHOD(RibbonTrail, SetEndScale), asCALL_THISCALL);
+    engine->RegisterObjectMethod("RibbonTrail", "float get_endScale() const", asMETHOD(RibbonTrail, GetEndScale), asCALL_THISCALL);
+    engine->RegisterObjectMethod("RibbonTrail", "void set_trailType(TrailType)", asMETHOD(RibbonTrail, SetTrailType), asCALL_THISCALL);
+    engine->RegisterObjectMethod("RibbonTrail", "TrailType get_trailType() const", asMETHOD(RibbonTrail, GetTrailType), asCALL_THISCALL);
+    engine->RegisterObjectMethod("RibbonTrail", "void set_sorted(bool)", asMETHOD(RibbonTrail, SetSorted), asCALL_THISCALL);
+    engine->RegisterObjectMethod("RibbonTrail", "bool get_sorted() const", asMETHOD(RibbonTrail, IsSorted), asCALL_THISCALL);
+    engine->RegisterObjectMethod("RibbonTrail", "void set_lifetime(float)", asMETHOD(RibbonTrail, SetLifetime), asCALL_THISCALL);
+    engine->RegisterObjectMethod("RibbonTrail", "float get_lifetime() const", asMETHOD(RibbonTrail, GetLifetime), asCALL_THISCALL);
+    engine->RegisterObjectMethod("RibbonTrail", "void set_emitting(bool)", asMETHOD(RibbonTrail, SetEmitting), asCALL_THISCALL);
+    engine->RegisterObjectMethod("RibbonTrail", "bool get_emitting() const", asMETHOD(RibbonTrail, IsEmitting), asCALL_THISCALL);
+    engine->RegisterObjectMethod("RibbonTrail", "void set_updateInvisible(bool)", asMETHOD(RibbonTrail, SetUpdateInvisible), asCALL_THISCALL);
+    engine->RegisterObjectMethod("RibbonTrail", "bool get_updateInvisible() const", asMETHOD(RibbonTrail, GetUpdateInvisible), asCALL_THISCALL);
+    engine->RegisterObjectMethod("RibbonTrail", "void set_tailColumn(uint)", asMETHOD(RibbonTrail, SetTailColumn), asCALL_THISCALL);
+    engine->RegisterObjectMethod("RibbonTrail", "uint get_tailColumn() const", asMETHOD(RibbonTrail, GetTailColumn), asCALL_THISCALL);
+    engine->RegisterObjectMethod("RibbonTrail", "void set_animationLodBias(float)", asMETHOD(RibbonTrail, SetAnimationLodBias), asCALL_THISCALL);
+    engine->RegisterObjectMethod("RibbonTrail", "float get_animationLodBias() const", asMETHOD(RibbonTrail, GetAnimationLodBias), asCALL_THISCALL);
+    engine->RegisterObjectMethod("RibbonTrail", "Zone@+ get_zone() const", asMETHOD(RibbonTrail, GetZone), asCALL_THISCALL);
+
 }
 
 static void RegisterCustomGeometry(asIScriptEngine* engine)
@@ -1855,6 +1904,8 @@ static void RegisterRenderer(asIScriptEngine* engine)
     engine->RegisterObjectMethod("Renderer", "bool get_dynamicInstancing() const", asMETHOD(Renderer, GetDynamicInstancing), asCALL_THISCALL);
     engine->RegisterObjectMethod("Renderer", "void set_minInstances(int)", asMETHOD(Renderer, SetMinInstances), asCALL_THISCALL);
     engine->RegisterObjectMethod("Renderer", "int get_minInstances() const", asMETHOD(Renderer, GetMinInstances), asCALL_THISCALL);
+    engine->RegisterObjectMethod("Renderer", "void set_numExtraInstancingBufferElements(int)", asMETHOD(Renderer, SetNumExtraInstancingBufferElements), asCALL_THISCALL);
+    engine->RegisterObjectMethod("Renderer", "int get_numExtraInstancingBufferElements() const", asMETHOD(Renderer, GetNumExtraInstancingBufferElements), asCALL_THISCALL);
     engine->RegisterObjectMethod("Renderer", "void set_maxSortedInstances(int)", asMETHOD(Renderer, SetMaxSortedInstances), asCALL_THISCALL);
     engine->RegisterObjectMethod("Renderer", "int get_maxSortedInstances() const", asMETHOD(Renderer, GetMaxSortedInstances), asCALL_THISCALL);
     engine->RegisterObjectMethod("Renderer", "void set_maxOccluderTriangles(int)", asMETHOD(Renderer, SetMaxOccluderTriangles), asCALL_THISCALL);
@@ -2077,6 +2128,7 @@ void RegisterGraphicsAPI(asIScriptEngine* engine)
     RegisterBillboardSet(engine);
     RegisterParticleEffect(engine);
     RegisterParticleEmitter(engine);
+    RegisterRibbonTrail(engine);
     RegisterCustomGeometry(engine);
     RegisterDecalSet(engine);
     RegisterTerrain(engine);

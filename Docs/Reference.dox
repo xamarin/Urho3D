@@ -303,7 +303,7 @@ public:
 
         // Check for pressing ESC. Note the engine_ member variable for convenience access to the Engine object
         int key = eventData[P_KEY].GetInt();
-        if (key == KEY_ESC)
+        if (key == KEY_ESCAPE)
             engine_->Exit();
     }
 };
@@ -338,7 +338,9 @@ Components created into the Scene itself have a special role: to implement scene
 
 "Ordinary" components like Light, Camera or StaticModel should not be created directly into the Scene, but rather into child nodes.
 
-\section SceneModel_Identification Identification
+\section SceneModel_Identification Identification and queries
+
+Nodes can be queried by name from the Scene (or any parent node) with the function \ref Node::GetChild "GetChild()". The query can be optionally recursive, meaning it traverses into child hierarchies. This is relatively slow, since string compares are involved.
 
 Unlike nodes, components do not have names; components inside the same node are only identified by their type, and index in the node's component list, which is filled in creation order. See the various overloads of \ref Node::GetComponent "GetComponent()" or \ref Node::GetComponents "GetComponents()" for details.
 
@@ -959,6 +961,7 @@ The rendering-related components defined by the %Graphics and %UI libraries are:
 - AnimationController: drives animations forward automatically and controls animation fade-in/out.
 - BillboardSet: a group of camera-facing billboards, which can have varying sizes, rotations and texture coordinates.
 - ParticleEmitter: a subclass of BillboardSet that emits particle billboards.
+- RibbonTrail: creates tail geometry following an object.
 - Light: illuminates the scene. Can optionally cast shadows.
 - Terrain: renders heightmap terrain.
 - CustomGeometry: renders runtime-defined unindexed geometry. The geometry data is not serialized or replicated over the network.
@@ -995,6 +998,15 @@ On Direct3D9 and Android OpenGL ES 2.0 it is possible to lose the rendering cont
 Textures that have been loaded from a file, as well as vertex & index buffers that have shadowing enabled will restore their contents automatically, the rest have to be restored manually. On Direct3D9 non-dynamic (managed) textures and buffers will never be lost, as the runtime automatically backs them up to system memory.
 
 See \ref GPUObject::IsDataLost "IsDataLost()" function in VertexBuffer, IndexBuffer, Texture2D, TextureCube and Texture3D classes for detecting data loss. Inbuilt classes such as Model, BillboardSet and Font already handle data loss for their internal GPU resources, so checking for it is only necessary for custom buffers and textures. Watch out especially for trying to render with an index buffer that has uninitialized data after a loss, as this can cause a crash inside the GPU driver due to referencing non-existent (garbage) vertices.
+
+\section Rendering_ExtraInstanceData Defining extra instancing data
+
+The only per-instance data that the rendering system supplies by itself are the objects' world transform matrices. If you want to define extra per-instance data in your custom Drawable subclasses, follow these steps:
+
+- Call \ref Renderer::SetNumExtraInstancingBufferElements "SetNumExtraInstancingBufferElements()". This defines the amount of extra Vector4's (in addition to the transform matrices) that the instancing data will contain.
+- The SourceBatch structure(s) of your custom Drawable need to point to the extra data. See the \ref SourceBatch::instancingData_ "instancingData_" member. Null pointer is allowed for objects that do not need to define extra data; be aware that the instancing vertex buffer will contain undefined data in that case.
+- Because non-instanced rendering will not have access to the extra data, you should disable non-instanced rendering of GEOM_STATIC drawables. Call \ref Renderer::SetMinInstances "SetMinInstances()" with a parameter 1 to accomplish this.
+- Use the extra data as texcoord 7 onward in your vertex shader (texcoord 4-6 are the transform matrix.)
 
 \section Rendering_Further Further details
 
@@ -1116,8 +1128,7 @@ The vertex format can be defined in two ways by two overloads of \ref VertexBuff
 - Instancematrix1-3 (%Vector4)
 - %Object index (int, not supported on D3D9)
 
-Note that the texcoord numbers are misleading as the actual texcoord inputs in shaders are zero-based. Instancematrix1-3 are reserved to be used by the engine for instancing and map to
-shader texcoord inputs 4-6.
+Note that the texcoord numbers are misleading as the actual texcoord inputs in shaders are zero-based. Instancematrix1-3 are reserved to be used by the engine for instancing and map to shader texcoord inputs 4-6.
 
 2) By defining VertexElement structures, which tell the data type, semantic, and zero-based semantic index (for e.g. multiple texcoords), and whether the data is per-vertex or per-instance data.
 This allows to freely define the order and meaning of the elements. However for 3D objects, the first element should always be "Position" and use the Vector3 type to ensure e.g. raycasts and occlusion rendering work properly.
@@ -1472,6 +1483,7 @@ The available commands are:
 - forwardlights: Render per-pixel forward lighting for opaque objects with the specified pass name. Shadow maps are also rendered as necessary.
 - lightvolumes: Render deferred light volumes using the specified shaders. G-buffer textures can be bound as necessary.
 - renderui: Render the UI into the output rendertarget. Using this will cause the default %UI render to the backbuffer to be skipped.
+- sendevent: Send an event with a specified string parameter ("event name"). This can be used to call custom code,typically custom low-level rendering, in the middle of the renderpath execution.
 
 A render path can be loaded from a main XML file by calling \ref RenderPath::Load "Load()", after which other XML files (for example one for each post-processing effect) can be appended to it by calling \ref RenderPath::Append "Append()". Rendertargets and commands can be enabled or disabled by calling \ref RenderPath::SetEnabled "SetEnabled()" to switch eg. a post-processing effect on or off. To aid in this, both can be identified by tag names, for example the bloom effect uses the tag "Bloom" for all of its rendertargets and commands.
 
@@ -1499,6 +1511,7 @@ The render path XML definition looks like this:
         <texture unit="unit" name="viewport|RTName|TextureName" />
     </command>
     <command type="renderui" output="viewport|RTName" depthstencil="DSName" />
+    <command type="sendevent" name="EventName" />
 </renderpath>
 \endcode
 
@@ -1706,6 +1719,7 @@ The parameters of the particle system are stored in a ParticleEffect resource cl
     <relative enable="true|false" />
     <scaled enable="true|false" />
     <sorted enable="true|false" />
+    <fixedscreensize enable="true|false" />
     <emittertype value="sphere|box" />
     <emittersize value="x y z" />
     <emitterradius value="x" />
@@ -1865,7 +1879,9 @@ The Audio subsystem implements an audio output stream. Once it has been initiali
 - Playing raw audio, Ogg Vorbis or WAV Sound resources using the SoundSource component. This allows manual stereo panning of mono sounds; stereo sounds will be output with their original stereo mix.
 - Playing the above sound formats in pseudo-3D using the SoundSource3D component. It has stereo positioning and distance attenuation, but does not (at least yet) filter the sound depending on the direction.
 
-To hear pseudo-3D positional sounds, a SoundListener component must exist in a scene node and be assigned to the audio subsystem by calling \ref Audio::SetListener "SetListener()". If the sound listener's scene node exists within a specific scene, it will only hear sounds from that scene, but if it has been created into a "sceneless" node it will hear sounds from all scenes.
+A sound source component needs to be created into a Node to be considered "enabled" and be able to play, however that node does not need to belong to a scene (e.g. for positionless %UI / HUD sounds, which would be just unnecessarily clutter in a 3D scene, you can just instantiate a node in application code, similar to a camera existing outside the scene.)
+
+To hear pseudo-3D positional sounds, a SoundListener component must likewise exist in a node and be assigned to the audio subsystem by calling \ref Audio::SetListener "SetListener()". The node's position & rotation define the listening spot. If the sound listener's node belongs to a scene, it only hears sounds from within that specific scene, but if it has been created outside of a scene it will hear any sounds.
 
 The output is software mixed for an unlimited amount of simultaneous sounds. Ogg Vorbis sounds are decoded on the fly, and decoding them can be memory- and CPU-intensive, so WAV files are recommended when a large number of short sound effects need to be played.
 
@@ -3369,15 +3385,15 @@ byte[]     Bytecode, produced by AngelScript serializer
 
 - Indents use 4 spaces instead of tabs. Indents on empty lines should not be kept.
 
-- Class and struct names are in camelcase beginning with an uppercase letter. They should be nouns. For example DebugRenderer, FreeTypeLibrary, Graphics.
+- Class and struct names are in camelcase beginning with an uppercase letter. They should be nouns. For example %DebugRenderer, FreeTypeLibrary, %Graphics.
 
 - Functions are likewise in upper-camelcase. For example CreateComponent, SetLinearRestThreshold.
 
 - Variables are in lower-camelcase. Member variables have an underscore appended. For example numContacts, randomSeed_.
 
-- Constants and enumerations are in uppercase. For example Vector3::ZERO or PASS_SHADOW.
+- Constants and enumerations are in uppercase. For example %Vector3::ZERO or PASS_SHADOW.
 
-- Pointers and references append the * or & symbol to the type without a space in between. For example Drawable* drawable, Serializer& dest.
+- Pointers and references append the * or & symbol to the type without a space in between. For example Drawable* drawable, %Serializer& dest.
 
 - Class definitions proceed in the following order:
   - public constructors and the destructor

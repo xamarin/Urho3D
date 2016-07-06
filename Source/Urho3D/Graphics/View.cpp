@@ -297,7 +297,6 @@ View::View(Context* context) :
     octree_(0),
     cullCamera_(0),
     camera_(0),
-    sourceView_(0),
     cameraZone_(0),
     farClipZone_(0),
     occlusionBuffer_(0),
@@ -603,11 +602,8 @@ void View::Render()
 
     // It is possible, though not recommended, that the same camera is used for multiple main views. Set automatic aspect ratio
     // to ensure correct projection will be used
-    if (camera_)
-    {
-        if (camera_->GetAutoAspectRatio())
-            camera_->SetAspectRatioInternal((float)(viewSize_.x_) / (float)(viewSize_.y_));
-    }
+    if (camera_ && camera_->GetAutoAspectRatio())
+        camera_->SetAspectRatioInternal((float)(viewSize_.x_) / (float)(viewSize_.y_));
 
     // Bind the face selection and indirection cube maps for point light shadows
 #ifndef GL_ES_VERSION_2_0
@@ -1080,7 +1076,6 @@ void View::GetLightBatches()
                                 threadedGeometries_.Push(drawable);
                         }
 
-                        Zone* zone = GetZone(drawable);
                         const Vector<SourceBatch>& batches = drawable->GetBatches();
 
                         for (unsigned l = 0; l < batches.Size(); ++l)
@@ -1098,7 +1093,7 @@ void View::GetLightBatches()
 
                             Batch destBatch(srcBatch);
                             destBatch.pass_ = pass;
-                            destBatch.zone_ = zone;
+                            destBatch.zone_ = 0;
 
                             AddBatchToQueue(shadowQueue.shadowBatches_, destBatch, tech);
                         }
@@ -1658,6 +1653,16 @@ void View::ExecuteRenderPathCommands()
                 {
                     SetRenderTargets(command);
                     GetSubsystem<UI>()->Render(false);
+                }
+                break;
+
+            case CMD_SENDEVENT:
+                {
+                    using namespace RenderPathEvent;
+
+                    VariantMap& eventData = GetEventDataMap();
+                    eventData[P_NAME] = command.eventName_;
+                    renderer_->SendEvent(E_RENDERPATHEVENT, eventData);
                 }
                 break;
 
@@ -2898,15 +2903,16 @@ void View::PrepareInstancingBuffer()
     if (!dest)
         return;
 
+    const unsigned stride = instancingBuffer->GetVertexSize();
     for (HashMap<unsigned, BatchQueue>::Iterator i = batchQueues_.Begin(); i != batchQueues_.End(); ++i)
-        i->second_.SetTransforms(dest, freeIndex);
+        i->second_.SetInstancingData(dest, stride, freeIndex);
 
     for (Vector<LightBatchQueue>::Iterator i = lightQueues_.Begin(); i != lightQueues_.End(); ++i)
     {
         for (unsigned j = 0; j < i->shadowSplits_.Size(); ++j)
-            i->shadowSplits_[j].shadowBatches_.SetTransforms(dest, freeIndex);
-        i->litBaseBatches_.SetTransforms(dest, freeIndex);
-        i->litBatches_.SetTransforms(dest, freeIndex);
+            i->shadowSplits_[j].shadowBatches_.SetInstancingData(dest, stride, freeIndex);
+        i->litBaseBatches_.SetInstancingData(dest, stride, freeIndex);
+        i->litBatches_.SetInstancingData(dest, stride, freeIndex);
     }
 
     instancingBuffer->Unlock();

@@ -31,7 +31,7 @@ namespace Urho3D
 class Vector3;
 
 /// Graphics capability support level. Web platform (Emscripten) also uses OpenGL ES, but is considered a desktop platform capability-wise
-#if defined(ANDROID) || defined(IOS) || defined(RPI)
+#if defined(IOS) || defined(__ANDROID__) || defined(__arm__) || defined(__aarch64__)
 #define MOBILE_GRAPHICS
 #else
 #define DESKTOP_GRAPHICS
@@ -56,8 +56,10 @@ enum GeometryType
     GEOM_INSTANCED = 2,
     GEOM_BILLBOARD = 3,
     GEOM_DIRBILLBOARD = 4,
-    GEOM_STATIC_NOINSTANCING = 5,
-    MAX_GEOMETRYTYPES = 5,
+    GEOM_TRAIL_FACE_CAMERA = 5,
+    GEOM_TRAIL_BONE = 6,
+    GEOM_STATIC_NOINSTANCING = 7,
+    MAX_GEOMETRYTYPES = 7,
 };
 
 /// Blending mode.

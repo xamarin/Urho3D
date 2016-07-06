@@ -32,6 +32,10 @@
 #include "../IO/IOEvents.h"
 #include "../IO/Log.h"
 
+#ifdef __ANDROID__
+#include <SDL/SDL_rwops.h>
+#endif
+
 #ifndef MINI_URHO
 #include <SDL/SDL_filesystem.h>
 #endif
@@ -64,7 +68,7 @@
 
 extern "C"
 {
-#ifdef ANDROID
+#ifdef __ANDROID__
 const char* SDL_Android_GetFilesDir();
 char** SDL_Android_GetFileList(const char* path, int* count);
 void SDL_Android_FreeFileList(char*** array, int* count);
@@ -597,7 +601,7 @@ bool FileSystem::FileExists(const String& fileName) const
     if (!CheckAccess(GetPath(fileName)))
         return false;
 
-#ifdef ANDROID
+#ifdef __ANDROID__
     if (URHO3D_IS_ASSET(fileName))
     {
         SDL_RWops* rwOps = SDL_RWFromFile(URHO3D_ASSET(fileName), "rb");
@@ -639,7 +643,7 @@ bool FileSystem::DirExists(const String& pathName) const
 
     String fixedName = GetNativePath(RemoveTrailingSlash(pathName));
 
-#ifdef ANDROID
+#ifdef __ANDROID__
     if (URHO3D_IS_ASSET(fixedName))
     {
         // Split the pathname into two components: the longest parent directory path and the last name component
@@ -697,7 +701,7 @@ String FileSystem::GetProgramDir() const
     if (!programDir_.Empty())
         return programDir_;
 
-#if defined(ANDROID)
+#if defined(__ANDROID__)
     // This is an internal directory specifier pointing to the assets in the .apk
     // Files from this directory will be opened using special handling
     programDir_ = APK;
@@ -744,7 +748,7 @@ String FileSystem::GetProgramDir() const
 
 String FileSystem::GetUserDocumentsDir() const
 {
-#if defined(ANDROID)
+#if defined(__ANDROID__)
     return AddTrailingSlash(SDL_Android_GetFilesDir());
 #elif defined(IOS)
     return AddTrailingSlash(SDL_IOS_GetDocumentsDir());
@@ -824,7 +828,7 @@ void FileSystem::ScanDirInternal(Vector<String>& result, String path, const Stri
     if (filterExtension.Contains('*'))
         filterExtension.Clear();
 
-#ifdef ANDROID
+#ifdef __ANDROID__
     if (URHO3D_IS_ASSET(path))
     {
         String assetPath(URHO3D_ASSET(path));
