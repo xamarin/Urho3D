@@ -158,12 +158,11 @@ static void GetCPUData(struct cpu_id_t* data)
 
 void InitFPU()
 {
-#if !defined(URHO3D_LUAJIT) && !defined(ANDROID) && !defined(IOS) && !defined(RPI) && !defined(__x86_64__) && !defined(_M_AMD64) && !defined(__EMSCRIPTEN__) && !defined(UWP)
     // Make sure FPU is in round-to-nearest, single precision mode
     // This ensures Direct3D and OpenGL behave similarly, and all threads behave similarly
-#if defined(_MSC_VER) && defined(_M_IX86)
+#if defined(_MSC_VER) && defined(_M_IX86) && !defined(UWP)
     _controlfp(_RC_NEAR | _PC_24, _MCW_RC | _MCW_PC);
-#elif defined(__i386__)
+#elif defined(__i386__) && !defined(UWP)
     unsigned control = GetFPUState();
     control &= ~(FPU_CW_PREC_MASK | FPU_CW_ROUND_MASK);
     control |= (FPU_CW_PREC_SINGLE | FPU_CW_ROUND_NEAR);
