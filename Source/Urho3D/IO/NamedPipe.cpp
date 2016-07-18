@@ -77,7 +77,7 @@ unsigned NamedPipe::Seek(unsigned position)
     return 0;
 }
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(UWP)
 
 static const String pipePath("\\\\.\\pipe\\");
 
@@ -201,7 +201,7 @@ bool NamedPipe::IsEof() const
         return true;
 }
 
-#else
+#elif !defined(UWP)
 
 static const String pipePath("/tmp/");
 

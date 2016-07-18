@@ -469,6 +469,8 @@ void Engine::RunFrame()
     }
 #endif
 
+    time->BeginFrame(timeStep_);
+
     // If pause when minimized -mode is in use, stop updates and audio as necessary
     if (pauseMinimized_ && input->IsMinimized())
     {
@@ -480,7 +482,6 @@ void Engine::RunFrame()
     }
     else
     {
-        time->BeginFrame(timeStep_);
         // Only unpause when it was paused by the engine
         if (audioPaused_)
         {
@@ -491,10 +492,10 @@ void Engine::RunFrame()
         Update();
         
         Render();
-        ApplyFrameLimit();
-        
-        time->EndFrame();
     }
+    ApplyFrameLimit();
+
+    time->EndFrame();
 }
 
 Console* Engine::CreateConsole()
