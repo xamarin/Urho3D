@@ -5122,6 +5122,7 @@ bool deferredSupport;
 IntVector2 desktopResolution;
 /* readonly */
 bool deviceLost;
+bool dither;
 bool flushGPU;
 /* readonly */
 bool fullscreen;
@@ -7646,6 +7647,7 @@ void AddColorFrame(ColorFrame);
 void AddColorTime(Color&, float);
 void AddTextureFrame(TextureFrame);
 void AddTextureTime(Rect&, float);
+ParticleEffect Clone(const String& = String ( )) const;
 ColorFrame GetColorFrame(uint) const;
 TextureFrame GetTextureFrame(uint) const;
 bool HasSubscribedToEvent(Object, const String&);
@@ -7718,6 +7720,7 @@ int weakRefs;
 class ParticleEffect2D
 {
 // Methods:
+ParticleEffect2D Clone(const String& = String ( )) const;
 bool HasSubscribedToEvent(Object, const String&);
 bool HasSubscribedToEvent(const String&);
 bool Load(File);
@@ -11608,7 +11611,6 @@ bool focus;
 FocusMode focusMode;
 /* readonly */
 Font font;
-/* readonly */
 int fontSize;
 int height;
 HorizontalAlignment horizontalAlignment;
@@ -11763,7 +11765,6 @@ FaceCameraMode faceCameraMode;
 bool fixedScreenSize;
 /* readonly */
 Font font;
-/* readonly */
 int fontSize;
 HorizontalAlignment horizontalAlignment;
 /* readonly */

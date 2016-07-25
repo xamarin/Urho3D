@@ -552,8 +552,17 @@ void Graphics::SetSRGB(bool enable)
     }
 }
 
+void Graphics::SetDither(bool enable)
+{
+    if (enable)
+        glEnable(GL_DITHER);
+    else
+        glDisable(GL_DITHER);
+}
+
 void Graphics::SetFlushGPU(bool enable)
 {
+    // Currently unimplemented on OpenGL
 }
 
 void Graphics::SetForceGL2(bool enable)
@@ -1917,6 +1926,11 @@ bool Graphics::IsInitialized() const
     return window_ != 0;
 }
 
+bool Graphics::GetDither() const
+{
+    return glIsEnabled(GL_DITHER) ? true : false;
+}
+
 bool Graphics::IsDeviceLost() const
 {
     // On iOS treat window minimization as device loss, as it is forbidden to access OpenGL when minimized
@@ -3076,7 +3090,7 @@ void Graphics::SetTextureUnitMappings()
     textureUnits_["LightSpotMap"] = TU_LIGHTSHAPE;
     textureUnits_["LightCubeMap"] = TU_LIGHTSHAPE;
     textureUnits_["ShadowMap"] = TU_SHADOWMAP;
-#ifdef DESKTOP_GRAPHICS
+#ifndef GL_ES_VERSION_2_0
     textureUnits_["VolumeMap"] = TU_VOLUMEMAP;
     textureUnits_["FaceSelectCubeMap"] = TU_FACESELECT;
     textureUnits_["IndirectionCubeMap"] = TU_INDIRECTION;

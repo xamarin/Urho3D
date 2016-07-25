@@ -2522,6 +2522,7 @@ Methods:
 - bool SetMode(int width, int height, bool fullscreen, bool borderless, bool resizable, bool highDPI, bool vsync, bool tripleBuffer, int multiSample)
 - bool SetMode(int width, int height)
 - void SetSRGB(bool enable)
+- void SetDither(bool enable)
 - void SetFlushGPU(bool enable)
 - void SetOrientations(const String orientations)
 - bool ToggleFullscreen()
@@ -2547,6 +2548,7 @@ Methods:
 - bool GetVSync() const
 - bool GetTripleBuffer() const
 - bool GetSRGB() const
+- bool GetDither() const
 - bool GetFlushGPU() const
 - const String GetOrientations() const
 - bool IsDeviceLost() const
@@ -2597,6 +2599,7 @@ Properties:
 - bool vSync (readonly)
 - bool tripleBuffer (readonly)
 - bool sRGB
+- bool dither
 - bool flushGPU
 - String orientations
 - bool deviceLost (readonly)
@@ -4224,6 +4227,7 @@ Methods:
 - void SetTextureFrame(unsigned index, const TextureFrame& textureFrame)
 - void SetNumTextureFrames(unsigned number)
 - void SortTextureFrames()
+- ParticleEffect* Clone(const String cloneName = String::EMPTY) const
 - Material* GetMaterial() const
 - unsigned GetNumParticles() const
 - bool GetUpdateInvisible() const
@@ -4296,6 +4300,10 @@ Properties:
 
 <a name="Class_ParticleEffect2D"></a>
 ### ParticleEffect2D : Resource
+
+Methods:
+
+- ParticleEffect2D* Clone(const String cloneName = String::EMPTY) const
 
 <a name="Class_ParticleEmitter"></a>
 ### ParticleEmitter : BillboardSet
@@ -6164,6 +6172,7 @@ Methods:
 - void delete()
 - bool SetFont(const String fontName, int size = DEFAULT_FONT_SIZE)
 - bool SetFont(Font* font, int size = DEFAULT_FONT_SIZE)
+- bool SetFontSize(int size)
 - void SetText(const String text)
 - void SetTextAlignment(HorizontalAlignment align)
 - void SetRowSpacing(float spacing)
@@ -6206,7 +6215,7 @@ Methods:
 Properties:
 
 - Font* font
-- int fontSize (readonly)
+- int fontSize
 - String text
 - HorizontalAlignment textAlignment
 - float rowSpacing
@@ -6235,6 +6244,7 @@ Methods:
 - void delete()
 - bool SetFont(const String fontName, int size = DEFAULT_FONT_SIZE)
 - bool SetFont(Font* font, int size = DEFAULT_FONT_SIZE)
+- bool SetFontSize(int size)
 - void SetMaterial(Material* material)
 - void SetText(const String text)
 - void SetAlignment(HorizontalAlignment hAlign, VerticalAlignment vAlign)
@@ -6286,7 +6296,7 @@ Properties:
 
 - Font* font
 - Material* material
-- int fontSize (readonly)
+- int fontSize
 - String text
 - HorizontalAlignment textAlignment
 - HorizontalAlignment horizontalAlignment
