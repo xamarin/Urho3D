@@ -374,6 +374,8 @@ Input::~Input()
 
 void Input::Update()
 {
+    if (!enabled_) return;
+        
     assert(initialized_);
 
     URHO3D_PROFILE(UpdateInput);
@@ -1166,6 +1168,11 @@ void Input::SetTouchEmulation(bool enable)
         touchEmulation_ = enable;
     }
 #endif
+}
+
+void Input::SetEnabled(bool enable)
+{
+    enabled_ = enable;
 }
 
 bool Input::RecordGesture()
