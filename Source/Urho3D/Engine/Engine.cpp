@@ -470,6 +470,9 @@ void Engine::RunFrame()
             audio->Stop();
             audioPaused_ = true;
         }
+#ifdef IOS
+        return;
+#endif
     }
     else
     {
