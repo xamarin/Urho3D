@@ -200,6 +200,8 @@ public:
     void SetScreenKeyboardVisible(bool enable);
     /// Set touch emulation by mouse. Only available on desktop platforms. When enabled, actual mouse events are no longer sent and the mouse cursor is forced visible.
     void SetTouchEmulation(bool enable);
+    /// Enabled or disable Input
+    void SetEnabled(bool enable);
     /// Begin recording a touch gesture. Return true if successful. The E_GESTURERECORDED event (which contains the ID for the new gesture) will be sent when recording finishes.
     bool RecordGesture();
     /// Save all in-memory touch gestures. Return true if successful.
@@ -293,7 +295,10 @@ public:
 
     /// Return whether application window has input focus.
     bool HasFocus() { return inputFocus_; }
-
+    
+    /// Return whether Input is enabled.
+    bool IsEnabled() { return enabled_; }
+    
     /// Return whether application window is minimized.
     bool IsMinimized() const;
 
@@ -415,6 +420,8 @@ private:
 #endif
     /// Touch emulation mode flag.
     bool touchEmulation_;
+    /// Input enabled flag
+    bool enabled_;
     /// Input focus flag.
     bool inputFocus_;
     /// Minimized flag.
