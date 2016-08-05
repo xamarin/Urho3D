@@ -482,11 +482,15 @@ void Engine::RunFrame()
             audio->Play();
             audioPaused_ = false;
         }
-
+#if defined(IOS) || defined(ANDROID)
         Update();
-        
         Render();
     }
+#else
+    }
+    Update();
+    Render();
+#endif
     ApplyFrameLimit();
 
     time->EndFrame();
