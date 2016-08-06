@@ -327,6 +327,7 @@ Input::Input(Context* context) :
     mouseMoveWheel_(0),
     windowID_(0),
     toggleFullscreen_(true),
+    enabled_(true),
     mouseVisible_(false),
     lastMouseVisible_(false),
     mouseGrabbed_(false),
