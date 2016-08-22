@@ -62,6 +62,7 @@ Camera::Camera(Context* context) :
     orthoSize_(DEFAULT_ORTHOSIZE),
     aspectRatio_(1.0f),
     zoom_(1.0f),
+    projectionCenter_(Vector2::ZERO),
     lodBias_(1.0f),
     viewMask_(DEFAULT_VIEWMASK),
     viewOverrideFlags_(VO_NONE),
@@ -131,6 +132,22 @@ void Camera::SetFarClip(float farClip)
 void Camera::SetFov(float fov)
 {
     fov_ = Clamp(fov, 0.0f, M_MAX_FOV);
+    frustumDirty_ = true;
+    projectionDirty_ = true;
+    MarkNetworkUpdate();
+}
+
+void Camera::SetProjectionCenter(const Vector2& center)
+{
+    projectionCenter_ = center;
+    frustumDirty_ = true;
+    projectionDirty_ = true;
+    MarkNetworkUpdate();
+}
+
+void Camera::SetSkew(float skew)
+{
+    skew_ = skew;
     frustumDirty_ = true;
     projectionDirty_ = true;
     MarkNetworkUpdate();
@@ -424,8 +441,11 @@ Matrix4 Camera::GetProjection(bool apiSpecific) const
 
         ret.m00_ = w;
         ret.m02_ = projectionOffset_.x_ * 2.0f;
+        ret.m01_ = skew_;
         ret.m11_ = h;
         ret.m12_ = projectionOffset_.y_ * 2.0f;
+        ret.m02_ = projectionCenter_.x_;
+        ret.m12_ = projectionCenter_.y_;
         ret.m22_ = q;
         ret.m23_ = r;
         ret.m32_ = 1.0f;

@@ -62,6 +62,10 @@ public:
     void SetFarClip(float farClip);
     /// Set vertical field of view in degrees.
     void SetFov(float fov);
+    /// Set projection center coordinates
+    void SetProjectionCenter(const Vector2& center);
+    /// Set skew
+    void SetSkew(float skew);
     /// Set orthographic mode view uniform size.
     void SetOrthoSize(float orthoSize);
     /// Set orthographic mode view non-uniform size. Disables the auto aspect ratio -mode.
@@ -100,6 +104,12 @@ public:
 
     /// Return near clip distance.
     float GetNearClip() const;
+
+    /// Return skew.
+    float GetSkew() const { return skew_; }
+
+    /// Return projection center.
+    const Vector2& GetProjectionCenter() const { return projectionCenter_; };
 
     /// Return vertical field of view in degrees.
     float GetFov() const { return fov_; }
@@ -216,6 +226,8 @@ private:
     mutable Matrix4 projection_;
     /// Cached frustum.
     mutable Frustum frustum_;
+    /// Cached projection center.
+    mutable Vector2 projectionCenter_;
     /// View matrix dirty flag.
     mutable bool viewDirty_;
     /// Projection matrix dirty flag.
@@ -230,6 +242,8 @@ private:
     float farClip_;
     /// Field of view.
     float fov_;
+    /// Skew
+    float skew_;
     /// Orthographic view size.
     float orthoSize_;
     /// Aspect ratio.
