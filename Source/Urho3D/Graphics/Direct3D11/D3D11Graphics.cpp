@@ -2271,12 +2271,12 @@ bool Graphics::UpdateSwapChain(int width, int height)
         desc1.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
         desc1.Texture2DArray.ArraySize = 1;
         desc1.Texture2DArray.FirstArraySlice = 0;
-        hr = impl_->device_->CreateRenderTargetView(backbufferTexture, &desc1, &impl_->defaultStereoRenderTargetView_);
+        hr = impl_->device_->CreateRenderTargetView(backbufferTexture, &desc1, &impl_->defaultRenderTargetView_);
 
         D3D11_RENDER_TARGET_VIEW_DESC desc2 = desc1;
         desc2.Texture2DArray.FirstArraySlice = 1;
 
-        hr = impl_->device_->CreateRenderTargetView(backbufferTexture, &desc2, &impl_->defaultRenderTargetView_);
+        hr = impl_->device_->CreateRenderTargetView(backbufferTexture, &desc2, &impl_->defaultStereoRenderTargetView_);
 #else
         hr = impl_->device_->CreateRenderTargetView(backbufferTexture, 0, &impl_->defaultRenderTargetView_);
 #endif
