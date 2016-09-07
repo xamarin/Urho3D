@@ -212,6 +212,7 @@ Vector3 Viewport::ScreenToWorldPoint(int x, int y, float depth) const
 void Viewport::AllocateView()
 {
     view_ = new View(context_);
+    view_->SetStereoMode(stereo_);
 }
 
 }

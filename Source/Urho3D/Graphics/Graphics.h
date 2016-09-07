@@ -224,6 +224,8 @@ public:
     void SetDepthWrite(bool enable);
     /// Set polygon fill mode.
     void SetFillMode(FillMode mode);
+    /// Set stereo mode
+    void SetStereo(bool stereo) { stereoRendering_ = stereo; }
     /// Set scissor test.
     void SetScissorTest(bool enable, const Rect& rect = Rect::FULL, bool borderInclusive = true);
     /// Set scissor test.
@@ -608,6 +610,8 @@ private:
     IntVector2 position_;
     /// Multisampling mode.
     int multiSample_;
+    /// Stereo rendering mode
+    bool stereoRendering_;
     /// Fullscreen flag.
     bool fullscreen_;
     /// Borderless flag.

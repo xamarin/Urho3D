@@ -1,4 +1,4 @@
-//
+﻿//
 // Copyright (c) 2008-2016 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -284,8 +284,10 @@ Graphics::~Graphics()
 
     if (window_)
     {
+#if !UWP_HOLO
         SDL_ShowCursor(SDL_TRUE);
         SDL_DestroyWindow(window_);
+#endif
         window_ = 0;
     }
 
@@ -350,6 +352,7 @@ bool Graphics::SetMode(int width, int height, bool fullscreen, bool borderless, 
     // Check fullscreen mode validity. Use a closest match if not found
     if (fullscreen)
     {
+#if !UWP_HOLO
         PODVector<IntVector2> resolutions = GetResolutions();
         if (resolutions.Size())
         {
@@ -369,6 +372,7 @@ bool Graphics::SetMode(int width, int height, bool fullscreen, bool borderless, 
             width = resolutions[best].x_;
             height = resolutions[best].y_;
         }
+#endif
     }
 
 #if !defined(UWP)
@@ -377,8 +381,10 @@ bool Graphics::SetMode(int width, int height, bool fullscreen, bool borderless, 
 
     if (maximize)
     {
+#if !UWP_HOLO
         Maximize();
         SDL_GetWindowSize(window_, &width, &height);
+#endif
     }
 
     if (!impl_->device_ || multiSample_ != multiSample)
@@ -394,7 +400,8 @@ bool Graphics::SetMode(int width, int height, bool fullscreen, bool borderless, 
 
     // Clear the initial window contents to black
     Clear(CLEAR_COLOR);
-    impl_->swapChain_->Present(0, 0);
+    if (impl_->swapChain_)
+        impl_->swapChain_->Present(0, 0);
 
 #ifdef URHO3D_LOGGING
     String msg;
@@ -564,6 +571,7 @@ bool Graphics::BeginFrame()
         return false;
 
     // If using an external window, check it for size changes, and reset screen mode if necessary
+#if !UWP_HOLO
     if (externalWindow_)
     {
         int width, height;
@@ -579,6 +587,7 @@ bool Graphics::BeginFrame()
         if (fullscreen_ && (SDL_GetWindowFlags(window_) & SDL_WINDOW_MINIMIZED))
             return false;
     }
+#endif
 
     // Set default rendertarget and depth buffer
     ResetRenderTargets();
@@ -603,7 +612,8 @@ void Graphics::EndFrame()
         URHO3D_PROFILE(Present);
 
         SendEvent(E_ENDRENDERING);
-        impl_->swapChain_->Present(vsync_ ? 1 : 0, 0);
+        if (impl_->swapChain_)
+            impl_->swapChain_->Present(vsync_ ? 1 : 0, 0);
     }
 
     // Clean up too large scratch buffers
@@ -626,8 +636,14 @@ void Graphics::Clear(unsigned flags, const Color& color, float depth, unsigned s
         PrepareDraw();
 
         if ((flags & CLEAR_COLOR) && impl_->renderTargetViews_[0])
+        {
+#if UWP_HOLO
+            Color holoClear(0, 0, 0, 0);//TODO: edit render path?
+            impl_->deviceContext_->ClearRenderTargetView(impl_->renderTargetViews_[0], holoClear.Data());
+#else
             impl_->deviceContext_->ClearRenderTargetView(impl_->renderTargetViews_[0], color.Data());
-
+#endif
+        }
         if ((flags & (CLEAR_DEPTH | CLEAR_STENCIL)) && impl_->depthStencilView_)
         {
             unsigned depthClearFlags = 0;
@@ -1673,7 +1689,11 @@ void Graphics::PrecacheShaders(Deserializer& source)
 
 bool Graphics::IsInitialized() const
 {
+#if UWP_HOLO
+    return impl_->GetDevice() != 0;
+#else
     return window_ != 0 && impl_->GetDevice() != 0;
+#endif
 }
 
 PODVector<int> Graphics::GetMultiSampleLevels() const
@@ -1816,6 +1836,9 @@ bool Graphics::IsDeviceLost() const
 
 void Graphics::OnWindowResized()
 {
+#if UWP_HOLO
+    return;
+#endif
     if (!impl_->device_ || !window_)
         return;
 
@@ -1845,6 +1868,9 @@ void Graphics::OnWindowResized()
 
 void Graphics::OnWindowMoved()
 {
+#if UWP_HOLO
+    return;
+#endif
     if (!impl_->device_ || !window_ || fullscreen_)
         return;
 
@@ -2036,6 +2062,9 @@ bool Graphics::GetGL3Support()
 
 bool Graphics::OpenWindow(int width, int height, bool resizable, bool borderless)
 {
+#if UWP_HOLO
+    return true;
+#endif
     if (!externalWindow_)
     {
         unsigned flags = 0;
@@ -2064,6 +2093,9 @@ bool Graphics::OpenWindow(int width, int height, bool resizable, bool borderless
 
 void Graphics::AdjustWindow(int& newWidth, int& newHeight, bool& newFullscreen, bool& newBorderless)
 {
+#if UWP_HOLO
+    return;
+#endif
     if (!externalWindow_)
     {
         if (!newWidth || !newHeight)
@@ -2211,11 +2243,19 @@ bool Graphics::UpdateSwapChain(int width, int height)
 #if UWP
     buffersCount = 2;
 #endif
-    impl_->swapChain_->ResizeBuffers(buffersCount, (UINT)width, (UINT)height, DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
 
     // Create default rendertarget view representing the backbuffer
     ID3D11Texture2D* backbufferTexture;
-    HRESULT hr = impl_->swapChain_->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backbufferTexture);
+    HRESULT hr = 0;
+    if (impl_->swapChain_)
+    {
+        impl_->swapChain_->ResizeBuffers(buffersCount, (UINT)width, (UINT)height, DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH);
+        hr = impl_->swapChain_->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backbufferTexture);
+    }
+#if UWP_HOLO
+    backbufferTexture = HoloLens_GetBackbuffer();
+#endif
+
     if (FAILED(hr))
     {
         URHO3D_SAFE_RELEASE(backbufferTexture);
@@ -2224,17 +2264,37 @@ bool Graphics::UpdateSwapChain(int width, int height)
     }
     else
     {
+#if UWP_HOLO
+        D3D11_RENDER_TARGET_VIEW_DESC desc1;
+        memset(&desc1, 0, sizeof desc1);
+        desc1.Format = DXGI_FORMAT_UNKNOWN;// textureDesc.Format;
+        desc1.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
+        desc1.Texture2DArray.ArraySize = 1;
+        desc1.Texture2DArray.FirstArraySlice = 0;
+        hr = impl_->device_->CreateRenderTargetView(backbufferTexture, &desc1, &impl_->defaultStereoRenderTargetView_);
+
+        D3D11_RENDER_TARGET_VIEW_DESC desc2 = desc1;
+        desc2.Texture2DArray.FirstArraySlice = 1;
+
+        hr = impl_->device_->CreateRenderTargetView(backbufferTexture, &desc2, &impl_->defaultRenderTargetView_);
+#else
         hr = impl_->device_->CreateRenderTargetView(backbufferTexture, 0, &impl_->defaultRenderTargetView_);
+#endif
         backbufferTexture->Release();
         if (FAILED(hr))
         {
             URHO3D_SAFE_RELEASE(impl_->defaultRenderTargetView_);
+            URHO3D_SAFE_RELEASE(impl_->defaultStereoRenderTargetView_);
             URHO3D_LOGD3DERROR("Failed to create backbuffer rendertarget view", hr);
             success = false;
         }
     }
 
-    // Create default depth-stencil texture and view
+#if UWP_HOLO
+    CD3D11_TEXTURE2D_DESC depthDesc(
+        DXGI_FORMAT_D16_UNORM, static_cast<UINT>(width), static_cast<UINT>(height), 
+        1,1, D3D11_BIND_DEPTH_STENCIL);
+#else
     D3D11_TEXTURE2D_DESC depthDesc;
     memset(&depthDesc, 0, sizeof depthDesc);
     depthDesc.Width = (UINT)width;
@@ -2248,7 +2308,9 @@ bool Graphics::UpdateSwapChain(int width, int height)
     depthDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
     depthDesc.CPUAccessFlags = 0;
     depthDesc.MiscFlags = 0;
+#endif
     hr = impl_->device_->CreateTexture2D(&depthDesc, 0, &impl_->defaultDepthTexture_);
+
     if (FAILED(hr))
     {
         URHO3D_SAFE_RELEASE(impl_->defaultDepthTexture_);
@@ -2257,7 +2319,15 @@ bool Graphics::UpdateSwapChain(int width, int height)
     }
     else
     {
+#if UWP_HOLO
+        D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilDesc;
+        depthStencilDesc.Format = DXGI_FORMAT_UNKNOWN;
+        depthStencilDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+        depthStencilDesc.Flags = 0;
+        hr = impl_->device_->CreateDepthStencilView(impl_->defaultDepthTexture_, &depthStencilDesc, &impl_->defaultDepthStencilView_);
+#else
         hr = impl_->device_->CreateDepthStencilView(impl_->defaultDepthTexture_, 0, &impl_->defaultDepthStencilView_);
+#endif
         if (FAILED(hr))
         {
             URHO3D_SAFE_RELEASE(impl_->defaultDepthStencilView_);
@@ -2385,8 +2455,9 @@ void Graphics::PrepareDraw()
         // backbuffer rendering with a custom depth stencil
         if (!renderTargets_[0] &&
             (!depthStencil_ || (depthStencil_ && depthStencil_->GetWidth() == width_ && depthStencil_->GetHeight() == height_)))
-            impl_->renderTargetViews_[0] = impl_->defaultRenderTargetView_;
+            impl_->renderTargetViews_[0] = stereoRendering_ ? impl_->defaultStereoRenderTargetView_ : impl_->defaultRenderTargetView_;
 
+        
         impl_->deviceContext_->OMSetRenderTargets(MAX_RENDERTARGETS, &impl_->renderTargetViews_[0], impl_->depthStencilView_);
         impl_->renderTargetsDirty_ = false;
     }

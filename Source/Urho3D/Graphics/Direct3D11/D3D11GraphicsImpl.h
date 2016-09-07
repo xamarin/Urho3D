@@ -27,9 +27,13 @@
 #include "../../Graphics/ShaderProgram.h"
 #include "../../Graphics/VertexDeclaration.h"
 #include "../../Math/Color.h"
-
 #include <d3d11.h>
 #include <dxgi.h>
+
+#if defined(UWP_HOLO)
+#include <d3d11_4.h>
+extern "C" ID3D11Texture2D* HoloLens_GetBackbuffer();
+#endif
 
 #if defined(UWP)
 extern "C" HRESULT SDL_UWP_CreateWinrtSwapChain(int width, int height, int multiSample, ID3D11Device** device, IDXGISwapChain** sc, ID3D11DeviceContext** dc);
@@ -73,6 +77,7 @@ private:
     IDXGISwapChain* swapChain_;
     /// Default (backbuffer) rendertarget view.
     ID3D11RenderTargetView* defaultRenderTargetView_;
+    ID3D11RenderTargetView* defaultStereoRenderTargetView_;
     /// Default depth-stencil texture.
     ID3D11Texture2D* defaultDepthTexture_;
     /// Default depth-stencil view.

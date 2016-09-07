@@ -60,6 +60,8 @@ public:
     void SetRect(const IntRect& rect);
     /// Set rendering path.
     void SetRenderPath(RenderPath* path);
+    /// Set stereo mode
+    void SetStereoMode(bool stereo) { stereo_ = stereo; }
     /// Set rendering path from an XML file.
     void SetRenderPath(XMLFile* file);
     /// Set whether to render debug geometry. Default true.
@@ -97,6 +99,8 @@ public:
     void AllocateView();
 
 private:
+    /// Stereo mode
+    bool stereo_;
     /// Scene pointer.
     WeakPtr<Scene> scene_;
     /// Camera pointer.

@@ -43,7 +43,7 @@ protected:
 
     // Event Handlers.
 
-#if (WINAPI_FAMILY == WINAPI_FAMILY_APP) && (NTDDI_VERSION < NTDDI_WIN10)  // for Windows 8/8.1/RT apps... (and not Phone apps)
+#if (WINAPI_FAMILY == WINAPI_FAMILY_APP) && (NTDDI_VERSION < NTDDI_WIN10) && !defined(UWP_HOLO)  // for Windows 8/8.1/RT apps... (and not Phone apps)
     void OnSettingsPaneCommandsRequested(
         Windows::UI::ApplicationSettings::SettingsPane ^p,
         Windows::UI::ApplicationSettings::SettingsPaneCommandsRequestedEventArgs ^args);

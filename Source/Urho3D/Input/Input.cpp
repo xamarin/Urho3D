@@ -375,6 +375,9 @@ Input::~Input()
 
 void Input::Update()
 {
+#if UWP_HOLO //No SDL input for HoloLens
+    return;
+#endif
     if (!enabled_) return;
         
     assert(initialized_);
@@ -2333,6 +2336,9 @@ void Input::HandleSDLEvent(void* sdlEvent)
 
 void Input::HandleScreenMode(StringHash eventType, VariantMap& eventData)
 {
+#if UWP_HOLO
+    return;
+#endif
     if (!initialized_)
         Initialize();
 

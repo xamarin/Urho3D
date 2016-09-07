@@ -1428,6 +1428,7 @@ void View::GetLitBatches(Drawable* drawable, LightBatchQueue& lightQueue, BatchQ
 
 void View::ExecuteRenderPathCommands()
 {
+    graphics_->SetStereo(stereo_);
     View* actualView = sourceView_ ? sourceView_ : this;
 
     // If not reusing shadowmaps, render all of them first
