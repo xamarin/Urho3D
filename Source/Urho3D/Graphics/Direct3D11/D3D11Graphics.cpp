@@ -275,6 +275,9 @@ Graphics::~Graphics()
     impl_->rasterizerStates_.Clear();
 
     URHO3D_SAFE_RELEASE(impl_->defaultRenderTargetView_);
+#if UWP_HOLO
+    URHO3D_SAFE_RELEASE(impl_->defaultStereoRenderTargetView_);
+#endif
     URHO3D_SAFE_RELEASE(impl_->defaultDepthStencilView_);
     URHO3D_SAFE_RELEASE(impl_->defaultDepthTexture_);
     URHO3D_SAFE_RELEASE(impl_->resolveTexture_);
@@ -1390,6 +1393,7 @@ void Graphics::SetRenderTarget(unsigned index, RenderSurface* renderTarget)
     {
         renderTargets_[index] = renderTarget;
         impl_->renderTargetsDirty_ = true;
+        impl_->stereoRenderTargetsDirty_ = true;
 
         // If the rendertarget is also bound as a texture, replace with backup texture or null
         if (renderTarget)
@@ -1420,6 +1424,7 @@ void Graphics::SetDepthStencil(RenderSurface* depthStencil)
     {
         depthStencil_ = depthStencil;
         impl_->renderTargetsDirty_ = true;
+        impl_->stereoRenderTargetsDirty_ = true;
     }
 }
 
@@ -1519,6 +1524,7 @@ void Graphics::SetDepthWrite(bool enable)
         impl_->depthStateDirty_ = true;
         // Also affects whether a read-only version of depth-stencil should be bound, to allow sampling
         impl_->renderTargetsDirty_ = true;
+        impl_->stereoRenderTargetsDirty_ = true;
     }
 }
 
@@ -2238,6 +2244,7 @@ bool Graphics::UpdateSwapChain(int width, int height)
     for (unsigned i = 0; i < MAX_RENDERTARGETS; ++i)
         impl_->renderTargetViews_[i] = 0;
     impl_->renderTargetsDirty_ = true;
+    impl_->stereoRenderTargetsDirty_ = true;
 
     UINT buffersCount = 1;
 #if UWP
@@ -2419,6 +2426,7 @@ void Graphics::ResetCachedState()
     useClipPlane_ = false;
     impl_->shaderProgram_ = 0;
     impl_->renderTargetsDirty_ = true;
+    impl_->stereoRenderTargetsDirty_ = true;
     impl_->texturesDirty_ = true;
     impl_->vertexDeclarationDirty_ = true;
     impl_->blendStateDirty_ = true;
@@ -2436,7 +2444,7 @@ void Graphics::ResetCachedState()
 
 void Graphics::PrepareDraw()
 {
-    if (impl_->renderTargetsDirty_)
+    if ((impl_->renderTargetsDirty_ && !stereoRendering_) || (impl_->stereoRenderTargetsDirty_ && stereoRendering_))
     {
         impl_->depthStencilView_ =
             (depthStencil_ && depthStencil_->GetUsage() == TEXTURE_DEPTHSTENCIL) ?
@@ -2459,7 +2467,10 @@ void Graphics::PrepareDraw()
 
         
         impl_->deviceContext_->OMSetRenderTargets(MAX_RENDERTARGETS, &impl_->renderTargetViews_[0], impl_->depthStencilView_);
-        impl_->renderTargetsDirty_ = false;
+        if (!stereoRendering_)
+            impl_->renderTargetsDirty_ = false;
+        else
+            impl_->stereoRenderTargetsDirty_ = false;
     }
 
     if (impl_->texturesDirty_ && impl_->firstDirtyTexture_ < M_MAX_UNSIGNED)

@@ -108,6 +108,8 @@ private:
     unsigned vertexOffsets_[MAX_VERTEX_STREAMS];
     /// Rendertargets dirty flag.
     bool renderTargetsDirty_;
+    /// Rendertargets dirty flag (stereo mode).
+    bool stereoRenderTargetsDirty_;
     /// Textures dirty flag.
     bool texturesDirty_;
     /// Vertex declaration dirty flag.
