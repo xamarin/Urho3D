@@ -113,9 +113,6 @@ public:
     /// Return skew.
     float GetSkew() const { return skew_; }
 
-    /// Return projection center.
-    const Vector2& GetProjectionCenter() const { return projectionCenter_; };
-
     /// Return vertical field of view in degrees.
     float GetFov() const { return fov_; }
 
@@ -236,8 +233,6 @@ private:
     mutable Matrix4 projection_;
     /// Cached world space frustum.
     mutable Frustum frustum_;
-    /// Cached projection center.
-    mutable Vector2 projectionCenter_;
     /// View matrix dirty flag.
     mutable bool viewDirty_;
     /// Projection matrix dirty flag.

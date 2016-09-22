@@ -62,7 +62,6 @@ Camera::Camera(Context* context) :
     orthoSize_(DEFAULT_ORTHOSIZE),
     aspectRatio_(1.0f),
     zoom_(1.0f),
-    projectionCenter_(Vector2::ZERO),
     lodBias_(1.0f),
     viewMask_(DEFAULT_VIEWMASK),
     viewOverrideFlags_(VO_NONE),
@@ -133,14 +132,6 @@ void Camera::SetFarClip(float farClip)
 void Camera::SetFov(float fov)
 {
     fov_ = Clamp(fov, 0.0f, M_MAX_FOV);
-    frustumDirty_ = true;
-    projectionDirty_ = true;
-    MarkNetworkUpdate();
-}
-
-void Camera::SetProjectionCenter(const Vector2& center)
-{
-    projectionCenter_ = center;
     frustumDirty_ = true;
     projectionDirty_ = true;
     MarkNetworkUpdate();
@@ -677,6 +668,7 @@ void Camera::UpdateProjection() const
         float r = -q * nearClip_;
 
         projection_.m00_ = w;
+        projection_.m01_ = skew_;
         projection_.m02_ = projectionOffset_.x_ * 2.0f;
         projection_.m11_ = h;
         projection_.m12_ = projectionOffset_.y_ * 2.0f;
