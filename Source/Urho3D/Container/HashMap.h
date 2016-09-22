@@ -262,8 +262,12 @@ public:
     /// Assign a hash map.
     HashMap& operator =(const HashMap<T, U>& rhs)
     {
-        Clear();
-        Insert(rhs);
+        // In case of self-assignment do nothing
+        if (&rhs != this)
+        {
+            Clear();
+            Insert(rhs);
+        }
         return *this;
     }
 
@@ -555,7 +559,7 @@ public:
     }
 
     /// Try to copy value to output. Return true if was found.
-    bool TryGetValue(const T& key, U& out)
+    bool TryGetValue(const T& key, U& out) const
     {
         if (!ptrs_)
             return false;

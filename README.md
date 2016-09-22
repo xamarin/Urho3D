@@ -29,13 +29,16 @@ Urho3D development, contributions and bugfixes by:
 - Josh Engebretson
 - Chris Friesen
 - Alex Fuller
+- Henrik Heino
 - Mika Heinonen
 - Jukka Jylänki
 - Graham King
 - Jason Kinzer
 - Eugene Kozlov
 - Gunnar Kriik
+- Aliaksandr Kryvashein
 - Artem Kulyk
+- Rokas Kupstys
 - Ali Kämäräinen
 - Pete Leigh
 - Frode 'Modanung' Lindeijer
@@ -53,6 +56,7 @@ Urho3D development, contributions and bugfixes by:
 - Pranjal Raihan
 - Nick Royer
 - Miika Santala
+- Anatoly Sennov
 - Bengt Soderstrom
 - Hualin Song
 - James Thomas
@@ -64,12 +68,14 @@ Urho3D development, contributions and bugfixes by:
 - BlueMagnificent
 - Enhex
 - Firegorilla
+- Gordon-F
 - Lumak
 - Magic.Lixin
 - Mike3D
 - MonkeyFirst
 - Newb I the Newbd
 - OvermindDL1
+- Scellow
 - Skrylar
 - TheComet93
 - Y-way
@@ -97,7 +103,6 @@ Urho3D development, contributions and bugfixes by:
 - reattiva
 - rifai
 - rikorin
-- r-ku
 - skaiware
 - ssinai1
 - svifylabs
@@ -165,6 +170,10 @@ Ninja model and terrain, water, smoke, flare and status bar textures from OGRE.
 BlueHighway font from Larabie Fonts.
 Anonymous Pro font by Mark Simonson.
 NinjaSnowWar sounds by Veli-Pekka Tätilä.
+PBR textures from Substance Share. (https://share.allegorithmic.com)
+IBL textures from HDRLab's sIBL Archive.
+Dieselpunk Moto model by allexandr007.
+Mutant model from Mixamo.
 
 ##Documentation
 Urho3D classes have been sparsely documented using Doxygen notation. To

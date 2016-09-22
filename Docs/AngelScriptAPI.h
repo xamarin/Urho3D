@@ -711,6 +711,7 @@ uint lightMask;
 float lodBias;
 Material material;
 uint maxLights;
+float minAngle;
 /* readonly */
 Node node;
 /* readonly */
@@ -1276,6 +1277,8 @@ float fov;
 /* readonly */
 Frustum frustum;
 /* readonly */
+Matrix4 gpuProjection;
+/* readonly */
 float halfViewSize;
 /* readonly */
 uint id;
@@ -1288,7 +1291,6 @@ uint numAttributes;
 ObjectAnimation objectAnimation;
 float orthoSize;
 bool orthographic;
-/* readonly */
 Matrix4 projection;
 Vector2 projectionOffset;
 Plane reflectionPlane;
@@ -4169,6 +4171,7 @@ double ReadDouble();
 String ReadFileID();
 float ReadFloat();
 int ReadInt();
+int64 ReadInt64();
 IntRect ReadIntRect();
 IntVector2 ReadIntVector2();
 String ReadLine();
@@ -4184,6 +4187,7 @@ String ReadString();
 StringHash ReadStringHash();
 uint8 ReadUByte();
 uint ReadUInt();
+uint64 ReadUInt64();
 uint16 ReadUShort();
 uint ReadVLE();
 Variant ReadVariant();
@@ -4804,6 +4808,7 @@ double ReadDouble();
 String ReadFileID();
 float ReadFloat();
 int ReadInt();
+int64 ReadInt64();
 IntRect ReadIntRect();
 IntVector2 ReadIntVector2();
 String ReadLine();
@@ -4819,6 +4824,7 @@ String ReadString();
 StringHash ReadStringHash();
 uint8 ReadUByte();
 uint ReadUInt();
+uint64 ReadUInt64();
 uint16 ReadUShort();
 uint ReadVLE();
 Variant ReadVariant();
@@ -4838,6 +4844,7 @@ bool WriteDouble(double);
 bool WriteFileID(const String&);
 bool WriteFloat(float);
 bool WriteInt(int);
+bool WriteInt64(int64);
 bool WriteIntRect(const IntRect&);
 bool WriteIntVector2(const IntVector2&);
 bool WriteLine(const String&);
@@ -4853,6 +4860,7 @@ bool WriteString(const String&);
 bool WriteStringHash(const StringHash&);
 bool WriteUByte(uint8);
 bool WriteUInt(uint);
+bool WriteUInt64(uint64);
 bool WriteUShort(uint16);
 bool WriteVLE(uint);
 bool WriteVariant(const Variant&);
@@ -5030,9 +5038,11 @@ class Frustum
 {
 // Methods:
 void Define(const BoundingBox&, const Matrix3x4&);
+void Define(const Matrix4&);
 void Define(const Vector3&, const Vector3&, const Matrix3x4&);
 void Define(float, float, float, float, float, const Matrix3x4&);
 void DefineOrtho(float, float, float, float, float, const Matrix3x4&);
+void DefineSplit(const Matrix4&, float, float);
 float Distance(const Vector3&) const;
 Intersection IsInside(const BoundingBox&);
 Intersection IsInside(const Sphere&);
@@ -5188,6 +5198,7 @@ double ReadDouble();
 String ReadFileID();
 float ReadFloat();
 int ReadInt();
+int64 ReadInt64();
 IntRect ReadIntRect();
 IntVector2 ReadIntVector2();
 String ReadLine();
@@ -5203,6 +5214,7 @@ String ReadString();
 StringHash ReadStringHash();
 uint8 ReadUByte();
 uint ReadUInt();
+uint64 ReadUInt64();
 uint16 ReadUShort();
 uint ReadVLE();
 Variant ReadVariant();
@@ -5350,6 +5362,7 @@ class Input
 {
 // Methods:
 int AddScreenJoystick(XMLFile = null, XMLFile = null);
+void CenterMousePosition();
 int GetKeyFromName(const String&) const;
 int GetKeyFromScancode(int) const;
 String GetKeyName(int) const;
@@ -5409,7 +5422,6 @@ int mouseMoveWheel;
 int mouseMoveX;
 /* readonly */
 int mouseMoveY;
-/* readonly */
 IntVector2 mousePosition;
 bool mouseVisible;
 /* readonly */
@@ -5544,9 +5556,15 @@ bool isObject;
 /* readonly */
 bool isString;
 /* readonly */
+JSONNumberType numberType;
+/* readonly */
+String numberTypeName;
+/* readonly */
 uint size;
 /* readonly */
 JSONValueType valueType;
+/* readonly */
+String valueTypeName;
 };
 
 class JoystickState
@@ -5626,6 +5644,8 @@ bool castShadows;
 /* readonly */
 String category;
 Color color;
+/* readonly */
+Color colorFromTemperature;
 float drawDistance;
 /* readonly */
 Color effectiveColor;
@@ -5669,15 +5689,18 @@ float shadowFadeDistance;
 FocusParameters shadowFocus;
 float shadowIntensity;
 uint shadowMask;
+float shadowMaxExtrusion;
 float shadowNearFarRatio;
 float shadowResolution;
 Texture shapeTexture;
 float specularIntensity;
+float temperature;
 bool temporary;
 /* readonly */
 StringHash type;
 /* readonly */
 String typeName;
+bool usePhysicalValues;
 uint viewMask;
 /* readonly */
 int weakRefs;
@@ -6241,6 +6264,7 @@ void SetUVTransform(const Vector2&, float, float);
 void SortTechniques();
 
 // Properties:
+bool alphaToCoverage;
 /* readonly */
 String category;
 CullMode cullMode;
@@ -6250,8 +6274,8 @@ FillMode fillMode;
 uint memoryUse;
 String name;
 uint numTechniques;
-/* readonly */
 bool occlusion;
+String pixelShaderDefines;
 /* readonly */
 int refs;
 uint8 renderOrder;
@@ -6271,6 +6295,7 @@ StringHash type;
 String typeName;
 /* readonly */
 uint useTimer;
+String vertexShaderDefines;
 /* readonly */
 int weakRefs;
 };
@@ -6688,6 +6713,7 @@ double ReadDouble();
 String ReadFileID();
 float ReadFloat();
 int ReadInt();
+int64 ReadInt64();
 IntRect ReadIntRect();
 IntVector2 ReadIntVector2();
 String ReadLine();
@@ -6703,6 +6729,7 @@ String ReadString();
 StringHash ReadStringHash();
 uint8 ReadUByte();
 uint ReadUInt();
+uint64 ReadUInt64();
 uint16 ReadUShort();
 uint ReadVLE();
 Variant ReadVariant();
@@ -6722,6 +6749,7 @@ bool WriteDouble(double);
 bool WriteFileID(const String&);
 bool WriteFloat(float);
 bool WriteInt(int);
+bool WriteInt64(int64);
 bool WriteIntRect(const IntRect&);
 bool WriteIntVector2(const IntVector2&);
 bool WriteLine(const String&);
@@ -6737,6 +6765,7 @@ bool WriteString(const String&);
 bool WriteStringHash(const StringHash&);
 bool WriteUByte(uint8);
 bool WriteUInt(uint);
+bool WriteUInt64(uint64);
 bool WriteUShort(uint16);
 bool WriteVLE(uint);
 bool WriteVariant(const Variant&);
@@ -7194,6 +7223,7 @@ void RemoveComponents(const String&);
 void RemoveInstanceDefault();
 void RemoveObjectAnimation();
 bool RemoveTag(const String&);
+void ReorderComponent(Component, uint);
 void ResetDeepEnabled();
 void ResetToDefault();
 void Roll(float, TransformSpace = TS_LOCAL);
@@ -7261,7 +7291,6 @@ Vector3 direction;
 bool enabled;
 /* readonly */
 bool enabledSelf;
-/* readonly */
 uint id;
 String name;
 /* readonly */
@@ -7798,6 +7827,7 @@ Array<Variant> attributeDefaults;
 /* readonly */
 Array<AttributeInfo> attributeInfos;
 Array<Variant> attributes;
+AutoRemoveMode autoRemoveMode;
 /* readonly */
 Array<Billboard> billboards;
 /* readonly */
@@ -7947,7 +7977,7 @@ class Pass
 {
 
 // Properties:
-bool alphaMask;
+bool alphaToCoverage;
 BlendMode blendMode;
 CullMode cullMode;
 CompareMode depthTestMode;
@@ -7955,10 +7985,12 @@ bool depthWrite;
 bool desktop;
 PassLightingMode lightingMode;
 String pixelShader;
+String pixelShaderDefineExcludes;
 String pixelShaderDefines;
 /* readonly */
 int refs;
 String vertexShader;
+String vertexShaderDefineExcludes;
 String vertexShaderDefines;
 /* readonly */
 int weakRefs;
@@ -9008,6 +9040,7 @@ void RemoveComponents(const String&);
 void RemoveInstanceDefault();
 void RemoveObjectAnimation();
 bool RemoveTag(const String&);
+void ReorderComponent(Component, uint);
 void ResetToDefault();
 void Roll(float, TransformSpace = TS_LOCAL);
 void Rotate(const Quaternion&, TransformSpace = TS_LOCAL);
@@ -9088,7 +9121,6 @@ Vector3 direction;
 float elapsedTime;
 /* readonly */
 String fileName;
-/* readonly */
 uint id;
 String name;
 /* readonly */
@@ -9771,6 +9803,7 @@ bool WriteDouble(double);
 bool WriteFileID(const String&);
 bool WriteFloat(float);
 bool WriteInt(int);
+bool WriteInt64(int64);
 bool WriteIntRect(const IntRect&);
 bool WriteIntVector2(const IntVector2&);
 bool WriteLine(const String&);
@@ -9786,6 +9819,7 @@ bool WriteString(const String&);
 bool WriteStringHash(const StringHash&);
 bool WriteUByte(uint8);
 bool WriteUInt(uint);
+bool WriteUInt64(uint64);
 bool WriteUShort(uint16);
 bool WriteVLE(uint);
 bool WriteVariant(const Variant&);
@@ -10348,7 +10382,7 @@ Array<Variant> attributeDefaults;
 /* readonly */
 Array<AttributeInfo> attributeInfos;
 Array<Variant> attributes;
-bool autoRemove;
+AutoRemoveMode autoRemoveMode;
 /* readonly */
 String category;
 bool enabled;
@@ -10435,7 +10469,7 @@ Array<Variant> attributeDefaults;
 /* readonly */
 Array<AttributeInfo> attributeInfos;
 Array<Variant> attributes;
-bool autoRemove;
+AutoRemoveMode autoRemoveMode;
 /* readonly */
 String category;
 bool enabled;
@@ -11195,7 +11229,7 @@ bool ToBool() const;
 Color ToColor() const;
 double ToDouble() const;
 float ToFloat() const;
-int ToInt() const;
+int ToInt(int = 10) const;
 IntRect ToIntRect() const;
 IntVector2 ToIntVector2() const;
 String ToLower() const;
@@ -11203,7 +11237,7 @@ Matrix3 ToMatrix3() const;
 Matrix3x4 ToMatrix3x4() const;
 Matrix4 ToMatrix4() const;
 Quaternion ToQuaternion() const;
-uint ToUInt() const;
+uint ToUInt(int = 10) const;
 String ToUpper() const;
 Vector2 ToVector2() const;
 Vector3 ToVector3() const;
@@ -11297,6 +11331,7 @@ WrapMode GetAttributeAnimationWrapMode(const String&) const;
 Variant GetAttributeDefault(const String&) const;
 float GetHeight(const Vector3&) const;
 bool GetInterceptNetworkUpdate(const String&) const;
+TerrainPatch GetNeighborPatch(int, int) const;
 Vector3 GetNormal(const Vector3&) const;
 TerrainPatch GetPatch(int, int) const;
 bool HasSubscribedToEvent(Object, const String&);
@@ -11323,6 +11358,7 @@ void SetAttributeAnimationSpeed(const String&, float);
 void SetAttributeAnimationTime(const String&, float);
 void SetAttributeAnimationWrapMode(const String&, WrapMode);
 void SetInterceptNetworkUpdate(const String&, bool);
+void SetNeighbors(Terrain, Terrain, Terrain, Terrain);
 IntVector2 WorldToHeightMap(const Vector3&) const;
 
 // Properties:
@@ -11336,6 +11372,7 @@ bool castShadows;
 /* readonly */
 String category;
 float drawDistance;
+Terrain eastNeighbor;
 bool enabled;
 /* readonly */
 bool enabledEffective;
@@ -11349,6 +11386,7 @@ uint maxLights;
 uint maxLodLevels;
 /* readonly */
 Node node;
+Terrain northNeighbor;
 /* readonly */
 uint numAttributes;
 /* readonly */
@@ -11367,6 +11405,7 @@ int refs;
 float shadowDistance;
 uint shadowMask;
 bool smoothing;
+Terrain southNeighbor;
 Vector3 spacing;
 bool temporary;
 /* readonly */
@@ -11376,6 +11415,7 @@ String typeName;
 uint viewMask;
 /* readonly */
 int weakRefs;
+Terrain westNeighbor;
 uint zoneMask;
 };
 
@@ -11830,6 +11870,7 @@ void SetNumLevels(uint);
 
 // Properties:
 Array<TextureAddressMode> addressMode;
+uint anisotropy;
 Texture backupTexture;
 Color borderColor;
 /* readonly */
@@ -11890,6 +11931,7 @@ bool SetSize(int, int, uint, TextureUsage = TEXTURE_STATIC);
 
 // Properties:
 Array<TextureAddressMode> addressMode;
+uint anisotropy;
 Texture backupTexture;
 Color borderColor;
 /* readonly */
@@ -11951,6 +11993,7 @@ bool SetSize(uint, int, int, uint, TextureUsage = TEXTURE_STATIC);
 
 // Properties:
 Array<TextureAddressMode> addressMode;
+uint anisotropy;
 Texture backupTexture;
 Color borderColor;
 /* readonly */
@@ -12013,6 +12056,7 @@ bool SetSize(int, int, int, uint, TextureUsage = TEXTURE_STATIC);
 
 // Properties:
 Array<TextureAddressMode> addressMode;
+uint anisotropy;
 Texture backupTexture;
 Color borderColor;
 /* readonly */
@@ -12073,6 +12117,7 @@ bool SetSize(int, uint, TextureUsage = TEXTURE_STATIC);
 
 // Properties:
 Array<TextureAddressMode> addressMode;
+uint anisotropy;
 Texture backupTexture;
 Color borderColor;
 /* readonly */
@@ -12642,6 +12687,7 @@ UIElement LoadLayout(XMLFile, XMLFile);
 bool SaveLayout(File, UIElement);
 bool SaveLayout(VectorBuffer&, UIElement);
 void SendEvent(const String&, VariantMap& = VariantMap ( ));
+void SetCustomSize(int, int);
 void SetFocusElement(UIElement, bool = false);
 void SetHeight(float);
 void SetWidth(float);
@@ -12654,6 +12700,7 @@ String clipBoardText;
 Cursor cursor;
 /* readonly */
 IntVector2 cursorPosition;
+IntVector2 customSize;
 float defaultToolTipDelay;
 float doubleClickInterval;
 int dragBeginDistance;
@@ -13056,6 +13103,7 @@ double ReadDouble();
 String ReadFileID();
 float ReadFloat();
 int ReadInt();
+int64 ReadInt64();
 IntRect ReadIntRect();
 IntVector2 ReadIntVector2();
 String ReadLine();
@@ -13071,6 +13119,7 @@ String ReadString();
 StringHash ReadStringHash();
 uint8 ReadUByte();
 uint ReadUInt();
+uint64 ReadUInt64();
 uint16 ReadUShort();
 uint ReadVLE();
 Variant ReadVariant();
@@ -13091,6 +13140,7 @@ bool WriteDouble(double);
 bool WriteFileID(const String&);
 bool WriteFloat(float);
 bool WriteInt(int);
+bool WriteInt64(int64);
 bool WriteIntRect(const IntRect&);
 bool WriteIntVector2(const IntVector2&);
 bool WriteLine(const String&);
@@ -13106,6 +13156,7 @@ bool WriteString(const String&);
 bool WriteStringHash(const StringHash&);
 bool WriteUByte(uint8);
 bool WriteUInt(uint);
+bool WriteUInt64(uint64);
 bool WriteUShort(uint16);
 bool WriteVLE(uint);
 bool WriteVariant(const Variant&);
@@ -13926,6 +13977,13 @@ ABM_LERP,
 ABM_ADDITIVE,
 };
 
+enum AutoRemoveMode
+{
+REMOVE_DISABLED,
+REMOVE_COMPONENT,
+REMOVE_NODE,
+};
+
 enum BlendMode
 {
 BLEND_REPLACE,
@@ -14089,6 +14147,7 @@ FC_ROTATE_XYZ,
 FC_ROTATE_Y,
 FC_LOOKAT_XYZ,
 FC_LOOKAT_Y,
+FC_LOOKAT_MIXED,
 FC_DIRECTION,
 };
 
@@ -14158,6 +14217,14 @@ INTERSECTS,
 INSIDE,
 };
 
+enum JSONNumberType
+{
+JSONNT_NAN,
+JSONNT_INT,
+JSONNT_UINT,
+JSONNT_FLOAT_DOUBLE,
+};
+
 enum JSONValueType
 {
 JSON_NULL,
@@ -14209,6 +14276,7 @@ enum NavigationPushiness
 NAVIGATIONPUSHINESS_LOW,
 NAVIGATIONPUSHINESS_MEDIUM,
 NAVIGATIONPUSHINESS_HIGH,
+NAVIGATIONPUSHINESS_NONE,
 };
 
 enum NavigationQuality
@@ -14674,7 +14742,6 @@ uint DD_SOURCE;
 uint DD_SOURCE_AND_TARGET;
 uint DD_TARGET;
 uint DEBUGHUD_SHOW_ALL;
-uint DEBUGHUD_SHOW_ALL_MEMORY;
 uint DEBUGHUD_SHOW_EVENTPROFILER;
 uint DEBUGHUD_SHOW_MEMORY;
 uint DEBUGHUD_SHOW_MODE;

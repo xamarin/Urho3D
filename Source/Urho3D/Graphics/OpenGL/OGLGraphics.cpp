@@ -243,6 +243,7 @@ Graphics::Graphics(Context* context_) :
     dxtTextureSupport_(false),
     etcTextureSupport_(false),
     pvrtcTextureSupport_(false),
+    hardwareShadowSupport_(false),
     sRGBSupport_(false),
     sRGBWriteSupport_(false),
     numPrimitives_(0),
@@ -252,6 +253,7 @@ Graphics::Graphics(Context* context_) :
     shadowMapFormat_(GL_DEPTH_COMPONENT16),
     hiresShadowMapFormat_(GL_DEPTH_COMPONENT24),
     defaultTextureFilterMode_(FILTER_TRILINEAR),
+    defaultTextureAnisotropy_(4),
     shaderPath_("Shaders/GLSL/"),
     shaderExtension_(".glsl"),
     orientations_("LandscapeLeft LandscapeRight"),
@@ -600,8 +602,15 @@ bool Graphics::TakeScreenShot(Image& destImage)
 
     ResetRenderTargets();
 
+#ifndef GL_ES_VERSION_2_0
     destImage.SetSize(width_, height_, 3);
     glReadPixels(0, 0, width_, height_, GL_RGB, GL_UNSIGNED_BYTE, destImage.GetData());
+#else
+    // Use RGBA format on OpenGL ES, as otherwise (at least on Android) the produced image is all black
+    destImage.SetSize(width_, height_, 4);
+    glReadPixels(0, 0, width_, height_, GL_RGBA, GL_UNSIGNED_BYTE, destImage.GetData());
+#endif
+
     // On OpenGL we need to flip the image vertically after reading
     destImage.FlipVertical();
 
@@ -1505,11 +1514,13 @@ void Graphics::SetDefaultTextureFilterMode(TextureFilterMode mode)
     }
 }
 
-void Graphics::SetTextureAnisotropy(unsigned level)
+void Graphics::SetDefaultTextureAnisotropy(unsigned level)
 {
-    if (level != textureAnisotropy_)
+    level = Max(level, 1U);
+    
+    if (level != defaultTextureAnisotropy_)
     {
-        textureAnisotropy_ = level;
+        defaultTextureAnisotropy_ = level;
         SetTextureParametersDirty();
     }
 }
@@ -1646,7 +1657,7 @@ void Graphics::SetViewport(const IntRect& rect)
     SetScissorTest(false);
 }
 
-void Graphics::SetBlendMode(BlendMode mode)
+void Graphics::SetBlendMode(BlendMode mode, bool alphaToCoverage)
 {
     if (mode != blendMode_)
     {
@@ -1660,6 +1671,16 @@ void Graphics::SetBlendMode(BlendMode mode)
         }
 
         blendMode_ = mode;
+    }
+
+    if (alphaToCoverage != alphaToCoverage_)
+    {
+        if (alphaToCoverage)
+            glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);
+        else
+            glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);
+
+        alphaToCoverage_ = alphaToCoverage;
     }
 }
 
@@ -1701,9 +1722,8 @@ void Graphics::SetDepthBias(float constantBias, float slopeScaledBias)
         if (slopeScaledBias != 0.0f)
         {
             // OpenGL constant bias is unreliable and dependant on depth buffer bitdepth, apply in the projection matrix instead
-            float adjustedSlopeScaledBias = slopeScaledBias + 1.0f;
             glEnable(GL_POLYGON_OFFSET_FILL);
-            glPolygonOffset(adjustedSlopeScaledBias, 0.0f);
+            glPolygonOffset(slopeScaledBias, 0.0f);
         }
         else
             glDisable(GL_POLYGON_OFFSET_FILL);
@@ -2691,6 +2711,9 @@ void Graphics::CheckFeatureSupport()
 #endif
     }
 #endif
+
+    // Consider OpenGL shadows always hardware sampled, if supported at all
+    hardwareShadowSupport_ = shadowMapFormat_ != 0;
 }
 
 void Graphics::PrepareDraw()
@@ -3031,7 +3054,7 @@ void Graphics::ResetCachedState()
     vertexShader_ = 0;
     pixelShader_ = 0;
     blendMode_ = BLEND_REPLACE;
-    textureAnisotropy_ = 1;
+    alphaToCoverage_ = false;
     colorWrite_ = true;
     cullMode_ = CULL_NONE;
     constantDepthBias_ = 0.0f;

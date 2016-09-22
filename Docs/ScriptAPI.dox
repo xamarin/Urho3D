@@ -116,6 +116,20 @@ namespace Urho3D
 - %Scene : Scene pointer
 - %Camera : Camera pointer
 
+### ViewBuffersReady
+- %View : View pointer
+- %Texture : Texture pointer
+- %Surface : RenderSurface pointer
+- %Scene : Scene pointer
+- %Camera : Camera pointer
+
+### ViewGlobalShaderParameters
+- %View : View pointer
+- %Texture : Texture pointer
+- %Surface : RenderSurface pointer
+- %Scene : Scene pointer
+- %Camera : Camera pointer
+
 ### EndViewRender
 - %View : View pointer
 - %Texture : Texture pointer
@@ -259,6 +273,14 @@ namespace Urho3D
 
 ### ExitRequested
 
+### SDLRawInput
+- %SDLEvent : SDL_Event*
+- %Consumed : bool
+
+### InputBegin
+
+### InputEnd
+
 ## %Navigation events
 
 ### NavigationMeshRebuilt
@@ -399,6 +421,18 @@ namespace Urho3D
 - %BodyB : RigidBody2D pointer
 - %NodeA : Node pointer
 - %NodeB : Node pointer
+- %Contact : b2Contact pointer
+
+### NodeBeginContact2D
+- %Body : RigidBody2D pointer
+- %OtherNode : Node pointer
+- %OtherBody : RigidBody2D pointer
+- %Contact : b2Contact pointer
+
+### NodeEndContact2D
+- %Body : RigidBody2D pointer
+- %OtherNode : Node pointer
+- %OtherBody : RigidBody2D pointer
 - %Contact : b2Contact pointer
 
 ## %Physics events
@@ -894,6 +928,7 @@ namespace Urho3D
 - %Can %Be %Occluded : bool
 - %Cast %Shadows : bool
 - %Face %Camera %Mode : int
+- %Min %Angle : float
 - %Draw %Distance : float
 - %Shadow %Distance : float
 - %Animation %LOD %Bias : float
@@ -1406,6 +1441,8 @@ namespace Urho3D
 - %Color : Color
 - %Specular %Intensity : float
 - %Brightness %Multiplier : float
+- %Temperature : float
+- %Use %Physical %Values : bool
 - %Range : float
 - %Spot %FOV : float
 - %Spot %Aspect %Ratio : float
@@ -1432,6 +1469,7 @@ namespace Urho3D
 - %Depth %Slope %Bias : float
 - %Normal %Offset : float
 - %Near/Farclip %Ratio : float
+- %Max %Extrusion : float
 - %View %Mask : int
 - %Light %Mask : int
 
@@ -1653,6 +1691,7 @@ namespace Urho3D
 - %Shadow %Distance : float
 - %Animation %LOD %Bias : float
 - %Is %Emitting : bool
+- %Autoremove %Mode : int
 - %Max %Lights : int
 - %View %Mask : int
 - %Light %Mask : int
@@ -1941,7 +1980,7 @@ namespace Urho3D
 - %Attenuation : float
 - %Panning : float
 - %Is %Playing : bool
-- %Autoremove %on %Stop : bool
+- %Autoremove %Mode : int
 - %Play %Position : int
 
 ### SoundSource3D
@@ -1951,7 +1990,7 @@ namespace Urho3D
 - %Frequency : float
 - %Gain : float
 - %Is %Playing : bool
-- %Autoremove %on %Stop : bool
+- %Autoremove %Mode : int
 - %Play %Position : int
 - %Near %Distance : float
 - %Far %Distance : float
@@ -2039,6 +2078,10 @@ namespace Urho3D
 - %Is %Enabled : bool
 - %Height %Map : ResourceRef
 - %Material : ResourceRef
+- %North %Neighbor %NodeID : int
+- %South %Neighbor %NodeID : int
+- %West %Neighbor %NodeID : int
+- %East %Neighbor %NodeID : int
 - %Vertex %Spacing : Vector3
 - %Patch %Size : int
 - %Max %LOD %Levels : int
@@ -2117,6 +2160,7 @@ namespace Urho3D
 - %Can %Be %Occluded : bool
 - %Fixed %Screen %Size : bool
 - %Face %Camera %Mode : int
+- %Min %Angle : float
 - %Draw %Distance : float
 - %Width : int
 - %Horiz %Alignment : int
@@ -3194,6 +3238,7 @@ Properties:
 - float lodBias
 - Material@ material
 - uint maxLights
+- float minAngle
 - Node@ node // readonly
 - uint numAttributes // readonly
 - uint numBillboards
@@ -3695,6 +3740,7 @@ Properties:
 - FillMode fillMode
 - float fov
 - Frustum frustum // readonly
+- Matrix4 gpuProjection // readonly
 - float halfViewSize // readonly
 - uint id // readonly
 - float lodBias
@@ -3704,7 +3750,7 @@ Properties:
 - ObjectAnimation@ objectAnimation
 - float orthoSize
 - bool orthographic
-- Matrix4 projection // readonly
+- Matrix4 projection
 - Vector2 projectionOffset
 - Plane reflectionPlane
 - int refs // readonly
@@ -6227,6 +6273,7 @@ Methods:
 - String ReadFileID()
 - float ReadFloat()
 - int ReadInt()
+- int64 ReadInt64()
 - IntRect ReadIntRect()
 - IntVector2 ReadIntVector2()
 - String ReadLine()
@@ -6242,6 +6289,7 @@ Methods:
 - StringHash ReadStringHash()
 - uint8 ReadUByte()
 - uint ReadUInt()
+- uint64 ReadUInt64()
 - uint16 ReadUShort()
 - uint ReadVLE()
 - Variant ReadVariant()
@@ -6787,6 +6835,7 @@ Methods:
 - String ReadFileID()
 - float ReadFloat()
 - int ReadInt()
+- int64 ReadInt64()
 - IntRect ReadIntRect()
 - IntVector2 ReadIntVector2()
 - String ReadLine()
@@ -6802,6 +6851,7 @@ Methods:
 - StringHash ReadStringHash()
 - uint8 ReadUByte()
 - uint ReadUInt()
+- uint64 ReadUInt64()
 - uint16 ReadUShort()
 - uint ReadVLE()
 - Variant ReadVariant()
@@ -6821,6 +6871,7 @@ Methods:
 - bool WriteFileID(const String&)
 - bool WriteFloat(float)
 - bool WriteInt(int)
+- bool WriteInt64(int64)
 - bool WriteIntRect(const IntRect&)
 - bool WriteIntVector2(const IntVector2&)
 - bool WriteLine(const String&)
@@ -6836,6 +6887,7 @@ Methods:
 - bool WriteStringHash(const StringHash&)
 - bool WriteUByte(uint8)
 - bool WriteUInt(uint)
+- bool WriteUInt64(uint64)
 - bool WriteUShort(uint16)
 - bool WriteVLE(uint)
 - bool WriteVariant(const Variant&)
@@ -6984,9 +7036,11 @@ Properties:
 Methods:
 
 - void Define(const BoundingBox&, const Matrix3x4&)
+- void Define(const Matrix4&)
 - void Define(const Vector3&, const Vector3&, const Matrix3x4&)
 - void Define(float, float, float, float, float, const Matrix3x4&)
 - void DefineOrtho(float, float, float, float, float, const Matrix3x4&)
+- void DefineSplit(const Matrix4&, float, float)
 - float Distance(const Vector3&) const
 - Intersection IsInside(const BoundingBox&)
 - Intersection IsInside(const Sphere&)
@@ -7109,6 +7163,7 @@ Methods:
 - String ReadFileID()
 - float ReadFloat()
 - int ReadInt()
+- int64 ReadInt64()
 - IntRect ReadIntRect()
 - IntVector2 ReadIntVector2()
 - String ReadLine()
@@ -7124,6 +7179,7 @@ Methods:
 - StringHash ReadStringHash()
 - uint8 ReadUByte()
 - uint ReadUInt()
+- uint64 ReadUInt64()
 - uint16 ReadUShort()
 - uint ReadVLE()
 - Variant ReadVariant()
@@ -7242,6 +7298,7 @@ Properties:
 Methods:
 
 - int AddScreenJoystick(XMLFile@ = null, XMLFile@ = null)
+- void CenterMousePosition()
 - int GetKeyFromName(const String&) const
 - int GetKeyFromScancode(int) const
 - String GetKeyName(int) const
@@ -7287,7 +7344,7 @@ Properties:
 - int mouseMoveWheel // readonly
 - int mouseMoveX // readonly
 - int mouseMoveY // readonly
-- IntVector2 mousePosition // readonly
+- IntVector2 mousePosition
 - bool mouseVisible
 - uint numJoysticks // readonly
 - uint numTouches // readonly
@@ -7400,8 +7457,11 @@ Properties:
 - bool isNumber // readonly
 - bool isObject // readonly
 - bool isString // readonly
+- JSONNumberType numberType // readonly
+- String numberTypeName // readonly
 - uint size // readonly
 - JSONValueType valueType // readonly
+- String valueTypeName // readonly
 
 <a name="Class_JoystickState"></a>
 
@@ -7473,6 +7533,7 @@ Properties:
 - bool castShadows
 - String category // readonly
 - Color color
+- Color colorFromTemperature // readonly
 - float drawDistance
 - Color effectiveColor // readonly
 - float effectiveSpecularIntensity // readonly
@@ -7505,13 +7566,16 @@ Properties:
 - FocusParameters shadowFocus
 - float shadowIntensity
 - uint shadowMask
+- float shadowMaxExtrusion
 - float shadowNearFarRatio
 - float shadowResolution
 - Texture@ shapeTexture
 - float specularIntensity
+- float temperature
 - bool temporary
 - StringHash type // readonly
 - String typeName // readonly
+- bool usePhysicalValues
 - uint viewMask
 - int weakRefs // readonly
 - BoundingBox worldBoundingBox // readonly
@@ -8005,6 +8069,7 @@ Methods:
 
 Properties:
 
+- bool alphaToCoverage
 - String category // readonly
 - CullMode cullMode
 - BiasParameters depthBias
@@ -8012,7 +8077,8 @@ Properties:
 - uint memoryUse // readonly
 - String name
 - uint numTechniques
-- bool occlusion // readonly
+- bool occlusion
+- String pixelShaderDefines
 - int refs // readonly
 - uint8 renderOrder
 - Scene@ scene
@@ -8025,6 +8091,7 @@ Properties:
 - StringHash type // readonly
 - String typeName // readonly
 - uint useTimer // readonly
+- String vertexShaderDefines
 - int weakRefs // readonly
 
 <a name="Class_Matrix2"></a>
@@ -8417,6 +8484,7 @@ Methods:
 - String ReadFileID()
 - float ReadFloat()
 - int ReadInt()
+- int64 ReadInt64()
 - IntRect ReadIntRect()
 - IntVector2 ReadIntVector2()
 - String ReadLine()
@@ -8432,6 +8500,7 @@ Methods:
 - StringHash ReadStringHash()
 - uint8 ReadUByte()
 - uint ReadUInt()
+- uint64 ReadUInt64()
 - uint16 ReadUShort()
 - uint ReadVLE()
 - Variant ReadVariant()
@@ -8451,6 +8520,7 @@ Methods:
 - bool WriteFileID(const String&)
 - bool WriteFloat(float)
 - bool WriteInt(int)
+- bool WriteInt64(int64)
 - bool WriteIntRect(const IntRect&)
 - bool WriteIntVector2(const IntVector2&)
 - bool WriteLine(const String&)
@@ -8466,6 +8536,7 @@ Methods:
 - bool WriteStringHash(const StringHash&)
 - bool WriteUByte(uint8)
 - bool WriteUInt(uint)
+- bool WriteUInt64(uint64)
 - bool WriteUShort(uint16)
 - bool WriteVLE(uint)
 - bool WriteVariant(const Variant&)
@@ -8872,6 +8943,7 @@ Methods:
 - void RemoveInstanceDefault()
 - void RemoveObjectAnimation()
 - bool RemoveTag(const String&)
+- void ReorderComponent(Component@, uint)
 - void ResetDeepEnabled()
 - void ResetToDefault()
 - void Roll(float, TransformSpace = TS_LOCAL)
@@ -8934,7 +9006,7 @@ Properties:
 - Vector3 direction
 - bool enabled
 - bool enabledSelf // readonly
-- uint id // readonly
+- uint id
 - String name
 - uint numAllChildren // readonly
 - uint numAttributes // readonly
@@ -9402,6 +9474,7 @@ Properties:
 - Variant[] attributeDefaults // readonly
 - AttributeInfo[] attributeInfos // readonly
 - Variant[] attributes
+- AutoRemoveMode autoRemoveMode
 - Billboard@[] billboards // readonly
 - BoundingBox boundingBox // readonly
 - bool castShadows
@@ -9527,7 +9600,7 @@ Properties:
 
 Properties:
 
-- bool alphaMask
+- bool alphaToCoverage
 - BlendMode blendMode
 - CullMode cullMode
 - CompareMode depthTestMode
@@ -9535,9 +9608,11 @@ Properties:
 - bool desktop
 - PassLightingMode lightingMode
 - String pixelShader
+- String pixelShaderDefineExcludes
 - String pixelShaderDefines
 - int refs // readonly
 - String vertexShader
+- String vertexShaderDefineExcludes
 - String vertexShaderDefines
 - int weakRefs // readonly
 
@@ -10522,6 +10597,7 @@ Methods:
 - void RemoveInstanceDefault()
 - void RemoveObjectAnimation()
 - bool RemoveTag(const String&)
+- void ReorderComponent(Component@, uint)
 - void ResetToDefault()
 - void Roll(float, TransformSpace = TS_LOCAL)
 - void Rotate(const Quaternion&, TransformSpace = TS_LOCAL)
@@ -10592,7 +10668,7 @@ Properties:
 - Vector3 direction
 - float elapsedTime
 - String fileName // readonly
-- uint id // readonly
+- uint id
 - String name
 - uint numAllChildren // readonly
 - uint numAttributes // readonly
@@ -11175,6 +11251,7 @@ Methods:
 - bool WriteFileID(const String&)
 - bool WriteFloat(float)
 - bool WriteInt(int)
+- bool WriteInt64(int64)
 - bool WriteIntRect(const IntRect&)
 - bool WriteIntVector2(const IntVector2&)
 - bool WriteLine(const String&)
@@ -11190,6 +11267,7 @@ Methods:
 - bool WriteStringHash(const StringHash&)
 - bool WriteUByte(uint8)
 - bool WriteUInt(uint)
+- bool WriteUInt64(uint64)
 - bool WriteUShort(uint16)
 - bool WriteVLE(uint)
 - bool WriteVariant(const Variant&)
@@ -11684,7 +11762,7 @@ Properties:
 - Variant[] attributeDefaults // readonly
 - AttributeInfo[] attributeInfos // readonly
 - Variant[] attributes
-- bool autoRemove
+- AutoRemoveMode autoRemoveMode
 - String category // readonly
 - bool enabled
 - bool enabledEffective // readonly
@@ -11759,7 +11837,7 @@ Properties:
 - Variant[] attributeDefaults // readonly
 - AttributeInfo[] attributeInfos // readonly
 - Variant[] attributes
-- bool autoRemove
+- AutoRemoveMode autoRemoveMode
 - String category // readonly
 - bool enabled
 - bool enabledEffective // readonly
@@ -12431,7 +12509,7 @@ Methods:
 - Color ToColor() const
 - double ToDouble() const
 - float ToFloat() const
-- int ToInt() const
+- int ToInt(int = 10) const
 - IntRect ToIntRect() const
 - IntVector2 ToIntVector2() const
 - String ToLower() const
@@ -12439,7 +12517,7 @@ Methods:
 - Matrix3x4 ToMatrix3x4() const
 - Matrix4 ToMatrix4() const
 - Quaternion ToQuaternion() const
-- uint ToUInt() const
+- uint ToUInt(int = 10) const
 - String ToUpper() const
 - Vector2 ToVector2() const
 - Vector3 ToVector3() const
@@ -12528,6 +12606,7 @@ Methods:
 - Variant GetAttributeDefault(const String&) const
 - float GetHeight(const Vector3&) const
 - bool GetInterceptNetworkUpdate(const String&) const
+- TerrainPatch@ GetNeighborPatch(int, int) const
 - Vector3 GetNormal(const Vector3&) const
 - TerrainPatch@ GetPatch(int, int) const
 - bool HasSubscribedToEvent(Object@, const String&)
@@ -12554,6 +12633,7 @@ Methods:
 - void SetAttributeAnimationTime(const String&, float)
 - void SetAttributeAnimationWrapMode(const String&, WrapMode)
 - void SetInterceptNetworkUpdate(const String&, bool)
+- void SetNeighbors(Terrain@, Terrain@, Terrain@, Terrain@)
 - IntVector2 WorldToHeightMap(const Vector3&) const
 
 Properties:
@@ -12565,6 +12645,7 @@ Properties:
 - bool castShadows
 - String category // readonly
 - float drawDistance
+- Terrain@ eastNeighbor
 - bool enabled
 - bool enabledEffective // readonly
 - Image@ heightMap
@@ -12575,6 +12656,7 @@ Properties:
 - uint maxLights
 - uint maxLodLevels
 - Node@ node // readonly
+- Terrain@ northNeighbor
 - uint numAttributes // readonly
 - IntVector2 numPatches // readonly
 - IntVector2 numVertices // readonly
@@ -12588,12 +12670,14 @@ Properties:
 - float shadowDistance
 - uint shadowMask
 - bool smoothing
+- Terrain@ southNeighbor
 - Vector3 spacing
 - bool temporary
 - StringHash type // readonly
 - String typeName // readonly
 - uint viewMask
 - int weakRefs // readonly
+- Terrain@ westNeighbor
 - uint zoneMask
 
 <a name="Class_TerrainPatch"></a>
@@ -12986,6 +13070,7 @@ Methods:
 Properties:
 
 - TextureAddressMode[] addressMode
+- uint anisotropy
 - Texture@ backupTexture
 - Color borderColor
 - String category // readonly
@@ -13032,6 +13117,7 @@ Methods:
 Properties:
 
 - TextureAddressMode[] addressMode
+- uint anisotropy
 - Texture@ backupTexture
 - Color borderColor
 - String category // readonly
@@ -13078,6 +13164,7 @@ Methods:
 Properties:
 
 - TextureAddressMode[] addressMode
+- uint anisotropy
 - Texture@ backupTexture
 - Color borderColor
 - String category // readonly
@@ -13125,6 +13212,7 @@ Methods:
 Properties:
 
 - TextureAddressMode[] addressMode
+- uint anisotropy
 - Texture@ backupTexture
 - Color borderColor
 - String category // readonly
@@ -13171,6 +13259,7 @@ Methods:
 Properties:
 
 - TextureAddressMode[] addressMode
+- uint anisotropy
 - Texture@ backupTexture
 - Color borderColor
 - String category // readonly
@@ -13657,6 +13746,7 @@ Methods:
 - bool SaveLayout(File@, UIElement@)
 - bool SaveLayout(VectorBuffer&, UIElement@)
 - void SendEvent(const String&, VariantMap& = VariantMap ( ))
+- void SetCustomSize(int, int)
 - void SetFocusElement(UIElement@, bool = false)
 - void SetHeight(float)
 - void SetWidth(float)
@@ -13668,6 +13758,7 @@ Properties:
 - String clipBoardText
 - Cursor@ cursor
 - IntVector2 cursorPosition // readonly
+- IntVector2 customSize
 - float defaultToolTipDelay
 - float doubleClickInterval
 - int dragBeginDistance
@@ -14036,6 +14127,7 @@ Methods:
 - String ReadFileID()
 - float ReadFloat()
 - int ReadInt()
+- int64 ReadInt64()
 - IntRect ReadIntRect()
 - IntVector2 ReadIntVector2()
 - String ReadLine()
@@ -14051,6 +14143,7 @@ Methods:
 - StringHash ReadStringHash()
 - uint8 ReadUByte()
 - uint ReadUInt()
+- uint64 ReadUInt64()
 - uint16 ReadUShort()
 - uint ReadVLE()
 - Variant ReadVariant()
@@ -14071,6 +14164,7 @@ Methods:
 - bool WriteFileID(const String&)
 - bool WriteFloat(float)
 - bool WriteInt(int)
+- bool WriteInt64(int64)
 - bool WriteIntRect(const IntRect&)
 - bool WriteIntVector2(const IntVector2&)
 - bool WriteLine(const String&)
@@ -14086,6 +14180,7 @@ Methods:
 - bool WriteStringHash(const StringHash&)
 - bool WriteUByte(uint8)
 - bool WriteUInt(uint)
+- bool WriteUInt64(uint64)
 - bool WriteUShort(uint16)
 - bool WriteVLE(uint)
 - bool WriteVariant(const Variant&)
@@ -14815,6 +14910,13 @@ Properties:
 - ABM_ADDITIVE
 
 
+### AutoRemoveMode
+
+- REMOVE_DISABLED
+- REMOVE_COMPONENT
+- REMOVE_NODE
+
+
 ### BlendMode
 
 - BLEND_REPLACE
@@ -14978,6 +15080,7 @@ Properties:
 - FC_ROTATE_Y
 - FC_LOOKAT_XYZ
 - FC_LOOKAT_Y
+- FC_LOOKAT_MIXED
 - FC_DIRECTION
 
 
@@ -15047,6 +15150,14 @@ Properties:
 - INSIDE
 
 
+### JSONNumberType
+
+- JSONNT_NAN
+- JSONNT_INT
+- JSONNT_UINT
+- JSONNT_FLOAT_DOUBLE
+
+
 ### JSONValueType
 
 - JSON_NULL
@@ -15098,6 +15209,7 @@ Properties:
 - NAVIGATIONPUSHINESS_LOW
 - NAVIGATIONPUSHINESS_MEDIUM
 - NAVIGATIONPUSHINESS_HIGH
+- NAVIGATIONPUSHINESS_NONE
 
 
 ### NavigationQuality
@@ -15560,7 +15672,6 @@ Properties:
 - uint DD_SOURCE_AND_TARGET
 - uint DD_TARGET
 - uint DEBUGHUD_SHOW_ALL
-- uint DEBUGHUD_SHOW_ALL_MEMORY
 - uint DEBUGHUD_SHOW_EVENTPROFILER
 - uint DEBUGHUD_SHOW_MEMORY
 - uint DEBUGHUD_SHOW_MODE
