@@ -62,8 +62,6 @@ public:
     void SetFarClip(float farClip);
     /// Set vertical field of view in degrees.
     void SetFov(float fov);
-    /// Set projection center coordinates
-    void SetProjectionCenter(const Vector2& center);
     /// Set skew
     void SetSkew(float skew);
     /// Set orthographic mode view uniform size.
