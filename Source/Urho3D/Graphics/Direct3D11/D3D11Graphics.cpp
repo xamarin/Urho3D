@@ -213,6 +213,7 @@ Graphics::Graphics(Context* context) :
     flushGPU_(false),
     forceGL2_(false),
     sRGB_(false),
+    stereoRendering_(false),
     anisotropySupport_(false),
     dxtTextureSupport_(false),
     etcTextureSupport_(false),
