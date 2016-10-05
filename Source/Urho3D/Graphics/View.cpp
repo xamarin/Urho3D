@@ -301,6 +301,7 @@ View::View(Context* context) :
     farClipZone_(0),
     occlusionBuffer_(0),
     renderTarget_(0),
+    stereo_(false),
     substituteRenderTarget_(0)
 {
     // Create octree query and scene results vector for each thread

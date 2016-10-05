@@ -62,6 +62,7 @@ Camera::Camera(Context* context) :
     orthoSize_(DEFAULT_ORTHOSIZE),
     aspectRatio_(1.0f),
     zoom_(1.0f),
+	skew_(0.0f),
     lodBias_(1.0f),
     viewMask_(DEFAULT_VIEWMASK),
     viewOverrideFlags_(VO_NONE),

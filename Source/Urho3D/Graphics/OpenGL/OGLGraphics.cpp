@@ -244,6 +244,7 @@ Graphics::Graphics(Context* context_) :
     etcTextureSupport_(false),
     pvrtcTextureSupport_(false),
     hardwareShadowSupport_(false),
+    stereoRendering_(false),
     sRGBSupport_(false),
     sRGBWriteSupport_(false),
     numPrimitives_(0),
