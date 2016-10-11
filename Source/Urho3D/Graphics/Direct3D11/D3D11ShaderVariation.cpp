@@ -56,7 +56,7 @@ void ShaderVariation::OnDeviceLost()
     // No-op on Direct3D11
 }
 
-#if UWP_HOLO
+#if UWP
 extern "C" const wchar_t* SDL_UWP_GetCacheDir();
 #endif
 
@@ -78,7 +78,7 @@ bool ShaderVariation::Create()
     SplitPath(owner_->GetName(), path, name, extension);
     extension = type_ == VS ? ".vs4" : ".ps4";
 
-#if UWP_HOLO
+#if UWP
     String binaryShaderName = String(SDL_UWP_GetCacheDir()) + "/" + name + "_" + StringHash(defines_).ToString() + extension;
 #else
     String binaryShaderName = path + "Cache/" + name + "_" + StringHash(defines_).ToString() + extension;
@@ -426,7 +426,7 @@ void ShaderVariation::SaveByteCode(const String& binaryShaderName)
     ResourceCache* cache = owner_->GetSubsystem<ResourceCache>();
     FileSystem* fileSystem = owner_->GetSubsystem<FileSystem>();
 
-#if UWP_HOLO
+#if UWP
     String path = String(SDL_UWP_GetCacheDir()) + "/";
 #else
     String path = GetPath(cache->GetResourceFileName(owner_->GetName())) + "Cache/";
