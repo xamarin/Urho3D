@@ -95,6 +95,7 @@ int Application::Run()
 #elif defined(__EMSCRIPTEN__)
         emscripten_set_main_loop_arg(RunFrame, engine_, 0, 1);
 #endif
+#endif
 
         return exitCode_;
     }
