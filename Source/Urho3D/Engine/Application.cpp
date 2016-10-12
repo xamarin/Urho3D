@@ -47,10 +47,6 @@ void RunFrame(void* data)
 }
 #endif
 
-#if defined(UWP)
-extern "C" void SDL_UWP_StartRenderLoop(Engine* engine);
-#endif
-
 Application::Application(Context* context) :
     Object(context),
     exitCode_(EXIT_SUCCESS)
@@ -98,9 +94,6 @@ int Application::Run()
         SDL_iPhoneSetAnimationCallback(GetSubsystem<Graphics>()->GetWindow(), 1, &RunFrame, engine_);
 #elif defined(__EMSCRIPTEN__)
         emscripten_set_main_loop_arg(RunFrame, engine_, 0, 1);
-#elif defined(UWP)
-        SDL_UWP_StartRenderLoop(engine_);
-#endif
 #endif
 
         return exitCode_;
