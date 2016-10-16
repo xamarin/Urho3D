@@ -383,6 +383,8 @@ bool Engine::Initialize(const VariantMap& parameters)
         ))
             return false;
 
+        graphics->SetShaderCacheDir(GetParameter(parameters, "ShaderCacheDir", fileSystem->GetAppPreferencesDir("urho3d", "shadercache")).GetString());
+
         if (HasParameter(parameters, "DumpShaders"))
             graphics->BeginDumpShaders(GetParameter(parameters, "DumpShaders", String::EMPTY).GetString());
         if (HasParameter(parameters, "RenderPath"))
@@ -413,6 +415,12 @@ bool Engine::Initialize(const VariantMap& parameters)
     // Initialize input
     if (HasParameter(parameters, "TouchEmulation"))
         GetSubsystem<Input>()->SetTouchEmulation(GetParameter(parameters, "TouchEmulation").GetBool());
+
+    // Initialize network
+#ifdef URHO3D_NETWORK
+    if (HasParameter(parameters, "PackageCacheDir"))
+        GetSubsystem<Network>()->SetPackageCacheDir(GetParameter(parameters, "PackageCacheDir").GetString());
+#endif
 
 #ifdef URHO3D_TESTING
     if (HasParameter(parameters, "TimeOut"))

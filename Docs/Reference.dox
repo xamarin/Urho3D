@@ -222,6 +222,8 @@ The full list of supported parameters, their datatypes and default values:
 - SoundStereo (bool) Stereo sound output mode. Default true.
 - SoundInterpolation (bool) Interpolated sound output mode to improve quality. Default true.
 - TouchEmulation (bool) %Touch emulation on desktop platform. Default false.
+- ShaderCacheDir (string) Shader binary cache directory for Direct3D. Default "urho3d/shadercache" within the user's application preferences directory.
+- PackageCacheDir (string) Package cache directory for Network subsystem. Not specified by default.
 
 \section MainLoop_Frame Main loop iteration
 
@@ -412,6 +414,7 @@ Resources include most things in Urho3D that are loaded from mass storage during
 - Sound
 - Technique
 - Texture2D
+- Texture2DArray
 - Texture3D
 - TextureCube
 - XMLFile
@@ -1088,6 +1091,8 @@ These differences need to be observed when using the low-level rendering functio
 
 - Alpha-to-coverage is not supported on Direct3D9.
 
+- Bool and int shader uniforms are not supported on Direct3D9.
+
 OpenGL ES 2.0 has further limitations:
 
 - Of the DXT formats, only DXT1 compressed textures will be uploaded as compressed, and only if the EXT_texture_compression_dxt1 extension is present. Other DXT formats will be uploaded as uncompressed RGBA. ETC1 (Android) and PVRTC (iOS) compressed textures are supported through the .ktx and .pvr file formats.
@@ -1107,6 +1112,10 @@ OpenGL ES 2.0 has further limitations:
 - Custom clip planes are not currently supported.
 
 - 3D and 2D array textures are not currently supported.
+
+- Multisampled texture rendertargets are not supported.
+
+- Line antialiasing is not supported.
 
 \page VertexBuffers Vertex buffers
 
@@ -1172,6 +1181,7 @@ A material definition looks like this:
     <fill value="solid|wireframe|point" />
     <depthbias constant="x" slopescaled="y" />
     <alphatocoverage enable="true|false" />
+    <lineantialias enable="true|false" />
     <renderorder value="x" />
     <occlusion enable="true|false" />
 </material>
@@ -1494,11 +1504,13 @@ The available commands are:
 
 - clear: Clear any of color, depth and stencil. Color clear can optionally use the fog color from the Zone visible at the far clip distance.
 - scenepass: Render scene objects whose \ref Materials "material technique" contains the specified pass. Will either be front-to-back ordered with state sorting, or back-to-front ordered with no state sorting. For deferred rendering, object lightmasks can be optionally marked to the stencil buffer. Vertex lights can optionally be handled during a pass, if it has the necessary shader combinations. Textures global to the pass can be bound to free texture units; these can either be the viewport, a named rendertarget, or a texture resource identified with its pathname.
-- quad: Render a viewport-sized quad using the specified shaders and compilation defines. Textures can be bound and additionally shader parameters and the blend mode (default=replace) can be specified.
+- quad: Render a viewport-sized quad using the specified shaders. The blend mode (default=replace) can be optionally specified.
 - forwardlights: Render per-pixel forward lighting for opaque objects with the specified pass name. Shadow maps are also rendered as necessary.
 - lightvolumes: Render deferred light volumes using the specified shaders. G-buffer textures can be bound as necessary.
 - renderui: Render the UI into the output rendertarget. Using this will cause the default %UI render to the backbuffer to be skipped.
 - sendevent: Send an event with a specified string parameter ("event name"). This can be used to call custom code,typically custom low-level rendering, in the middle of the renderpath execution.
+
+Scenepass, quad, forwardlights and lightvolumes commands all allow command-global shader compilation defines, shader parameters and textures to be defined. For example in deferred rendering, the lightvolumes command would bind the G-buffer textures to be able to calculate the lighting. Note that when binding command-global textures, these are (for optimization) bound only once in the beginning of the command. If the texture binding is overwritten by an object's material, it is "lost" until the end of the command. Therefore the command-global textures should be in units that are not used by materials.
 
 A render path can be loaded from a main XML file by calling \ref RenderPath::Load "Load()", after which other XML files (for example one for each post-processing effect) can be appended to it by calling \ref RenderPath::Append "Append()". Rendertargets and commands can be enabled or disabled by calling \ref RenderPath::SetEnabled "SetEnabled()" to switch eg. a post-processing effect on or off. To aid in this, both can be identified by tag names, for example the bloom effect uses the tag "Bloom" for all of its rendertargets and commands.
 
@@ -1509,21 +1521,27 @@ The render path XML definition looks like this:
 \code
 <renderpath>
     <rendertarget name="RTName" tag="TagName" enabled="true|false" cubemap="true|false" size="x y"|sizedivisor="x y"|sizemultiplier="x y"
-        format="rgb|rgba|r32f|rgba16|rgba16f|rgba32f|rg16|rg16f|rg32f|lineardepth|readabledepth" filter="true|false" srgb="true|false" persistent="true|false" />
+        format="rgb|rgba|l|a|r32f|rgba16|rgba16f|rgba32f|rg16|rg16f|rg32f|lineardepth|readabledepth|d24s8" filter="true|false" srgb="true|false" persistent="true|false"
+        multisample="x" autoresolve="true|false" />
     <command type="clear" tag="TagName" enabled="true|false" color="r g b a|fog" depth="x" stencil="y" output="viewport|RTName" face="0|1|2|3|4|5" depthstencil="DSName" />
-    <command type="scenepass" pass="PassName" sort="fronttoback|backtofront" marktostencil="true|false" vertexlights="true|false" metadata="base|alpha|gbuffer" depthstencil="DSName">
+    <command type="scenepass" pass="PassName" vsdefines="DEFINE1 DEFINE2" psdefines="DEFINE3 DEFINE4" sort="fronttoback|backtofront" marktostencil="true|false" vertexlights="true|false" metadata="base|alpha|gbuffer" depthstencil="DSName">
         <output index="0" name="RTName1" face="0|1|2|3|4|5" />
         <output index="1" name="RTName2" />
         <output index="2" name="RTName3" />
         <texture unit="unit" name="viewport|RTName|TextureName" />
+        <parameter name="ParameterName" value="x y z w" />
     </command>
     <command type="quad" vs="VertexShaderName" ps="PixelShaderName" vsdefines="DEFINE1 DEFINE2" psdefines="DEFINE3 DEFINE4" blend="replace|add|multiply|alpha|addalpha|premulalpha|invdestalpha|subtract|subtractalpha" output="viewport|RTName" depthstencil="DSName" />
         <texture unit="unit" name="viewport|RTName|TextureName" />
         <parameter name="ParameterName" value="x y z w" />
     </command>
-    <command type="forwardlights" pass="PassName" uselitbase="true|false" output="viewport|RTName" depthstencil="DSName" />
-    <command type="lightvolumes"  vs="VertexShaderName" ps="PixelShaderName" output="viewport|RTName" depthstencil="DSName" />
+    <command type="forwardlights" pass="PassName" vsdefines="DEFINE1 DEFINE2" psdefines="DEFINE3 DEFINE4" uselitbase="true|false" output="viewport|RTName" depthstencil="DSName">
         <texture unit="unit" name="viewport|RTName|TextureName" />
+        <parameter name="ParameterName" value="x y z w" />
+    </command
+    <command type="lightvolumes"  vs="VertexShaderName" ps="PixelShaderName" vsdefines="DEFINE1 DEFINE2" psdefines="DEFINE3 DEFINE4" output="viewport|RTName" depthstencil="DSName" />
+        <texture unit="unit" name="viewport|RTName|TextureName" />
+        <parameter name="ParameterName" value="x y z w" />
     </command>
     <command type="renderui" output="viewport|RTName" depthstencil="DSName" />
     <command type="sendevent" name="EventName" />
@@ -1585,6 +1603,14 @@ Otherwise fully customized scene render passes can be specified, but there are a
 Post-processing effects are usually implemented by using the quad command. When using intermediate rendertargets that are of different size than the viewport rendertarget, it is often necessary in shaders to reference their (inverse) size and the half-pixel offset for Direct3D9. These shader uniforms are automatically attempted to be assigned for named rendertargets. For an example look at the bloom postprocess shaders: because there is a rendertarget called BlurH, each quad command in the renderpath will attempt to set the shader uniforms cBlurHInvSize and cBlurHOffsets (both Vector2.) Note that setting shader uniforms is case insensitive.
 
 In OpenGL post-processing shaders it is important to distinguish between sampling a rendertarget texture and a regular texture resource, because intermediate rendertargets (such as the G-buffer) may be vertically inverted. Use the GetScreenPos() or GetQuadTexCoord() functions to get rendertarget UV coordinates from the clip coordinates; this takes flipping into account automatically. For sampling a regular texture, use GetQuadTexCoordNoFlip() function, which requires world coordinates instead of clip coordinates.
+
+\section RenderPaths_MultiSample Multisampled rendertargets
+
+Texture2D and TextureCube support multisampling. Programmatically, multisampling is enabled through the \ref Texture2D::SetSize "SetSize()" function when defining the dimensions and format. Multisampling can also be set in a renderpath's rendertarget definition.
+
+The normal operation is that a multisampled rendertarget will be automatically resolved to 1-sample before being sampled as a texture. This is denoted by the \ref Texture2D::GetAutoResolve() "autoResolve" parameter, whose default value is true. On OpenGL (when supported) and Direct3D11, it's also possible to access the individual samples of a Texture2D in shader code by defining a multisampled sampler and using specialized functions (texelFetch on OpenGL, Texture2DMS.Load on Direct3D11). In this case the "autoResolve" parameter should be set to false. Note that accessing individual samples is not possible for cube textures, or when using Direct3D9.
+
+By accessing the individual samples of multisampled G-buffer textures, a deferred MSAA renderer could be implemented. This has some performance considerations / complexities (you should avoid running the lighting calculations per sample when not on triangle edges) and is not implemented by default.
 
 \page Lights Lights and shadows
 
@@ -1651,6 +1677,8 @@ Additionally there are shadow fade distance, shadow intensity, shadow resolution
 The shadow map base resolution and quality (bit depth & sampling mode) are set through functions in the Renderer subsystem, see \ref Renderer::SetShadowMapSize "SetShadowMapSize()" and \ref Renderer::SetShadowQuality "SetShadowQuality()".
 
 The shadow quality enum allows choosing also variance (VSM) shadows instead of the default hardware depth shadows. VSM shadows behave markedly differently; depth bias settings are no longer relevant, but you should make sure all your large surfaces (also ground & terrain) are marked as shadow casters, otherwise shadows cast by objects moving over them can appear unnaturally thin. For VSM shadows, see the functions \ref Renderer::SetShadowSoftness "SetShadowSoftness()" and \ref Renderer::SetVSMShadowParameters "SetVSMShadowParameters()" to control the softness (blurring) and in-shadow detection behavior. Instead of self-shadowing artifacts common with hardware depth shadows, you may encounter light bleeding when shadow casting surfaces are close in light direction to each other, which adjusting the VSM shadow parameters may help.
+
+VSM shadow maps can also be multisampled for better quality, though this has a performance cost. See \ref Renderer::SetVSMMultiSample "SetVSMMultiSample()".
 
 \section Lights_ShadowMapReuse Shadow map reuse
 
@@ -2162,6 +2190,10 @@ To create automatically adjusting child layouts, the layout mode can be switched
 Left, top, right & bottom border widths and spacing between elements can also be specified for the layout. A grid layout is not directly supported, but it can be manually created with a horizontal layout inside a vertical layout, or vice versa.
 
 Use the functions \ref UIElement::SetLayout "SetLayout()" or \ref UIElement::SetLayoutMode "SetLayoutMode()" to control the layouting.
+
+\section UI_Anchoring Child element anchoring
+
+A separate mechanism from layouting that allows automatically adjusting %UI hierarchies is to use anchoring. First enable anchoring in a child element with \ref UIElement::SetEnableAnchor "SetEnableAnchor()", after which the top-left and bottom-right corners in relation to the parent's size (range 0-1) can be set with \ref UIElement::SetMinAnchor "SetMinAnchor()" and \ref UIElement::SetMaxAnchor "SetMaxAnchor()". The corners can further be offset in pixels by calling \ref UIElement::SetMinOffset "SetMinOffset()" and \ref UIElement::SetMaxOffset "SetMaxOffset()". Finally note that instead of just setting horizontal / vertical alignment, the child element's pivot can also be expressed in a 0-1 range relative to its size by calling \ref UIElement::SetPivot "SetPivot()".
 
 \section UI_Fonts Fonts
 
@@ -3428,6 +3460,8 @@ byte[]     Bytecode, produced by AngelScript serializer
 - Constants and enumerations are in uppercase. For example %Vector3::ZERO or PASS_SHADOW.
 
 - Pointers and references append the * or & symbol to the type without a space in between. For example Drawable* drawable, %Serializer& dest.
+
+- The macro NULL should not be used, 0 is used instead.
 
 - Class definitions proceed in the following order:
   - public constructors and the destructor

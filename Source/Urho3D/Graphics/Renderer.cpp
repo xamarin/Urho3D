@@ -278,6 +278,7 @@ Renderer::Renderer(Context* context) :
     shadowQuality_(SHADOWQUALITY_PCF_16BIT),
     shadowSoftness_(1.0f),
     vsmShadowParams_(0.0000001f, 0.2f),
+    vsmMultiSample_(1),
     maxShadowMaps_(1),
     minInstances_(2),
     maxSortedInstances_(1000),
@@ -454,6 +455,16 @@ void Renderer::SetVSMShadowParameters(float minVariance, float lightBleedingRedu
 {
     vsmShadowParams_.x_ = Max(minVariance, 0.0f);
     vsmShadowParams_.y_ = Clamp(lightBleedingReduction, 0.0f, 1.0f);
+}
+
+void Renderer::SetVSMMultiSample(int multiSample)
+{
+    multiSample = Clamp(multiSample, 1, 16);
+    if (multiSample != vsmMultiSample_)
+    {
+        vsmMultiSample_ = multiSample;
+        ResetShadowMaps();
+    }
 }
 
 void Renderer::SetShadowMapFilter(Object* instance, ShadowMapFilter functionPtr)
@@ -916,6 +927,7 @@ Texture2D* Renderer::GetShadowMap(Light* light, Camera* camera, unsigned viewWid
     // Find format and usage of the shadow map
     unsigned shadowMapFormat = 0;
     TextureUsage shadowMapUsage = TEXTURE_DEPTHSTENCIL;
+    int multiSample = 1;
 
     switch (shadowQuality_)
     {
@@ -933,6 +945,7 @@ Texture2D* Renderer::GetShadowMap(Light* light, Camera* camera, unsigned viewWid
     case SHADOWQUALITY_BLUR_VSM:
         shadowMapFormat = graphics_->GetRGFloat32Format();
         shadowMapUsage = TEXTURE_RENDERTARGET;
+        multiSample = vsmMultiSample_;
         break;
     }
 
@@ -945,7 +958,7 @@ Texture2D* Renderer::GetShadowMap(Light* light, Camera* camera, unsigned viewWid
 
     while (retries)
     {
-        if (!newShadowMap->SetSize(width, height, shadowMapFormat, shadowMapUsage))
+        if (!newShadowMap->SetSize(width, height, shadowMapFormat, shadowMapUsage, multiSample))
         {
             width >>= 1;
             height >>= 1;
@@ -991,7 +1004,7 @@ Texture2D* Renderer::GetShadowMap(Light* light, Camera* camera, unsigned viewWid
     return newShadowMap;
 }
 
-Texture* Renderer::GetScreenBuffer(int width, int height, unsigned format, bool cubemap, bool filtered, bool srgb,
+Texture* Renderer::GetScreenBuffer(int width, int height, unsigned format, int multiSample, bool autoResolve, bool cubemap, bool filtered, bool srgb,
     unsigned persistentKey)
 {
     bool depthStencil = (format == Graphics::GetDepthStencilFormat()) || (format == Graphics::GetReadableDepthFormat());
@@ -1004,13 +1017,19 @@ Texture* Renderer::GetScreenBuffer(int width, int height, unsigned format, bool 
     if (cubemap)
         height = width;
 
-    long long searchKey = ((long long)format << 32) | (width << 16) | height;
+    multiSample = Clamp(multiSample, 1, 16);
+    if (multiSample == 1)
+        autoResolve = false;
+
+    long long searchKey = ((long long)format << 32) | (multiSample << 24) | (width << 12) | height;
     if (filtered)
         searchKey |= 0x8000000000000000LL;
     if (srgb)
         searchKey |= 0x4000000000000000LL;
     if (cubemap)
         searchKey |= 0x2000000000000000LL;
+    if (autoResolve)
+        searchKey |= 0x1000000000000000LL;
 
     // Add persistent key if defined
     if (persistentKey)
@@ -1032,7 +1051,7 @@ Texture* Renderer::GetScreenBuffer(int width, int height, unsigned format, bool 
         if (!cubemap)
         {
             SharedPtr<Texture2D> newTex2D(new Texture2D(context_));
-            newTex2D->SetSize(width, height, format, depthStencil ? TEXTURE_DEPTHSTENCIL : TEXTURE_RENDERTARGET);
+            newTex2D->SetSize(width, height, format, depthStencil ? TEXTURE_DEPTHSTENCIL : TEXTURE_RENDERTARGET, multiSample, autoResolve);
 
 #ifdef URHO3D_OPENGL
             // OpenGL hack: clear persistent floating point screen buffers to ensure the initial contents aren't illegal (NaN)?
@@ -1053,7 +1072,7 @@ Texture* Renderer::GetScreenBuffer(int width, int height, unsigned format, bool 
         else
         {
             SharedPtr<TextureCube> newTexCube(new TextureCube(context_));
-            newTexCube->SetSize(width, format, TEXTURE_RENDERTARGET);
+            newTexCube->SetSize(width, format, TEXTURE_RENDERTARGET, multiSample);
 
             newBuffer = newTexCube;
         }
@@ -1074,16 +1093,17 @@ Texture* Renderer::GetScreenBuffer(int width, int height, unsigned format, bool 
     }
 }
 
-RenderSurface* Renderer::GetDepthStencil(int width, int height)
+RenderSurface* Renderer::GetDepthStencil(int width, int height, int multiSample, bool autoResolve)
 {
     // Return the default depth-stencil surface if applicable
     // (when using OpenGL Graphics will allocate right size surfaces on demand to emulate Direct3D9)
-    if (width == graphics_->GetWidth() && height == graphics_->GetHeight() && graphics_->GetMultiSample() <= 1)
+    if (width == graphics_->GetWidth() && height == graphics_->GetHeight() && multiSample == 1 &&
+        graphics_->GetMultiSample() == multiSample)
         return 0;
     else
     {
-        return static_cast<Texture2D*>(GetScreenBuffer(width, height, Graphics::GetDepthStencilFormat(), false, false,
-            false))->GetRenderSurface();
+        return static_cast<Texture2D*>(GetScreenBuffer(width, height, Graphics::GetDepthStencilFormat(), multiSample, autoResolve,
+            false, false, false))->GetRenderSurface();
     }
 }
 
@@ -1146,18 +1166,20 @@ View* Renderer::GetActualView(View* view)
         return view;
 }
 
-void Renderer::SetBatchShaders(Batch& batch, Technique* tech, bool allowShadows)
+void Renderer::SetBatchShaders(Batch& batch, Technique* tech, bool allowShadows, const BatchQueue& queue)
 {
-    // Check if shaders are unloaded or need reloading
     Pass* pass = batch.pass_;
-    Vector<SharedPtr<ShaderVariation> >& vertexShaders = pass->GetVertexShaders();
-    Vector<SharedPtr<ShaderVariation> >& pixelShaders = pass->GetPixelShaders();
-    if (!vertexShaders.Size() || !pixelShaders.Size() || pass->GetShadersLoadedFrameNumber() != shadersChangedFrameNumber_)
-    {
-        // First release all previous shaders, then load
+
+    // Check if need to release/reload all shaders
+    if (pass->GetShadersLoadedFrameNumber() != shadersChangedFrameNumber_)
         pass->ReleaseShaders();
-        LoadPassShaders(pass);
-    }
+
+    Vector<SharedPtr<ShaderVariation> >& vertexShaders = queue.hasExtraDefines_ ? pass->GetVertexShaders(queue.vsExtraDefinesHash_) : pass->GetVertexShaders();
+    Vector<SharedPtr<ShaderVariation> >& pixelShaders = queue.hasExtraDefines_ ? pass->GetPixelShaders(queue.psExtraDefinesHash_) : pass->GetPixelShaders();
+    
+    // Load shaders now if necessary
+    if (!vertexShaders.Size() || !pixelShaders.Size())
+        LoadPassShaders(pass, vertexShaders, pixelShaders, queue);
 
     // Make sure shaders are loaded now
     if (vertexShaders.Size() && pixelShaders.Size())
@@ -1633,26 +1655,42 @@ void Renderer::LoadShaders()
     shadersDirty_ = false;
 }
 
-void Renderer::LoadPassShaders(Pass* pass)
+void Renderer::LoadPassShaders(Pass* pass, Vector<SharedPtr<ShaderVariation> >& vertexShaders, Vector<SharedPtr<ShaderVariation> >& pixelShaders, const BatchQueue& queue)
 {
     URHO3D_PROFILE(LoadPassShaders);
-
-    Vector<SharedPtr<ShaderVariation> >& vertexShaders = pass->GetVertexShaders();
-    Vector<SharedPtr<ShaderVariation> >& pixelShaders = pass->GetPixelShaders();
 
     // Forget all the old shaders
     vertexShaders.Clear();
     pixelShaders.Clear();
 
-    String extraShaderDefines = " ";
+    String vsDefines = pass->GetEffectiveVertexShaderDefines();
+    String psDefines = pass->GetEffectivePixelShaderDefines();
+
+    // Make sure to end defines with space to allow appending engine's defines
+    if (vsDefines.Length() && !vsDefines.EndsWith(" "))
+        vsDefines += ' ';
+    if (psDefines.Length() && !psDefines.EndsWith(" "))
+        psDefines += ' ';
+
+    // Append defines from batch queue (renderpath command) if needed
+    if (queue.vsExtraDefines_.Length())
+    {
+        vsDefines += queue.vsExtraDefines_;
+        vsDefines += ' ';
+    }
+    if (queue.psExtraDefines_.Length())
+    {
+        psDefines += queue.psExtraDefines_;
+        psDefines += ' ';
+    }
+
+    // Add defines for VSM in the shadow pass if necessary
     if (pass->GetName() == "shadow"
         && (shadowQuality_ == SHADOWQUALITY_VSM || shadowQuality_ == SHADOWQUALITY_BLUR_VSM))
     {
-        extraShaderDefines = " VSM_SHADOW ";
+        vsDefines += "VSM_SHADOW ";
+        psDefines += "VSM_SHADOW ";
     }
-
-    String vsDefines = pass->GetEffectiveVertexShaderDefines();
-    String psDefines = pass->GetEffectivePixelShaderDefines();
 
     if (pass->GetLightingMode() == LIGHTING_PERPIXEL)
     {
@@ -1666,7 +1704,7 @@ void Renderer::LoadPassShaders(Pass* pass)
             unsigned l = j % MAX_LIGHT_VS_VARIATIONS;
 
             vertexShaders[j] = graphics_->GetShader(VS, pass->GetVertexShader(),
-                vsDefines + extraShaderDefines + lightVSVariations[l] + geometryVSVariations[g]);
+                vsDefines + lightVSVariations[l] + geometryVSVariations[g]);
         }
         for (unsigned j = 0; j < MAX_LIGHT_PS_VARIATIONS * 2; ++j)
         {
@@ -1676,12 +1714,12 @@ void Renderer::LoadPassShaders(Pass* pass)
             if (l & LPS_SHADOW)
             {
                 pixelShaders[j] = graphics_->GetShader(PS, pass->GetPixelShader(),
-                    psDefines + extraShaderDefines + lightPSVariations[l] + GetShadowVariations() +
+                    psDefines + lightPSVariations[l] + GetShadowVariations() +
                     heightFogVariations[h]);
             }
             else
                 pixelShaders[j] = graphics_->GetShader(PS, pass->GetPixelShader(),
-                    psDefines + extraShaderDefines + lightPSVariations[l] + heightFogVariations[h]);
+                    psDefines + lightPSVariations[l] + heightFogVariations[h]);
         }
     }
     else
@@ -1695,7 +1733,7 @@ void Renderer::LoadPassShaders(Pass* pass)
                 unsigned g = j / MAX_VERTEXLIGHT_VS_VARIATIONS;
                 unsigned l = j % MAX_VERTEXLIGHT_VS_VARIATIONS;
                 vertexShaders[j] = graphics_->GetShader(VS, pass->GetVertexShader(),
-                    vsDefines + extraShaderDefines + vertexLightVSVariations[l] + geometryVSVariations[g]);
+                    vsDefines + vertexLightVSVariations[l] + geometryVSVariations[g]);
             }
         }
         else
@@ -1704,7 +1742,7 @@ void Renderer::LoadPassShaders(Pass* pass)
             for (unsigned j = 0; j < MAX_GEOMETRYTYPES; ++j)
             {
                 vertexShaders[j] = graphics_->GetShader(VS, pass->GetVertexShader(),
-                    vsDefines + extraShaderDefines + geometryVSVariations[j]);
+                    vsDefines + geometryVSVariations[j]);
             }
         }
 
@@ -1712,7 +1750,7 @@ void Renderer::LoadPassShaders(Pass* pass)
         for (unsigned j = 0; j < 2; ++j)
         {
             pixelShaders[j] =
-                graphics_->GetShader(PS, pass->GetPixelShader(), psDefines + extraShaderDefines + heightFogVariations[j]);
+                graphics_->GetShader(PS, pass->GetPixelShader(), psDefines + heightFogVariations[j]);
         }
     }
 
@@ -1948,9 +1986,11 @@ void Renderer::BlurShadowMap(View* view, Texture2D* shadowMap, float blurScale)
     graphics_->SetScissorTest(false);
 
     // Get a temporary render buffer
-    Texture2D* tmpBuffer = static_cast<Texture2D*>(GetScreenBuffer(shadowMap->GetWidth(), shadowMap->GetHeight(), shadowMap->GetFormat(), false, false, false));
+    Texture2D* tmpBuffer = static_cast<Texture2D*>(GetScreenBuffer(shadowMap->GetWidth(), shadowMap->GetHeight(),
+        shadowMap->GetFormat(), 1, false, false, false, false));
     graphics_->SetRenderTarget(0, tmpBuffer->GetRenderSurface());
-    graphics_->SetDepthStencil(GetDepthStencil(shadowMap->GetWidth(), shadowMap->GetHeight()));
+    graphics_->SetDepthStencil(GetDepthStencil(shadowMap->GetWidth(), shadowMap->GetHeight(), shadowMap->GetMultiSample(),
+        shadowMap->GetAutoResolve()));
     graphics_->SetViewport(IntRect(0, 0, shadowMap->GetWidth(), shadowMap->GetHeight()));
 
     // Get shaders

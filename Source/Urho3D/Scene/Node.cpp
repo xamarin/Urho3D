@@ -49,20 +49,21 @@ namespace Urho3D
 
 Node::Node(Context* context) :
     Animatable(context),
-    networkUpdate_(false),
     worldTransform_(Matrix3x4::IDENTITY),
     dirty_(false),
     enabled_(true),
     enabledPrev_(true),
+    networkUpdate_(false),
     parent_(0),
     scene_(0),
     id_(0),
     position_(Vector3::ZERO),
     rotation_(Quaternion::IDENTITY),
     scale_(Vector3::ONE),
-    worldRotation_(Quaternion::IDENTITY),
-    owner_(0)
+    worldRotation_(Quaternion::IDENTITY)
 {
+    impl_ = new NodeImpl();
+    impl_->owner_ = 0;
 }
 
 Node::~Node()
@@ -323,10 +324,10 @@ bool Node::SaveJSON(Serializer& dest, const String& indentation) const
 
 void Node::SetName(const String& name)
 {
-    if (name != name_)
+    if (name != impl_->name_)
     {
-        name_ = name;
-        nameHash_ = name_;
+        impl_->name_ = name;
+        impl_->nameHash_ = name;
 
         MarkNetworkUpdate();
 
@@ -358,7 +359,7 @@ void Node::AddTag(const String& tag)
         return;
     
     // Add tag
-    tags_.Push(tag);
+    impl_->tags_.Push(tag);
 
     // Cache
     scene_->NodeTagAdded(this, tag);
@@ -390,7 +391,7 @@ void Node::AddTags(const StringVector& tags)
 
 bool Node::RemoveTag(const String& tag)
 {
-    bool removed = tags_.Remove(tag);
+    bool removed = impl_->tags_.Remove(tag);
 
     // Nothing to do
     if (!removed)
@@ -419,21 +420,21 @@ void Node::RemoveAllTags()
     // Clear old scene cache
     if (scene_)
     {
-        for (unsigned i = 0; i < tags_.Size(); ++i)
+        for (unsigned i = 0; i < impl_->tags_.Size(); ++i)
         {
-            scene_->NodeTagRemoved(this, tags_[i]);
+            scene_->NodeTagRemoved(this, impl_->tags_[i]);
 
             // Send event
             using namespace NodeTagRemoved;
             VariantMap& eventData = GetEventDataMap();
             eventData[P_SCENE] = scene_;
             eventData[P_NODE] = this;
-            eventData[P_TAG] = tags_[i];
+            eventData[P_TAG] = impl_->tags_[i];
             scene_->SendEvent(E_NODETAGREMOVED, eventData);
         }
     }
 
-    tags_.Clear();
+    impl_->tags_.Clear();
 
     // Sync
     MarkNetworkUpdate();
@@ -503,6 +504,11 @@ void Node::SetTransform(const Vector3& position, const Quaternion& rotation, con
     MarkDirty();
 
     MarkNetworkUpdate();
+}
+
+void Node::SetTransform(const Matrix3x4& matrix)
+{
+    SetTransform(matrix.Translation(), matrix.Rotation(), matrix.Scale());
 }
 
 void Node::SetWorldPosition(const Vector3& position)
@@ -727,7 +733,7 @@ void Node::SetEnabledRecursive(bool enable)
 
 void Node::SetOwner(Connection* owner)
 {
-    owner_ = owner;
+    impl_->owner_ = owner;
 }
 
 void Node::MarkDirty()
@@ -1227,6 +1233,13 @@ void Node::GetChildren(PODVector<Node*>& dest, bool recursive) const
         GetChildrenRecursive(dest);
 }
 
+PODVector<Node*> Node::GetChildren(bool recursive) const
+{
+    PODVector<Node*> dest;
+    GetChildren(dest, recursive);
+    return dest;
+}
+
 void Node::GetChildrenWithComponent(PODVector<Node*>& dest, StringHash type, bool recursive) const
 {
     dest.Clear();
@@ -1243,6 +1256,13 @@ void Node::GetChildrenWithComponent(PODVector<Node*>& dest, StringHash type, boo
         GetChildrenWithComponentRecursive(dest, type);
 }
 
+PODVector<Node*> Node::GetChildrenWithComponent(StringHash type, bool recursive) const
+{
+    PODVector<Node*> dest;
+    GetChildrenWithComponent(dest, type, recursive);
+    return dest;
+}
+
 void Node::GetChildrenWithTag(PODVector<Node*>& dest, const String& tag, bool recursive /*= true*/) const
 {
     dest.Clear();
@@ -1257,6 +1277,13 @@ void Node::GetChildrenWithTag(PODVector<Node*>& dest, const String& tag, bool re
     }
     else
         GetChildrenWithTagRecursive(dest, tag);
+}
+
+PODVector<Node*> Node::GetChildrenWithTag(const String& tag, bool recursive) const
+{
+    PODVector<Node*> dest;
+    GetChildrenWithTag(dest, tag, recursive);
+    return dest;
 }
 
 Node* Node::GetChild(unsigned index) const
@@ -1332,7 +1359,7 @@ bool Node::HasComponent(StringHash type) const
 
 bool Node::HasTag(const String& tag) const
 {
-    return tags_.Contains(tag);
+    return impl_->tags_.Contains(tag);
 }
 
 const Variant& Node::GetVar(StringHash key) const
@@ -1459,21 +1486,21 @@ const Vector3& Node::GetNetPositionAttr() const
 
 const PODVector<unsigned char>& Node::GetNetRotationAttr() const
 {
-    attrBuffer_.Clear();
-    attrBuffer_.WritePackedQuaternion(rotation_);
-    return attrBuffer_.GetBuffer();
+    impl_->attrBuffer_.Clear();
+    impl_->attrBuffer_.WritePackedQuaternion(rotation_);
+    return impl_->attrBuffer_.GetBuffer();
 }
 
 const PODVector<unsigned char>& Node::GetNetParentAttr() const
 {
-    attrBuffer_.Clear();
+    impl_->attrBuffer_.Clear();
     Scene* scene = GetScene();
     if (scene && parent_ && parent_ != scene)
     {
         // If parent is replicated, can write the ID directly
         unsigned parentID = parent_->GetID();
         if (parentID < FIRST_LOCAL_ID)
-            attrBuffer_.WriteNetID(parentID);
+            impl_->attrBuffer_.WriteNetID(parentID);
         else
         {
             // Parent is local: traverse hierarchy to find a non-local base node
@@ -1483,12 +1510,12 @@ const PODVector<unsigned char>& Node::GetNetParentAttr() const
                 current = current->GetParent();
 
             // Then write the base node ID and the parent's name hash
-            attrBuffer_.WriteNetID(current->GetID());
-            attrBuffer_.WriteStringHash(parent_->GetNameHash());
+            impl_->attrBuffer_.WriteNetID(current->GetID());
+            impl_->attrBuffer_.WriteStringHash(parent_->GetNameHash());
         }
     }
 
-    return attrBuffer_.GetBuffer();
+    return impl_->attrBuffer_.GetBuffer();
 }
 
 bool Node::Load(Deserializer& source, SceneResolver& resolver, bool readChildren, bool rewriteIDs, CreateMode mode)
@@ -1629,7 +1656,7 @@ bool Node::LoadJSON(const JSONValue& source, SceneResolver& resolver, bool readC
 void Node::PrepareNetworkUpdate()
 {
     // Update dependency nodes list first
-    dependencyNodes_.Clear();
+    impl_->dependencyNodes_.Clear();
 
     // Add the parent node, but if it is local, traverse to the first non-local node
     if (parent_ && parent_ != scene_)
@@ -1638,7 +1665,7 @@ void Node::PrepareNetworkUpdate()
         while (current->id_ >= FIRST_LOCAL_ID)
             current = current->parent_;
         if (current && current != scene_)
-            dependencyNodes_.Push(current);
+            impl_->dependencyNodes_.Push(current);
     }
 
     // Let the components add their dependencies
@@ -1646,7 +1673,7 @@ void Node::PrepareNetworkUpdate()
     {
         Component* component = *i;
         if (component->GetID() < FIRST_LOCAL_ID)
-            component->GetDependencyNodes(dependencyNodes_);
+            component->GetDependencyNodes(impl_->dependencyNodes_);
     }
 
     // Then check for node attribute changes
@@ -1716,8 +1743,8 @@ void Node::PrepareNetworkUpdate()
 
 void Node::CleanupConnection(Connection* connection)
 {
-    if (owner_ == connection)
-        owner_ = 0;
+    if (impl_->owner_ == connection)
+        impl_->owner_ = 0;
 
     if (networkState_)
     {

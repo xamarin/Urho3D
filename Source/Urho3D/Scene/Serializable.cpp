@@ -57,18 +57,12 @@ static unsigned RemapAttributeIndex(const Vector<AttributeInfo>* attributes, con
 
 Serializable::Serializable(Context* context) :
     Object(context),
-    networkState_(0),
-    instanceDefaultValues_(0),
     temporary_(false)
 {
 }
 
 Serializable::~Serializable()
 {
-    delete networkState_;
-    networkState_ = 0;
-    delete instanceDefaultValues_;
-    instanceDefaultValues_ = 0;
 }
 
 void Serializable::OnSetAttribute(const AttributeInfo& attr, const Variant& src)
@@ -316,7 +310,7 @@ bool Serializable::Save(Serializer& dest) const
     for (unsigned i = 0; i < attributes->Size(); ++i)
     {
         const AttributeInfo& attr = attributes->At(i);
-        if (!(attr.mode_ & AM_FILE))
+        if (!(attr.mode_ & AM_FILE) || (attr.mode_ & AM_FILEREADONLY) == AM_FILEREADONLY)
             continue;
 
         OnGetAttribute(attr, value);
@@ -521,7 +515,7 @@ bool Serializable::SaveXML(XMLElement& dest) const
     for (unsigned i = 0; i < attributes->Size(); ++i)
     {
         const AttributeInfo& attr = attributes->At(i);
-        if (!(attr.mode_ & AM_FILE))
+        if (!(attr.mode_ & AM_FILE) || (attr.mode_ & AM_FILEREADONLY) == AM_FILEREADONLY)
             continue;
 
         OnGetAttribute(attr, value);
@@ -558,7 +552,7 @@ bool Serializable::SaveJSON(JSONValue& dest) const
     for (unsigned i = 0; i < attributes->Size(); ++i)
     {
         const AttributeInfo& attr = attributes->At(i);
-        if (!(attr.mode_ & AM_FILE))
+        if (!(attr.mode_ & AM_FILE) || (attr.mode_ & AM_FILEREADONLY) == AM_FILEREADONLY)
             continue;
 
         OnGetAttribute(attr, value);
@@ -669,8 +663,7 @@ void Serializable::ResetToDefault()
 
 void Serializable::RemoveInstanceDefault()
 {
-    delete instanceDefaultValues_;
-    instanceDefaultValues_ = 0;
+    instanceDefaultValues_.Reset();
 }
 
 void Serializable::SetTemporary(bool enable)

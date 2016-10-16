@@ -302,7 +302,8 @@ View::View(Context* context) :
     occlusionBuffer_(0),
     renderTarget_(0),
     stereo_(false),
-    substituteRenderTarget_(0)
+    substituteRenderTarget_(0),
+    passCommand_(0)
 {
     // Create octree query and scene results vector for each thread
     unsigned numThreads = GetSubsystem<WorkQueue>()->GetNumThreads() + 1; // Worker threads + main thread
@@ -370,6 +371,7 @@ bool View::Define(RenderSurface* renderTarget, Viewport* viewport)
             hasScenePasses_ = sourceView_->hasScenePasses_;
             noStencil_ = sourceView_->noStencil_;
             lightVolumeCommand_ = sourceView_->lightVolumeCommand_;
+            forwardLightsCommand_ = sourceView_->forwardLightsCommand_;
             octree_ = sourceView_->octree_;
             return true;
         }
@@ -394,6 +396,7 @@ bool View::Define(RenderSurface* renderTarget, Viewport* viewport)
     hasScenePasses_ = false;
     noStencil_ = false;
     lightVolumeCommand_ = 0;
+    forwardLightsCommand_ = 0;
 
     scenePasses_.Clear();
     geometriesUpdated_ = false;
@@ -458,6 +461,7 @@ bool View::Define(RenderSurface* renderTarget, Viewport* viewport)
             if (j == batchQueues_.End())
                 j = batchQueues_.Insert(Pair<unsigned, BatchQueue>(info.passIndex_, BatchQueue()));
             info.batchQueue_ = &j->second_;
+            SetQueueShaderDefines(*info.batchQueue_, command);
 
             scenePasses_.Push(info);
         }
@@ -508,7 +512,10 @@ bool View::Define(RenderSurface* renderTarget, Viewport* viewport)
             deferred_ = true;
         }
         else if (command.type_ == CMD_FORWARDLIGHTS)
+        {
+            forwardLightsCommand_ = &command;
             useLitBase_ = command.useLitBase_;
+        }
     }
 
     drawShadows_ = renderer_->GetDrawShadows();
@@ -630,6 +637,7 @@ void View::Render()
 
     // Reset state after commands
     graphics_->SetFillMode(FILL_SOLID);
+    graphics_->SetLineAntiAlias(false);
     graphics_->SetClipPlane(false);
     graphics_->SetColorWrite(true);
     graphics_->SetDepthBias(0.0f, 0.0f);
@@ -760,6 +768,17 @@ void View::SetCameraShaderParameters(Camera* camera)
 #endif
 
     graphics_->SetShaderParameter(VSP_VIEWPROJ, projection * camera->GetView());
+
+    // If in a scene pass and the command defines shader parameters, set them now
+    if (passCommand_)
+        SetCommandShaderParameters(*passCommand_);
+}
+
+void View::SetCommandShaderParameters(const RenderPathCommand& command)
+{
+    const HashMap<StringHash, Variant>& parameters = command.shaderParameters_;
+    for (HashMap<StringHash, Variant>::ConstIterator k = parameters.Begin(); k != parameters.End(); ++k)
+        graphics_->SetShaderParameter(k->first_, k->second_);
 }
 
 void View::SetGBufferShaderParameters(const IntVector2& texSize, const IntRect& viewRect)
@@ -1039,6 +1058,16 @@ void View::GetLightBatches()
                 lightQueue.shadowMap_ = 0;
                 lightQueue.litBaseBatches_.Clear(maxSortedInstances);
                 lightQueue.litBatches_.Clear(maxSortedInstances);
+                if (forwardLightsCommand_)
+                {
+                    SetQueueShaderDefines(lightQueue.litBaseBatches_, *forwardLightsCommand_);
+                    SetQueueShaderDefines(lightQueue.litBatches_, *forwardLightsCommand_);
+                }
+                else
+                {
+                    lightQueue.litBaseBatches_.hasExtraDefines_ = false;
+                    lightQueue.litBatches_.hasExtraDefines_ = false;
+                }
                 lightQueue.volumeBatches_.Clear();
 
                 // Allocate shadow map now
@@ -1455,6 +1484,7 @@ void View::ExecuteRenderPathCommands()
         // Set for safety in case of empty renderpath
         currentRenderTarget_ = substituteRenderTarget_ ? substituteRenderTarget_ : renderTarget_;
         currentViewportTexture_ = 0;
+        passCommand_ = 0;
 
         bool viewportModified = false;
         bool isPingponging = false;
@@ -1572,7 +1602,18 @@ void View::ExecuteRenderPathCommands()
                         bool allowDepthWrite = SetTextures(command);
                         graphics_->SetClipPlane(camera_->GetUseClipping(), camera_->GetClipPlane(), camera_->GetView(),
                             camera_->GetGPUProjection());
+
+                        if (command.shaderParameters_.Size())
+                        {
+                            // If pass defines shader parameters, reset parameter sources now to ensure they all will be set
+                            // (will be set after camera shader parameters)
+                            graphics_->ClearParameterSources();
+                            passCommand_ = &command;
+                        }
+
                         queue.Draw(this, camera_, command.markToStencil_, false, allowDepthWrite);
+
+                        passCommand_ = 0;
                     }
                 }
                 break;
@@ -1608,6 +1649,12 @@ void View::ExecuteRenderPathCommands()
                         graphics_->SetClipPlane(camera_->GetUseClipping(), camera_->GetClipPlane(), camera_->GetView(),
                             camera_->GetGPUProjection());
 
+                        if (command.shaderParameters_.Size())
+                        {
+                            graphics_->ClearParameterSources();
+                            passCommand_ = &command;
+                        }
+
                         // Draw base (replace blend) batches first
                         i->litBaseBatches_.Draw(this, camera_, false, false, allowDepthWrite);
 
@@ -1619,6 +1666,8 @@ void View::ExecuteRenderPathCommands()
                                 renderer_->OptimizeLightByStencil(i->light_, camera_);
                             i->litBatches_.Draw(this, camera_, false, true, allowDepthWrite);
                         }
+
+                        passCommand_ = 0;
                     }
 
                     graphics_->SetScissorTest(false);
@@ -1644,11 +1693,19 @@ void View::ExecuteRenderPathCommands()
 
                         SetTextures(command);
 
+                        if (command.shaderParameters_.Size())
+                        {
+                            graphics_->ClearParameterSources();
+                            passCommand_ = &command;
+                        }
+
                         for (unsigned j = 0; j < i->volumeBatches_.Size(); ++j)
                         {
                             SetupLightVolumeBatch(i->volumeBatches_[j]);
                             i->volumeBatches_[j].Draw(this, camera_, false);
                         }
+
+                        passCommand_ = 0;
                     }
 
                     graphics_->SetScissorTest(false);
@@ -1713,7 +1770,7 @@ void View::SetRenderTargets(RenderPathCommand& command)
                 if (!depthOnlyDummyTexture_)
                 {
                     depthOnlyDummyTexture_ = renderer_->GetScreenBuffer(texture->GetWidth(), texture->GetHeight(),
-                        graphics_->GetDummyColorFormat(), false, false, false);
+                        graphics_->GetDummyColorFormat(), texture->GetMultiSample(), texture->GetAutoResolve(), false, false, false);
                 }
 #endif
                 graphics_->SetRenderTarget(0, GetRenderSurfaceFromTexture(depthOnlyDummyTexture_));
@@ -1839,14 +1896,13 @@ void View::RenderQuad(RenderPathCommand& command)
     }
 
     // Set command's shader parameters last to allow them to override any of the above
-    const HashMap<StringHash, Variant>& parameters = command.shaderParameters_;
-    for (HashMap<StringHash, Variant>::ConstIterator k = parameters.Begin(); k != parameters.End(); ++k)
-        graphics_->SetShaderParameter(k->first_, k->second_);
+    SetCommandShaderParameters(command);
 
     graphics_->SetBlendMode(command.blendMode_);
     graphics_->SetDepthTest(CMP_ALWAYS);
     graphics_->SetDepthWrite(false);
     graphics_->SetFillMode(FILL_SOLID);
+    graphics_->SetLineAntiAlias(false);
     graphics_->SetClipPlane(false);
     graphics_->SetScissorTest(false);
     graphics_->SetStencilTest(false);
@@ -2008,22 +2064,23 @@ void View::AllocateScreenBuffers()
             ++numViewportTextures;
     }
 
-    // Allocate screen buffers with filtering active in case the quad commands need that
+    // Allocate screen buffers. Enable filtering in case the quad commands need that
     // Follow the sRGB mode of the destination render target
     bool sRGB = renderTarget_ ? renderTarget_->GetParentTexture()->GetSRGB() : graphics_->GetSRGB();
+    int multiSample = renderTarget_ ? renderTarget_->GetMultiSample() : graphics_->GetMultiSample();
+    bool autoResolve = renderTarget_ ? renderTarget_->GetAutoResolve() : true;
     substituteRenderTarget_ = needSubstitute ? GetRenderSurfaceFromTexture(renderer_->GetScreenBuffer(viewSize_.x_, viewSize_.y_,
-        format, false, true, sRGB)) : (RenderSurface*)0;
+        format, multiSample, autoResolve, false, true, sRGB)) : (RenderSurface*)0;
     for (unsigned i = 0; i < MAX_VIEWPORT_TEXTURES; ++i)
     {
-        viewportTextures_[i] =
-            i < numViewportTextures ? renderer_->GetScreenBuffer(viewSize_.x_, viewSize_.y_, format, false, true, sRGB) :
-                (Texture*)0;
+        viewportTextures_[i] = i < numViewportTextures ? renderer_->GetScreenBuffer(viewSize_.x_, viewSize_.y_, format, multiSample,
+            autoResolve, false, true, sRGB) : (Texture*)0;
     }
     // If using a substitute render target and pingponging, the substitute can act as the second viewport texture
     if (numViewportTextures == 1 && substituteRenderTarget_)
         viewportTextures_[1] = substituteRenderTarget_->GetParentTexture();
 
-    // Allocate extra render targets defined by the rendering path
+    // Allocate extra render targets defined by the render path
     for (unsigned i = 0; i < renderPath_->renderTargets_.Size(); ++i)
     {
         const RenderTargetInfo& rtInfo = renderPath_->renderTargets_[i];
@@ -2049,8 +2106,9 @@ void View::AllocateScreenBuffers()
 
         // If the rendertarget is persistent, key it with a hash derived from the RT name and the view's pointer
         renderTargets_[rtInfo.name_] =
-            renderer_->GetScreenBuffer(intWidth, intHeight, rtInfo.format_, rtInfo.cubemap_, rtInfo.filtered_, rtInfo.sRGB_,
-                rtInfo.persistent_ ? StringHash(rtInfo.name_).Value() + (unsigned)(size_t)this : 0);
+            renderer_->GetScreenBuffer(intWidth, intHeight, rtInfo.format_, rtInfo.multiSample_, rtInfo.autoResolve_,
+                rtInfo.cubemap_, rtInfo.filtered_, rtInfo.sRGB_, rtInfo.persistent_ ? StringHash(rtInfo.name_).Value()
+                + (unsigned)(size_t)this : 0);
     }
 }
 
@@ -2074,6 +2132,7 @@ void View::BlitFramebuffer(Texture* source, RenderSurface* destination, bool dep
     graphics_->SetDepthTest(CMP_ALWAYS);
     graphics_->SetDepthWrite(depthWrite);
     graphics_->SetFillMode(FILL_SOLID);
+    graphics_->SetLineAntiAlias(false);
     graphics_->SetClipPlane(false);
     graphics_->SetScissorTest(false);
     graphics_->SetStencilTest(false);
@@ -2233,6 +2292,7 @@ void View::ProcessLight(LightQueryResult& query, unsigned threadIndex)
 {
     Light* light = query.light_;
     LightType type = light->GetLightType();
+    unsigned lightMask = light->GetLightMask();
     const Frustum& frustum = cullCamera_->GetFrustum();
 
     // Check if light should be shadowed
@@ -2254,7 +2314,7 @@ void View::ProcessLight(LightQueryResult& query, unsigned threadIndex)
     case LIGHT_DIRECTIONAL:
         for (unsigned i = 0; i < geometries_.Size(); ++i)
         {
-            if (GetLightMask(geometries_[i]) & light->GetLightMask())
+            if (GetLightMask(geometries_[i]) & lightMask)
                 query.litGeometries_.Push(geometries_[i]);
         }
         break;
@@ -2266,7 +2326,7 @@ void View::ProcessLight(LightQueryResult& query, unsigned threadIndex)
             octree_->GetDrawables(octreeQuery);
             for (unsigned i = 0; i < tempDrawables.Size(); ++i)
             {
-                if (tempDrawables[i]->IsInView(frame_) && (GetLightMask(tempDrawables[i]) & light->GetLightMask()))
+                if (tempDrawables[i]->IsInView(frame_) && (GetLightMask(tempDrawables[i]) & lightMask))
                     query.litGeometries_.Push(tempDrawables[i]);
             }
         }
@@ -2279,7 +2339,7 @@ void View::ProcessLight(LightQueryResult& query, unsigned threadIndex)
             octree_->GetDrawables(octreeQuery);
             for (unsigned i = 0; i < tempDrawables.Size(); ++i)
             {
-                if (tempDrawables[i]->IsInView(frame_) && (GetLightMask(tempDrawables[i]) & light->GetLightMask()))
+                if (tempDrawables[i]->IsInView(frame_) && (GetLightMask(tempDrawables[i]) & lightMask))
                     query.litGeometries_.Push(tempDrawables[i]);
             }
         }
@@ -2334,6 +2394,7 @@ void View::ProcessLight(LightQueryResult& query, unsigned threadIndex)
 void View::ProcessShadowCasters(LightQueryResult& query, const PODVector<Drawable*>& drawables, unsigned splitIndex)
 {
     Light* light = query.light_;
+    unsigned lightMask = light->GetLightMask();
 
     Camera* shadowCamera = query.shadowCameras_[splitIndex];
     const Frustum& shadowCameraFrustum = shadowCamera->GetFrustum();
@@ -2370,7 +2431,7 @@ void View::ProcessShadowCasters(LightQueryResult& query, const PODVector<Drawabl
         if (!drawable->GetCastShadows())
             continue;
         // Check shadow mask
-        if (!(GetShadowMask(drawable) & light->GetLightMask()))
+        if (!(GetShadowMask(drawable) & lightMask))
             continue;
         // For point light, check that this drawable is inside the split shadow camera frustum
         if (type == LIGHT_POINT && shadowCameraFrustum.IsInsideFast(drawable->GetWorldBoundingBox()) == OUTSIDE)
@@ -2580,13 +2641,16 @@ void View::SetupDirLightShadowCamera(Camera* shadowCamera, Light* light, float n
     if (parameters.focus_)
     {
         BoundingBox litGeometriesBox;
+        unsigned lightMask = light->GetLightMask();
+
         for (unsigned i = 0; i < geometries_.Size(); ++i)
         {
             Drawable* drawable = geometries_[i];
             if (drawable->GetMinZ() <= farSplit && drawable->GetMaxZ() >= nearSplit &&
-                (GetLightMask(drawable) & light->GetLightMask()))
+                (GetLightMask(drawable) & lightMask))
                 litGeometriesBox.Merge(drawable->GetWorldBoundingBox());
         }
+
         if (litGeometriesBox.Defined())
         {
             frustumVolume.Clip(litGeometriesBox);
@@ -2819,7 +2883,23 @@ void View::CheckMaterialForAuxView(Material* material)
     material->MarkForAuxView(frame_.frameNumber_);
 }
 
-void View::AddBatchToQueue(BatchQueue& batchQueue, Batch& batch, Technique* tech, bool allowInstancing, bool allowShadows)
+void View::SetQueueShaderDefines(BatchQueue& queue, const RenderPathCommand& command)
+{
+    String vsDefines = command.vertexShaderDefines_.Trimmed();
+    String psDefines = command.pixelShaderDefines_.Trimmed();
+    if (vsDefines.Length() || psDefines.Length())
+    {
+        queue.hasExtraDefines_ = true;
+        queue.vsExtraDefines_ = vsDefines;
+        queue.psExtraDefines_ = psDefines;
+        queue.vsExtraDefinesHash_ = StringHash(vsDefines);
+        queue.psExtraDefinesHash_ = StringHash(psDefines);
+    }
+    else
+        queue.hasExtraDefines_ = false;
+}
+
+void View::AddBatchToQueue(BatchQueue& queue, Batch& batch, Technique* tech, bool allowInstancing, bool allowShadows)
 {
     if (!batch.material_)
         batch.material_ = renderer_->GetDefaultMaterial();
@@ -2832,16 +2912,16 @@ void View::AddBatchToQueue(BatchQueue& batchQueue, Batch& batch, Technique* tech
     {
         BatchGroupKey key(batch);
 
-        HashMap<BatchGroupKey, BatchGroup>::Iterator i = batchQueue.batchGroups_.Find(key);
-        if (i == batchQueue.batchGroups_.End())
+        HashMap<BatchGroupKey, BatchGroup>::Iterator i = queue.batchGroups_.Find(key);
+        if (i == queue.batchGroups_.End())
         {
             // Create a new group based on the batch
             // In case the group remains below the instancing limit, do not enable instancing shaders yet
             BatchGroup newGroup(batch);
             newGroup.geometryType_ = GEOM_STATIC;
-            renderer_->SetBatchShaders(newGroup, tech, allowShadows);
+            renderer_->SetBatchShaders(newGroup, tech, allowShadows, queue);
             newGroup.CalculateSortKey();
-            i = batchQueue.batchGroups_.Insert(MakePair(key, newGroup));
+            i = queue.batchGroups_.Insert(MakePair(key, newGroup));
         }
 
         int oldSize = i->second_.instances_.Size();
@@ -2850,13 +2930,13 @@ void View::AddBatchToQueue(BatchQueue& batchQueue, Batch& batch, Technique* tech
         if (oldSize < minInstances_ && (int)i->second_.instances_.Size() >= minInstances_)
         {
             i->second_.geometryType_ = GEOM_INSTANCED;
-            renderer_->SetBatchShaders(i->second_, tech, allowShadows);
+            renderer_->SetBatchShaders(i->second_, tech, allowShadows, queue);
             i->second_.CalculateSortKey();
         }
     }
     else
     {
-        renderer_->SetBatchShaders(batch, tech, allowShadows);
+        renderer_->SetBatchShaders(batch, tech, allowShadows, queue);
         batch.CalculateSortKey();
 
         // If batch is static with multiple world transforms and cannot instance, we must push copies of the batch individually
@@ -2867,12 +2947,12 @@ void View::AddBatchToQueue(BatchQueue& batchQueue, Batch& batch, Technique* tech
             for (unsigned i = 0; i < numTransforms; ++i)
             {
                 // Move the transform pointer to generate copies of the batch which only refer to 1 world transform
-                batchQueue.batches_.Push(batch);
+                queue.batches_.Push(batch);
                 ++batch.worldTransform_;
             }
         }
         else
-            batchQueue.batches_.Push(batch);
+            queue.batches_.Push(batch);
     }
 }
 
@@ -2936,6 +3016,7 @@ void View::SetupLightVolumeBatch(Batch& batch)
     graphics_->SetDepthBias(0.0f, 0.0f);
     graphics_->SetDepthWrite(false);
     graphics_->SetFillMode(FILL_SOLID);
+    graphics_->SetLineAntiAlias(false);
     graphics_->SetClipPlane(false);
 
     if (type != LIGHT_DIRECTIONAL)
@@ -3013,7 +3094,8 @@ void View::RenderShadowMap(const LightBatchQueue& queue)
         // Disable other render targets
         for (unsigned i = 1; i < MAX_RENDERTARGETS; ++i)
             graphics_->SetRenderTarget(i, (RenderSurface*) 0);
-        graphics_->SetDepthStencil(renderer_->GetDepthStencil(shadowMap->GetWidth(), shadowMap->GetHeight()));
+        graphics_->SetDepthStencil(renderer_->GetDepthStencil(shadowMap->GetWidth(), shadowMap->GetHeight(),
+            shadowMap->GetMultiSample(), shadowMap->GetAutoResolve()));
         graphics_->SetViewport(IntRect(0, 0, shadowMap->GetWidth(), shadowMap->GetHeight()));
         graphics_->Clear(CLEAR_DEPTH | CLEAR_COLOR, Color::WHITE);
 
@@ -3070,7 +3152,8 @@ RenderSurface* View::GetDepthStencil(RenderSurface* renderTarget)
     RenderSurface* depthStencil = renderTarget->GetLinkedDepthStencil();
     // Finally get one from Renderer
     if (!depthStencil)
-        depthStencil = renderer_->GetDepthStencil(renderTarget->GetWidth(), renderTarget->GetHeight());
+        depthStencil = renderer_->GetDepthStencil(renderTarget->GetWidth(), renderTarget->GetHeight(),
+            renderTarget->GetMultiSample(), renderTarget->GetAutoResolve());
     return depthStencil;
 }
 

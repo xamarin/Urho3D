@@ -409,8 +409,7 @@ bool Graphics::SetMode(int width, int height, bool fullscreen, bool borderless, 
     // Fall back to non-multisampled if unsupported multisampling mode
     if (multiSample > 1)
     {
-        if (FAILED(impl_->interface_->CheckDeviceMultiSampleType(impl_->adapter_, impl_->deviceType_, fullscreenFormat, FALSE,
-            (D3DMULTISAMPLE_TYPE)multiSample, NULL)))
+        if (!impl_->CheckMultiSampleSupport(fullscreenFormat, multiSample))
             multiSample = 1;
     }
 
@@ -830,6 +829,92 @@ bool Graphics::ResolveToTexture(Texture2D* destination, const IntRect& viewport)
         return true;
 }
 
+bool Graphics::ResolveToTexture(Texture2D* texture)
+{
+    if (!texture || !texture->GetRenderSurface() || !texture->GetGPUObject() || texture->GetMultiSample() < 2)
+        return false;
+
+    URHO3D_PROFILE(ResolveToTexture);
+
+    // Clear dirty flag already, because if resolve fails it's no use to retry (e.g. on the same frame)
+    RenderSurface* surface = texture->GetRenderSurface();
+    texture->SetResolveDirty(false);
+    surface->SetResolveDirty(false);
+
+    RECT rect;
+    rect.left = 0;
+    rect.top = 0;
+    rect.right = texture->GetWidth();
+    rect.bottom = texture->GetHeight();
+
+    IDirect3DSurface9* srcSurface = (IDirect3DSurface9*)surface->GetSurface();
+    IDirect3DTexture9* destTexture = (IDirect3DTexture9*)texture->GetGPUObject();
+    IDirect3DSurface9* destSurface = 0;
+    HRESULT hr = destTexture->GetSurfaceLevel(0, &destSurface);
+    if (FAILED(hr))
+    {
+        URHO3D_LOGD3DERROR("Failed to get destination surface for resolve", hr);
+        URHO3D_SAFE_RELEASE(destSurface);
+        return false;
+    }
+
+    hr = impl_->device_->StretchRect(srcSurface, &rect, destSurface, &rect, D3DTEXF_NONE);
+    URHO3D_SAFE_RELEASE(destSurface);
+    if (FAILED(hr))
+    {
+        URHO3D_LOGD3DERROR("Failed to resolve to texture", hr);
+        return false;
+    }
+    else
+        return true;
+}
+
+bool Graphics::ResolveToTexture(TextureCube* texture)
+{
+    if (!texture || !texture->GetRenderSurface(FACE_POSITIVE_X) || !texture->GetGPUObject() || texture->GetMultiSample() < 2)
+        return false;
+
+    URHO3D_PROFILE(ResolveToTexture);
+    
+    texture->SetResolveDirty(false);
+
+    RECT rect;
+    rect.left = 0;
+    rect.top = 0;
+    rect.right = texture->GetWidth();
+    rect.bottom = texture->GetHeight();
+
+    for (unsigned i = 0; i < MAX_CUBEMAP_FACES; ++i)
+    {
+        // Resolve only the surface(s) that were actually rendered to
+        RenderSurface* surface = texture->GetRenderSurface((CubeMapFace)i);
+        if (!surface->IsResolveDirty())
+            continue;
+
+        surface->SetResolveDirty(false);
+        IDirect3DSurface9* srcSurface = (IDirect3DSurface9*)surface->GetSurface();
+        IDirect3DCubeTexture9* destTexture = (IDirect3DCubeTexture9*)texture->GetGPUObject();
+        IDirect3DSurface9* destSurface = 0;
+        HRESULT hr = destTexture->GetCubeMapSurface((D3DCUBEMAP_FACES)i, 0, &destSurface);
+        if (FAILED(hr))
+        {
+            URHO3D_LOGD3DERROR("Failed to get destination surface for resolve", hr);
+            URHO3D_SAFE_RELEASE(destSurface);
+            return false;
+        }
+
+        hr = impl_->device_->StretchRect(srcSurface, &rect, destSurface, &rect, D3DTEXF_NONE);
+        URHO3D_SAFE_RELEASE(destSurface);
+        if (FAILED(hr))
+        {
+            URHO3D_LOGD3DERROR("Failed to resolve to texture", hr);
+            return false;
+        }
+    }
+
+    return true;
+}
+
 void Graphics::Draw(PrimitiveType type, unsigned vertexStart, unsigned vertexCount)
 {
     if (!vertexCount)
@@ -1152,9 +1237,22 @@ void Graphics::SetShaderParameter(StringHash param, float value)
         impl_->device_->SetPixelShaderConstantF(i->second_.register_, &data.x_, 1);
 }
 
+void Graphics::SetShaderParameter(StringHash param, int value)
+{
+    /// \todo Int constants seem to have no effect on Direct3D9
+    HashMap<StringHash, ShaderParameter>::Iterator i;
+    if (!impl_->shaderProgram_ || (i = impl_->shaderProgram_->parameters_.Find(param)) == impl_->shaderProgram_->parameters_.End())
+        return;
+
+    if (i->second_.type_ == VS)
+        impl_->device_->SetVertexShaderConstantI(i->second_.register_, &value, 1);
+    else
+        impl_->device_->SetPixelShaderConstantI(i->second_.register_, &value, 1);
+}
+
 void Graphics::SetShaderParameter(StringHash param, bool value)
 {
-    /// \todo Bool constants possibly have no effect on Direct3D9
+    /// \todo Bool constants seem to have no effect on Direct3D9
     HashMap<StringHash, ShaderParameter>::Iterator i;
     if (!impl_->shaderProgram_ || (i = impl_->shaderProgram_->parameters_.Find(param)) == impl_->shaderProgram_->parameters_.End())
         return;
@@ -1271,60 +1369,6 @@ void Graphics::SetShaderParameter(StringHash param, const Matrix3x4& matrix)
         impl_->device_->SetPixelShaderConstantF(i->second_.register_, matrix.Data(), 3);
 }
 
-void Graphics::SetShaderParameter(StringHash param, const Variant& value)
-{
-    switch (value.GetType())
-    {
-    case VAR_BOOL:
-        SetShaderParameter(param, value.GetBool());
-        break;
-
-    case VAR_FLOAT:
-        SetShaderParameter(param, value.GetFloat());
-        break;
-
-    case VAR_VECTOR2:
-        SetShaderParameter(param, value.GetVector2());
-        break;
-
-    case VAR_VECTOR3:
-        SetShaderParameter(param, value.GetVector3());
-        break;
-
-    case VAR_VECTOR4:
-        SetShaderParameter(param, value.GetVector4());
-        break;
-
-    case VAR_COLOR:
-        SetShaderParameter(param, value.GetColor());
-        break;
-
-    case VAR_MATRIX3:
-        SetShaderParameter(param, value.GetMatrix3());
-        break;
-
-    case VAR_MATRIX3X4:
-        SetShaderParameter(param, value.GetMatrix3x4());
-        break;
-
-    case VAR_MATRIX4:
-        SetShaderParameter(param, value.GetMatrix4());
-        break;
-
-    case VAR_BUFFER:
-        {
-            const PODVector<unsigned char>& buffer = value.GetBuffer();
-            if (buffer.Size() >= sizeof(float))
-                SetShaderParameter(param, reinterpret_cast<const float*>(&buffer[0]), buffer.Size() / sizeof(float));
-        }
-        break;
-
-    default:
-        // Unsupported parameter type, do nothing
-        break;
-    }
-}
-
 bool Graphics::NeedParameterUpdate(ShaderParameterGroup group, const void* source)
 {
     if ((unsigned)(size_t)shaderParameterSources_[group] == M_MAX_UNSIGNED || shaderParameterSources_[group] != source)
@@ -1368,11 +1412,22 @@ void Graphics::SetTexture(unsigned index, Texture* texture)
     if (index >= MAX_TEXTURE_UNITS)
         return;
 
-    // Check if texture is currently bound as a rendertarget. In that case, use its backup texture, or blank if not defined
     if (texture)
     {
+        // Check if texture is currently bound as a rendertarget. In that case, use its backup texture, or blank if not defined
         if (renderTargets_[0] && renderTargets_[0]->GetParentTexture() == texture)
             texture = texture->GetBackupTexture();
+        else
+        {
+            // Resolve multisampled texture now as necessary
+            if (texture->GetMultiSample() > 1 && texture->GetAutoResolve() && texture->IsResolveDirty())
+            {
+                if (texture->GetType() == Texture2D::GetTypeStatic())
+                    ResolveToTexture(static_cast<Texture2D*>(texture));
+                else if (texture->GetType() == TextureCube::GetTypeStatic())
+                    ResolveToTexture(static_cast<TextureCube*>(texture));
+            }
+        }
     }
 
     if (texture != textures_[index])
@@ -1517,15 +1572,22 @@ void Graphics::SetRenderTarget(unsigned index, RenderSurface* renderTarget)
         }
     }
 
-    // If the rendertarget is also bound as a texture, replace with backup texture or null
     if (renderTarget)
     {
         Texture* parentTexture = renderTarget->GetParentTexture();
 
+        // If the rendertarget is also bound as a texture, replace with backup texture or null
         for (unsigned i = 0; i < MAX_TEXTURE_UNITS; ++i)
         {
             if (textures_[i] == parentTexture)
                 SetTexture(i, textures_[i]->GetBackupTexture());
+        }
+
+        // If multisampled, mark the texture & surface needing resolve
+        if (parentTexture->GetMultiSample() > 1 && parentTexture->GetAutoResolve())
+        {
+            parentTexture->SetResolveDirty(true);
+            renderTarget->SetResolveDirty(true);
         }
     }
 
@@ -1703,6 +1765,16 @@ void Graphics::SetFillMode(FillMode mode)
     }
 }
 
+void Graphics::SetLineAntiAlias(bool enable)
+{
+    if (enable != lineAntiAlias_)
+    {
+        impl_->device_->SetRenderState(D3DRS_ANTIALIASEDLINEENABLE, enable ? TRUE : FALSE);
+        lineAntiAlias_ = enable;
+    }
+}
+
+
 void Graphics::SetScissorTest(bool enable, const Rect& rect, bool borderInclusive)
 {
     // During some light rendering loops, a full rect is toggled on/off repeatedly.
@@ -1860,23 +1932,6 @@ void Graphics::SetClipPlane(bool enable, const Plane& clipPlane, const Matrix3x4
     }
 }
 
-void Graphics::BeginDumpShaders(const String& fileName)
-{
-    shaderPrecache_ = new ShaderPrecache(context_, fileName);
-}
-
-void Graphics::EndDumpShaders()
-{
-    shaderPrecache_.Reset();
-}
-
-void Graphics::PrecacheShaders(Deserializer& source)
-{
-    URHO3D_PROFILE(PrecacheShaders);
-
-    ShaderPrecache::LoadShaders(this, source);
-}
-
 bool Graphics::IsInitialized() const
 {
     return window_ != 0 && impl_->GetDevice() != 0;
@@ -1895,10 +1950,9 @@ PODVector<int> Graphics::GetMultiSampleLevels() const
     SDL_GetDesktopDisplayMode(0, &mode);
     D3DFORMAT fullscreenFormat = SDL_BITSPERPIXEL(mode.format) == 16 ? D3DFMT_R5G6B5 : D3DFMT_X8R8G8B8;
 
-    for (unsigned i = (int)D3DMULTISAMPLE_2_SAMPLES; i < (int)D3DMULTISAMPLE_16_SAMPLES; ++i)
+    for (int i = (int)D3DMULTISAMPLE_2_SAMPLES; i < (int)D3DMULTISAMPLE_16_SAMPLES; ++i)
     {
-        if (SUCCEEDED(impl_->interface_->CheckDeviceMultiSampleType(impl_->adapter_, impl_->deviceType_, fullscreenFormat, FALSE,
-            (D3DMULTISAMPLE_TYPE)i, NULL)))
+        if (impl_->CheckMultiSampleSupport(fullscreenFormat, i))
             ret.Push(i);
     }
 
@@ -2552,6 +2606,7 @@ void Graphics::ResetCachedState()
     slopeScaledDepthBias_ = 0.0f;
     depthTestMode_ = CMP_LESSEQUAL;
     depthWrite_ = true;
+    lineAntiAlias_ = false;
     fillMode_ = FILL_SOLID;
     scissorTest_ = false;
     scissorRect_ = IntRect::ZERO;

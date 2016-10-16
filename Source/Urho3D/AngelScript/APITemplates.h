@@ -668,6 +668,7 @@ template <class T> void RegisterNode(asIScriptEngine* engine, const char* classN
     engine->RegisterObjectMethod(className, "void SetTransform(const Vector3&in, const Quaternion&in)", asMETHODPR(T, SetTransform, (const Vector3&, const Quaternion&), void), asCALL_THISCALL);
     engine->RegisterObjectMethod(className, "void SetTransform(const Vector3&in, const Quaternion&in, const Vector3&in)", asMETHODPR(T, SetTransform, (const Vector3&, const Quaternion&, const Vector3&), void), asCALL_THISCALL);
     engine->RegisterObjectMethod(className, "void SetTransform(const Vector3&in, const Quaternion&in, float)", asMETHODPR(T, SetTransform, (const Vector3&, const Quaternion&, float), void), asCALL_THISCALL);
+    engine->RegisterObjectMethod(className, "void SetTransform(const Matrix3x4&in)", asMETHODPR(T, SetTransform, (const Matrix3x4&), void), asCALL_THISCALL);
     engine->RegisterObjectMethod(className, "void SetTransform2D(const Vector2&in, float)", asMETHODPR(T, SetTransform2D, (const Vector2&, float), void), asCALL_THISCALL);
     engine->RegisterObjectMethod(className, "void SetTransform2D(const Vector2&in, float, const Vector2&in)", asMETHODPR(T, SetTransform2D, (const Vector2&, float, const Vector2&), void), asCALL_THISCALL);
     engine->RegisterObjectMethod(className, "void SetTransform2D(const Vector2&in, float, float)", asMETHODPR(T, SetTransform2D, (const Vector2&, float, float), void), asCALL_THISCALL);
@@ -777,24 +778,34 @@ template <class T> void RegisterNode(asIScriptEngine* engine, const char* classN
     engine->RegisterObjectMethod(className, "VariantMap& get_vars()", asFUNCTION(NodeGetVars), asCALL_CDECL_OBJLAST);
 }
 
-static bool ResourceLoad(File* file, XMLFile* ptr)
+static bool ResourceLoad(File* file, Resource* ptr)
 {
     return file && ptr->Load(*file);
 }
 
-static bool ResourceLoadVectorBuffer(VectorBuffer& buffer, XMLFile* ptr)
+static bool ResourceLoadVectorBuffer(VectorBuffer& buffer, Resource* ptr)
 {
     return ptr->Load(buffer);
 }
 
-static bool ResourceSave(File* file, XMLFile* ptr)
+static bool ResourceLoadByName(const String& fileName, Resource* ptr)
+{
+    return ptr->Load(fileName);
+}
+
+static bool ResourceSave(File* file, Resource* ptr)
 {
     return file && ptr->Save(*file);
 }
 
-static bool ResourceSaveVectorBuffer(VectorBuffer& buffer, XMLFile* ptr)
+static bool ResourceSaveVectorBuffer(VectorBuffer& buffer, Resource* ptr)
 {
     return ptr->Save(buffer);
+}
+
+static bool ResourceSaveByName(const String& fileName, Resource* ptr)
+{
+    return ptr->Save(fileName);
 }
 
 /// Template function for registering a class derived from Resource.
@@ -810,8 +821,10 @@ template <class T> void RegisterResource(asIScriptEngine* engine, const char* cl
     }
     engine->RegisterObjectMethod(className, "bool Load(File@+)", asFUNCTION(ResourceLoad), asCALL_CDECL_OBJLAST);
     engine->RegisterObjectMethod(className, "bool Load(VectorBuffer&)", asFUNCTION(ResourceLoadVectorBuffer), asCALL_CDECL_OBJLAST);
+    engine->RegisterObjectMethod(className, "bool Load(const String&in)", asFUNCTION(ResourceLoadByName), asCALL_CDECL_OBJLAST);
     engine->RegisterObjectMethod(className, "bool Save(File@+) const", asFUNCTION(ResourceSave), asCALL_CDECL_OBJLAST);
     engine->RegisterObjectMethod(className, "bool Save(VectorBuffer&) const", asFUNCTION(ResourceSaveVectorBuffer), asCALL_CDECL_OBJLAST);
+    engine->RegisterObjectMethod(className, "bool Save(const String&in) const", asFUNCTION(ResourceSaveByName), asCALL_CDECL_OBJLAST);
     engine->RegisterObjectMethod(className, "void set_name(const String&in) const", asMETHODPR(T, SetName, (const String&), void), asCALL_THISCALL);
     engine->RegisterObjectMethod(className, "const String& get_name() const", asMETHODPR(T, GetName, () const, const String&), asCALL_THISCALL);
     engine->RegisterObjectMethod(className, "uint get_memoryUse() const", asMETHODPR(T, GetMemoryUse, () const, unsigned), asCALL_THISCALL);
@@ -902,6 +915,9 @@ template <class T> void RegisterTexture(asIScriptEngine* engine, const char* cla
     engine->RegisterObjectMethod(className, "const Color& get_borderColor() const", asMETHOD(T, GetBorderColor), asCALL_THISCALL);
     engine->RegisterObjectMethod(className, "void set_sRGB(bool)", asMETHOD(T, SetSRGB), asCALL_THISCALL);
     engine->RegisterObjectMethod(className, "bool get_sRGB() const", asMETHOD(T, GetSRGB), asCALL_THISCALL);
+    engine->RegisterObjectMethod(className, "int get_multiSample() const", asMETHOD(T, GetMultiSample), asCALL_THISCALL);
+    engine->RegisterObjectMethod(className, "bool get_autoResolve() const", asMETHOD(T, GetAutoResolve), asCALL_THISCALL);
+    engine->RegisterObjectMethod(className, "bool get_resolveDirty() const", asMETHOD(T, IsResolveDirty), asCALL_THISCALL);
     engine->RegisterObjectMethod(className, "void set_backupTexture(Texture@+)", asMETHOD(T, SetBackupTexture), asCALL_THISCALL);
     engine->RegisterObjectMethod(className, "Texture@+ get_backupTexture() const", asMETHOD(T, GetBackupTexture), asCALL_THISCALL);
     engine->RegisterObjectMethod(className, "void set_mipsToSkip(int, int)", asMETHOD(T, SetMipsToSkip), asCALL_THISCALL);
@@ -947,15 +963,16 @@ static bool UIElementLoadXML(XMLFile* file, XMLFile* styleFile, UIElement* ptr)
         return false;
 }
 
-static bool UIElementLoadChildXML(XMLFile* file, XMLFile* styleFile, UIElement* ptr)
+static UIElement* UIElementLoadChildXML(XMLFile* file, XMLFile* styleFile, UIElement* ptr)
 {
-    if (file)
-    {
-        XMLElement rootElem = file->GetRoot("element");
-        return rootElem && ptr->LoadChildXML(rootElem, styleFile);
-    }
+    if (!file)
+        return 0;
+
+    XMLElement rootElem = file->GetRoot("element");
+    if (rootElem)
+        return ptr->LoadChildXML(rootElem, styleFile);
     else
-        return false;
+        return 0;
 }
 
 static bool UIElementSaveXML(File* file, const String& indentation, UIElement* ptr)
@@ -1050,8 +1067,8 @@ template <class T> void RegisterUIElement(asIScriptEngine* engine, const char* c
     engine->RegisterObjectMethod(className, "bool LoadXML(File@+)", asFUNCTIONPR(UIElementLoadXML, (File*, UIElement*), bool), asCALL_CDECL_OBJLAST);
     engine->RegisterObjectMethod(className, "bool LoadXML(VectorBuffer&)", asFUNCTIONPR(UIElementLoadXMLVectorBuffer, (VectorBuffer&, UIElement*), bool), asCALL_CDECL_OBJLAST);
     engine->RegisterObjectMethod(className, "bool LoadXML(XMLFile@+, XMLFile@+)", asFUNCTIONPR(UIElementLoadXML, (XMLFile*, XMLFile*, UIElement*), bool), asCALL_CDECL_OBJLAST);
-    engine->RegisterObjectMethod(className, "bool LoadChildXML(const XMLElement&in, XMLFile@+ arg1 = null, bool arg2 = false)", asMETHOD(T, LoadChildXML), asCALL_THISCALL);
-    engine->RegisterObjectMethod(className, "bool LoadChildXML(XMLFile@+, XMLFile@+ arg1 = null)", asFUNCTION(UIElementLoadChildXML), asCALL_CDECL_OBJLAST);
+    engine->RegisterObjectMethod(className, "UIElement@+ LoadChildXML(const XMLElement&in, XMLFile@+ arg1 = null, bool arg2 = false)", asMETHOD(T, LoadChildXML), asCALL_THISCALL);
+    engine->RegisterObjectMethod(className, "UIElement@+ LoadChildXML(XMLFile@+, XMLFile@+ arg1 = null)", asFUNCTION(UIElementLoadChildXML), asCALL_CDECL_OBJLAST);
     engine->RegisterObjectMethod(className, "bool SaveXML(File@+, const String&in indentation = \"\t\")", asFUNCTION(UIElementSaveXML), asCALL_CDECL_OBJLAST);
     engine->RegisterObjectMethod(className, "bool SaveXML(VectorBuffer&, const String&in indentation = \"\t\")", asFUNCTION(UIElementSaveXMLVectorBuffer), asCALL_CDECL_OBJLAST);
     engine->RegisterObjectMethod(className, "bool SetStyle(const XMLElement&in)", asMETHODPR(T, SetStyle, (const XMLElement&), bool), asCALL_THISCALL);
@@ -1066,6 +1083,9 @@ template <class T> void RegisterUIElement(asIScriptEngine* engine, const char* c
     engine->RegisterObjectMethod(className, "void SetFixedWidth(int)", asMETHOD(T, SetFixedWidth), asCALL_THISCALL);
     engine->RegisterObjectMethod(className, "void SetFixedHeight(int)", asMETHOD(T, SetFixedHeight), asCALL_THISCALL);
     engine->RegisterObjectMethod(className, "void SetAlignment(HorizontalAlignment, VerticalAlignment)", asMETHOD(T, SetAlignment), asCALL_THISCALL);
+    engine->RegisterObjectMethod(className, "void SetMinAnchor(float, float)", asMETHODPR(T, SetMinAnchor, (float, float), void), asCALL_THISCALL);
+    engine->RegisterObjectMethod(className, "void SetMaxAnchor(float, float)", asMETHODPR(T, SetMaxAnchor, (float, float), void), asCALL_THISCALL);
+    engine->RegisterObjectMethod(className, "void SetPivot(float, float)", asMETHODPR(T, SetPivot, (float, float), void), asCALL_THISCALL);
     engine->RegisterObjectMethod(className, "void SetLayout(LayoutMode, int spacing = 0, const IntRect& border = IntRect(0, 0, 0, 0))", asMETHOD(T, SetLayout), asCALL_THISCALL);
     engine->RegisterObjectMethod(className, "void UpdateLayout()", asMETHOD(T, UpdateLayout), asCALL_THISCALL);
     engine->RegisterObjectMethod(className, "void DisableLayoutUpdate()", asMETHOD(T, DisableLayoutUpdate), asCALL_THISCALL);
@@ -1129,6 +1149,18 @@ template <class T> void RegisterUIElement(asIScriptEngine* engine, const char* c
     engine->RegisterObjectMethod(className, "HorizontalAlignment get_horizontalAlignment() const", asMETHOD(T, GetHorizontalAlignment), asCALL_THISCALL);
     engine->RegisterObjectMethod(className, "void set_verticalAlignment(VerticalAlignment)", asMETHOD(T, SetVerticalAlignment), asCALL_THISCALL);
     engine->RegisterObjectMethod(className, "VerticalAlignment get_verticalAlignment() const", asMETHOD(T, GetVerticalAlignment), asCALL_THISCALL);
+    engine->RegisterObjectMethod(className, "void set_enableAnchor(bool)", asMETHOD(T, SetEnableAnchor), asCALL_THISCALL);
+    engine->RegisterObjectMethod(className, "bool get_enableAnchor() const", asMETHOD(T, GetEnableAnchor), asCALL_THISCALL);
+    engine->RegisterObjectMethod(className, "void set_minAnchor(const Vector2&in)", asMETHODPR(T, SetMinAnchor, (const Vector2&), void), asCALL_THISCALL);
+    engine->RegisterObjectMethod(className, "const Vector2& get_minAnchor() const", asMETHOD(T, GetMinAnchor), asCALL_THISCALL);
+    engine->RegisterObjectMethod(className, "void set_maxAnchor(const Vector2&in)", asMETHODPR(T, SetMaxAnchor, (const Vector2&), void), asCALL_THISCALL);
+    engine->RegisterObjectMethod(className, "const Vector2& get_maxAnchor() const", asMETHOD(T, GetMaxAnchor), asCALL_THISCALL);
+    engine->RegisterObjectMethod(className, "void set_minOffset(const IntVector2&in)", asMETHODPR(T, SetMinOffset, (const IntVector2&), void), asCALL_THISCALL);
+    engine->RegisterObjectMethod(className, "const IntVector2& get_minOffset() const", asMETHOD(T, GetMinOffset), asCALL_THISCALL);
+    engine->RegisterObjectMethod(className, "void set_maxOffset(const IntVector2&in)", asMETHODPR(T, SetMaxOffset, (const IntVector2&), void), asCALL_THISCALL);
+    engine->RegisterObjectMethod(className, "const IntVector2& get_maxOffset() const", asMETHOD(T, GetMaxOffset), asCALL_THISCALL);
+    engine->RegisterObjectMethod(className, "void set_pivot(const Vector2&in)", asMETHODPR(T, SetPivot, (const Vector2&), void), asCALL_THISCALL);
+    engine->RegisterObjectMethod(className, "const Vector2& get_pivot() const", asMETHOD(T, GetPivot), asCALL_THISCALL);
     engine->RegisterObjectMethod(className, "void set_clipBorder(const IntRect&in)", asMETHODPR(T, SetClipBorder, (const IntRect&), void), asCALL_THISCALL);
     engine->RegisterObjectMethod(className, "const IntRect& get_clipBorder() const", asMETHOD(T, GetClipBorder), asCALL_THISCALL);
     engine->RegisterObjectMethod(className, "void set_color(const Color&in)", asMETHODPR(T, SetColor, (const Color&), void), asCALL_THISCALL);

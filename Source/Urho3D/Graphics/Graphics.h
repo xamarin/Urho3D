@@ -128,6 +128,10 @@ public:
     void Clear(unsigned flags, const Color& color = Color(0.0f, 0.0f, 0.0f, 0.0f), float depth = 1.0f, unsigned stencil = 0);
     /// Resolve multisampled backbuffer to a texture rendertarget. The texture's size should match the viewport size.
     bool ResolveToTexture(Texture2D* destination, const IntRect& viewport);
+    /// Resolve a multisampled texture on itself.
+    bool ResolveToTexture(Texture2D* texture);
+    /// Resolve a multisampled cube texture on itself.
+    bool ResolveToTexture(TextureCube* texture);
     /// Draw non-indexed geometry.
     void Draw(PrimitiveType type, unsigned vertexStart, unsigned vertexCount);
     /// Draw indexed geometry.
@@ -154,6 +158,8 @@ public:
     void SetShaderParameter(StringHash param, const float* data, unsigned count);
     /// Set shader float constant.
     void SetShaderParameter(StringHash param, float value);
+    /// Set shader integer constant.
+    void SetShaderParameter(StringHash param, int value);
     /// Set shader boolean constant.
     void SetShaderParameter(StringHash param, bool value);
     /// Set shader color constant.
@@ -226,6 +232,8 @@ public:
     void SetFillMode(FillMode mode);
     /// Set stereo mode
     void SetStereo(bool stereo) { stereoRendering_ = stereo; }
+    /// Set line antialiasing on/off.
+    void SetLineAntiAlias(bool enable);
     /// Set scissor test.
     void SetScissorTest(bool enable, const Rect& rect = Rect::FULL, bool borderInclusive = true);
     /// Set scissor test.
@@ -243,6 +251,8 @@ public:
     void EndDumpShaders();
     /// Precache shader variations from an XML file generated with BeginDumpShaders().
     void PrecacheShaders(Deserializer& source);
+    /// Set shader cache directory, Direct3D only. This can either be an absolute path or a path within the resource system.
+    void SetShaderCacheDir(const String& path);
 
     /// Return whether rendering initialized.
     bool IsInitialized() const;
@@ -425,6 +435,9 @@ public:
     /// Return polygon fill mode.
     FillMode GetFillMode() const { return fillMode_; }
 
+    /// Return whether line antialiasing is enabled.
+    bool GetLineAntiAlias() const { return lineAntiAlias_; }
+
     /// Return whether stencil test is enabled.
     bool GetStencilTest() const { return stencilTest_; }
 
@@ -457,6 +470,9 @@ public:
 
     /// Return whether a custom clipping plane is in use.
     bool GetUseClipPlane() const { return useClipPlane_; }
+
+    /// Return shader cache directory, Direct3D only.
+    const String& GetShaderCacheDir() const { return shaderCacheDir_; }
 
     /// Return current rendertarget width and height.
     IntVector2 GetRenderTargetDimensions() const;
@@ -581,7 +597,7 @@ private:
     /// Bind a framebuffer using either extension or core functionality. Used only on OpenGL.
     void BindFramebuffer(unsigned fbo);
     /// Bind a framebuffer color attachment using either extension or core functionality. Used only on OpenGL.
-    void BindColorAttachment(unsigned index, unsigned target, unsigned object);
+    void BindColorAttachment(unsigned index, unsigned target, unsigned object, bool isRenderBuffer);
     /// Bind a framebuffer depth attachment using either extension or core functionality. Used only on OpenGL.
     void BindDepthAttachment(unsigned object, bool isRenderBuffer);
     /// Bind a framebuffer stencil attachment using either extension or core functionality. Used only on OpenGL.
@@ -711,12 +727,14 @@ private:
     CompareMode depthTestMode_;
     /// Depth write enable flag.
     bool depthWrite_;
+    /// Line antialiasing enable flag.
+    bool lineAntiAlias_;
     /// Polygon fill mode.
     FillMode fillMode_;
-    /// Scissor test rectangle.
-    IntRect scissorRect_;
     /// Scissor test enable flag.
     bool scissorTest_;
+    /// Scissor test rectangle.
+    IntRect scissorRect_;
     /// Stencil test compare mode.
     CompareMode stencilTestMode_;
     /// Stencil operation on pass.
@@ -741,6 +759,8 @@ private:
     const void* shaderParameterSources_[MAX_SHADER_PARAMETER_GROUPS];
     /// Base directory for shaders.
     String shaderPath_;
+    /// Cache directory for Direct3D binary shaders.
+    String shaderCacheDir_;
     /// File extension for shaders.
     String shaderExtension_;
     /// Last used shader in shader variation query.
