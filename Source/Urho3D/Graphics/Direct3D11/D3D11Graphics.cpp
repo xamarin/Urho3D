@@ -2318,11 +2318,6 @@ bool Graphics::UpdateSwapChain(int width, int height)
         }
     }
 
-#if UWP_HOLO
-    CD3D11_TEXTURE2D_DESC depthDesc(
-        DXGI_FORMAT_D16_UNORM, static_cast<UINT>(width), static_cast<UINT>(height), 
-        1,1, D3D11_BIND_DEPTH_STENCIL);
-#else
     D3D11_TEXTURE2D_DESC depthDesc;
     memset(&depthDesc, 0, sizeof depthDesc);
     depthDesc.Width = (UINT)width;
@@ -2336,7 +2331,6 @@ bool Graphics::UpdateSwapChain(int width, int height)
     depthDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
     depthDesc.CPUAccessFlags = 0;
     depthDesc.MiscFlags = 0;
-#endif
     hr = impl_->device_->CreateTexture2D(&depthDesc, 0, &impl_->defaultDepthTexture_);
 
     if (FAILED(hr))
@@ -2347,15 +2341,7 @@ bool Graphics::UpdateSwapChain(int width, int height)
     }
     else
     {
-#if UWP_HOLO
-        D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilDesc;
-        depthStencilDesc.Format = DXGI_FORMAT_UNKNOWN;
-        depthStencilDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-        depthStencilDesc.Flags = 0;
-        hr = impl_->device_->CreateDepthStencilView(impl_->defaultDepthTexture_, &depthStencilDesc, &impl_->defaultDepthStencilView_);
-#else
         hr = impl_->device_->CreateDepthStencilView(impl_->defaultDepthTexture_, 0, &impl_->defaultDepthStencilView_);
-#endif
         if (FAILED(hr))
         {
             URHO3D_SAFE_RELEASE(impl_->defaultDepthStencilView_);
