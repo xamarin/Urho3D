@@ -67,6 +67,7 @@ Urho3D development, contributions and bugfixes by:
 - Vivienne Anthony
 - Colin Barrett
 - Erik Beran
+- Gauthier Billot
 - Loic Blot
 - Danny Boisvert
 - Sergey Bosko
@@ -80,6 +81,7 @@ Urho3D development, contributions and bugfixes by:
 - Henrik Heino
 - Mika Heinonen
 - Victor Holt
+- Johnathan Jenkins
 - Jukka Jylänki
 - Graham King
 - Jason Kinzer
@@ -106,6 +108,7 @@ Urho3D development, contributions and bugfixes by:
 - Nick Royer
 - Miika Santala
 - Anatoly Sennov
+- Matan Shukry
 - Bengt Soderstrom
 - Hualin Song
 - James Thomas
@@ -116,6 +119,7 @@ Urho3D development, contributions and bugfixes by:
 - AGreatFish
 - BlueMagnificent
 - Enhex
+- Fastran
 - Firegorilla
 - Gordon-F
 - Lumak
@@ -195,7 +199,7 @@ Urho3D uses the following third-party libraries:
 - pugixml 1.7 (http://pugixml.org)
 - rapidjson 0.11 (https://code.google.com/p/rapidjson)
 - Recast/Detour (https://github.com/memononen/recastnavigation)
-- SDL 2.0.4 (https://www.libsdl.org)
+- SDL 2.0.5 (https://www.libsdl.org)
 - SQLite 3.13.0 (https://www.sqlite.org)
 - StanHull (https://codesuppository.blogspot.com/2006/03/john-ratcliffs-code-suppository-blog.html)
 - stb_image 2.12 (https://nothings.org)
@@ -1014,6 +1018,8 @@ Related projects:
 
 - Urho3D libRocket Integration (https://github.com/realrunner/urho3d-librocket)
 
+- Consolidated Urho3D extra samples (https://github.com/Lumak/Urho3D-Extra-Samples)
+
 \page PortingNotes Porting notes
 
 From 1.4 to 1.5:
@@ -1043,7 +1049,7 @@ From 1.6 to master:
 - SoundSource autoremove boolean was replaced with AutoRemoveMode enum, which allows removing either the component or owner node. Also used by ParticleEmitter.
 - Getting camera projection matrix has changed. Use GetProjection() to get the API-independent matrix, and GetGPUProjection() to get the matrix converted to be usable as a shader parameter. On D3D these are the same.
 - Alpha masking hint has been removed from Technique & Pass, due to materials also now being able to define additional shader compilation defines. You can use Material::SetRenderOrder() instead to ensure that partially opaque geometry will be drawn after fully opaque for GPU depth buffer optimization.
-  Due to this change you must also manually define that a material should not take part in occlusion rendering, see Material::SetOcclusion(). 
+  Due to this change you must also manually define that a material should not take part in occlusion rendering, see Material::SetOcclusion().
 - Techniques that existed just for shader defines like ALPHAMASK and PACKEDNORMAL have been removed. Replace by using techniques without those defines (e.g. DiffNormal instead of DiffNormalPacked), and adding the necessary defines to your materials instead.
 - The Light class has gained a max extrusion distance parameter for directional light shadows. In case you use a large far clip distance, you can experience different shadow depth resolution and effect of bias parameters, as the far clip distance no longer alone determines the extrusion. Adjust with Light::SetShadowMaxExtrusion() as necessary.
 - Direct3D binary shaders are now cached by default to the user preferences directory "urho3d/shadercache" to avoid writing into the application installation directory, to which the user may not have rights.
@@ -1051,6 +1057,8 @@ From 1.6 to master:
   Use the directory "Shaders/HLSL/Cache" to get the old behavior.
 - Signatures of UIElement virtual functions OnResize() and OnPositionSet() have changed.
 - UIElement::LoadChildXML() now returns the created element on success, instead of a boolean.
+- Rendertargets have gained the ability to have automatically regenerated mipmaps. Screen buffers received from the Renderer subsystem have mipmaps off, but for manually created rendertargets the default is mipmaps on, like for ordinary textures. Use SetNumLevels(1) to disable.
+- The shader function GetWorldTangent() now returns a 4-component vector.
 */
 
 }

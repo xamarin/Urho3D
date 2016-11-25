@@ -1318,6 +1318,9 @@ void Graphics::SetTexture(unsigned index, Texture* texture)
                     ResolveToTexture(static_cast<TextureCube*>(texture));
             }
         }
+
+        if (texture->GetLevelsDirty())
+            texture->RegenerateLevels();
     }
 
     if (texture && texture->GetParametersDirty())
@@ -1433,6 +1436,10 @@ void Graphics::SetRenderTarget(unsigned index, RenderSurface* renderTarget)
                 parentTexture->SetResolveDirty(true);
                 renderTarget->SetResolveDirty(true);
             }
+
+            // If mipmapped, mark the levels needing regeneration
+            if (parentTexture->GetLevels() > 1)
+                parentTexture->SetLevelsDirty();
         }
     }
 }

@@ -1938,9 +1938,11 @@ Methods:
 - void AddLine(const Vector3& start, const Vector3& end, unsigned color, bool depthTest = true)
 - void AddTriangle(const Vector3& v1, const Vector3& v2, const Vector3& v3, const Color& color, bool depthTest = true)
 - void AddTriangle(const Vector3& v1, const Vector3& v2, const Vector3& v3, unsigned color, bool depthTest = true)
+- void AddPolygon(const Vector3& v1, const Vector3& v2, const Vector3& v3, const Vector3& v4, const Color& color, bool depthTest = true)
+- void AddPolygon(const Vector3& v1, const Vector3& v2, const Vector3& v3, const Vector3& v4, unsigned color, bool depthTest = true)
 - void AddNode(Node* node, float scale = 1.0f, bool depthTest = true)
-- void AddBoundingBox(const BoundingBox& box, const Color& color, bool depthTest = true)
-- void AddBoundingBox(const BoundingBox& box, const Matrix3x4& transform, const Color& color, bool depthTest = true)
+- void AddBoundingBox(const BoundingBox& box, const Color& color, bool depthTest = true, bool solid = false)
+- void AddBoundingBox(const BoundingBox& box, const Matrix3x4& transform, const Color& color, bool depthTest = true, bool solid = false)
 - void AddFrustum(const Frustum& frustum, const Color& color, bool depthTest = true)
 - void AddPolyhedron(const Polyhedron& poly, const Color& color, bool depthTest = true)
 - void AddSphere(const Sphere& sphere, const Color& color, bool depthTest = true)
@@ -3044,6 +3046,8 @@ Methods:
 - void SetPerVertex(bool enable)
 - void SetColor(const Color& color)
 - void SetTemperature(float temperature)
+- void SetRadius(float redius)
+- void SetLength(float length)
 - void SetUsePhysicalValues(bool enable)
 - void SetSpecularIntensity(float intensity)
 - void SetBrightness(float brightness)
@@ -3065,6 +3069,8 @@ Methods:
 - bool GetPerVertex() const
 - const Color& GetColor() const
 - float GetTemperature() const
+- float GetRadius() const
+- float GetLength() const
 - float GetSpecularIntensity() const
 - float GetBrightness() const
 - Color GetEffectiveColor() const
@@ -3095,6 +3101,8 @@ Properties:
 - bool perVertex
 - Color& color
 - float temperature
+- float radius
+- float length
 - bool usePhysicalValues
 - float specularIntensity
 - float brightness
@@ -3966,7 +3974,8 @@ Methods:
 - void SetEnabledRecursive(bool enable)
 - void SetOwner(Connection* owner)
 - void MarkDirty()
-- Node* CreateChild(const String name = String::EMPTY, CreateMode mode = REPLICATED, unsigned id = 0)
+- Node* CreateChild(const String name = String::EMPTY, CreateMode mode = REPLICATED, unsigned id = 0, bool temporary = false)
+- Node* CreateTemporaryChild(const String name = String::EMPTY, CreateMode mode = REPLICATED, unsigned id = 0)
 - void AddChild(Node* node, unsigned index = M_MAX_UNSIGNED)
 - void RemoveChild(Node* node)
 - void RemoveAllChildren()
@@ -4045,7 +4054,7 @@ Methods:
 - bool Load(Deserializer& source, SceneResolver& resolver, bool loadChildren = true, bool rewriteIDs = false, CreateMode mode = REPLICATED)
 - bool LoadXML(const XMLElement& source, SceneResolver& resolver, bool loadChildren = true, bool rewriteIDs = false, CreateMode mode = REPLICATED)
 - bool LoadJSON(const JSONValue& source, SceneResolver& resolver, bool loadChildren = true, bool rewriteIDs = false, CreateMode mode = REPLICATED)
-- Node* CreateChild(unsigned id, CreateMode mode)
+- Node* CreateChild(unsigned id, CreateMode mode, bool temporary = false)
 - void AddComponent(Component* component, unsigned id, CreateMode mode)
 - bool HasTag(const String tag) const
 - const StringVector& GetTags() const
@@ -6083,6 +6092,10 @@ Methods:
 - void SetAlpha(float alpha)
 - void SetUseHotSpot(bool useHotSpot)
 - void SetHotSpot(const Vector2& hotspot)
+- void SetUseDrawRect(bool useDrawRect)
+- void SetDrawRect(const Rect& rect)
+- void SetUseTextureRect(bool useTextureRect)
+- void SetTextureRect(const Rect& rect)
 - void SetCustomMaterial(Material* customMaterial)
 - Sprite2D* GetSprite() const
 - BlendMode GetBlendMode() const
@@ -6092,6 +6105,10 @@ Methods:
 - float GetAlpha() const
 - bool GetUseHotSpot() const
 - const Vector2& GetHotSpot() const
+- bool GetUseDrawRect() const
+- const Rect& GetDrawRect() const
+- bool GetUseTextureRect() const
+- const Rect& GetTextureRect() const
 - Material* GetCustomMaterial() const
 
 Properties:
@@ -6105,6 +6122,10 @@ Properties:
 - bool useHotSpot
 - Vector2 hotSpot
 - Material* customMaterial
+- Rect drawRect
+- bool useDrawRect
+- Rect textureRect
+- bool useTextureRect
 
 <a name="Class_StringHash"></a>
 ### StringHash
@@ -6470,6 +6491,7 @@ Methods:
 - int GetMultiSample() const
 - bool GetAutoResolve() const
 - bool IsResolveDirty() const
+- bool GetLevelsDirty() const
 - Texture* GetBackupTexture() const
 - int GetMipsToSkip(int quality) const
 - int GetLevelWidth(unsigned level) const
@@ -6494,6 +6516,7 @@ Properties:
 - int multiSample (readonly)
 - bool autoResolve (readonly)
 - bool resolveDirty (readonly)
+- bool levelsDirty (readonly)
 - Texture* backupTexture
 - TextureUsage usage (readonly)
 
@@ -7126,6 +7149,7 @@ Methods:
 - const Vector<Variant>& GetVariantVector() const
 - const VariantMap& GetVariantMap() const
 - const Vector<String>& GetStringVector() const
+- const Rect& GetRect() const
 - const IntRect& GetIntRect() const
 - const IntVector2& GetIntVector2() const
 - RefCounted* GetPtr(const char* type) const
@@ -8260,6 +8284,7 @@ Properties:
 - int VAR_MATRIX4
 - int VAR_DOUBLE
 - int VAR_STRINGVECTOR
+- int VAR_RECT
 - int MAX_VAR_TYPES
 
 ### VertexElementSemantic
@@ -8382,8 +8407,8 @@ Properties:
 - Renderer* GetRenderer()
 - Time* GetTime()
 - UI* GetUI()
-- bool HasSubscribedToEvent(Object* sender, const String eventName)
 - bool HasSubscribedToEvent(const String eventName)
+- bool HasSubscribedToEvent(Object* sender, const String eventName)
 - float InverseLerp(float lhs, float rhs, float x)
 - bool IsAbsolutePath(const String pathName)
 - bool IsAlpha(unsigned ch)
@@ -8391,6 +8416,7 @@ Properties:
 - bool IsNaN(float value)
 - bool IsPowerOfTwo(unsigned value)
 - float Lerp(float lhs, float rhs, float t)
+- float Ln(float x)
 - float Max(float lhs, float rhs)
 - int MaxInt(int lhs, int rhs)
 - float Min(float lhs, float rhs)
@@ -8402,9 +8428,9 @@ Properties:
 - void PrintLine(const String str, bool error = false)
 - int Rand()
 - float RandStandardNormal()
+- float Random(float range)
 - float Random()
 - float Random(float min, float max)
-- float Random(float range)
 - int RandomInt(int range)
 - int RandomInt(int min, int max)
 - float RandomNormal(float meanValue, float variance)
@@ -8423,9 +8449,9 @@ Properties:
 - float Sin(float angle)
 - float SmoothStep(float lhs, float rhs, float t)
 - float Sqrt(float x)
-- float StableRandom(const Vector2& seed)
-- float StableRandom(const Vector3& seed)
 - float StableRandom(float seed)
+- float StableRandom(const Vector3& seed)
+- float StableRandom(const Vector2& seed)
 - void SubscribeToEvent(const String eventName, void* functionOrFunctionName)
 - void SubscribeToEvent(void* sender, const String eventName, void* functionOrFunctionName)
 - float Tan(float angle)
@@ -8454,27 +8480,27 @@ Properties:
 - void UnsubscribeFromEvent(const String eventName)
 - void UnsubscribeFromEvents(Object* sender)
 - Vector3 VectorCeil(const Vector3& vec)
-- Vector4 VectorCeil(const Vector4& vec)
 - Vector2 VectorCeil(const Vector2& vec)
+- Vector4 VectorCeil(const Vector4& vec)
 - IntVector2 VectorCeilToInt(const Vector2& vec)
 - Vector4 VectorFloor(const Vector4& vec)
 - Vector2 VectorFloor(const Vector2& vec)
 - Vector3 VectorFloor(const Vector3& vec)
 - IntVector2 VectorFloorToInt(const Vector2& vec)
-- Vector4 VectorLerp(const Vector4& lhs, const Vector4& rhs, const Vector4& t)
 - Vector2 VectorLerp(const Vector2& lhs, const Vector2& rhs, const Vector2& t)
+- Vector4 VectorLerp(const Vector4& lhs, const Vector4& rhs, const Vector4& t)
 - Vector3 VectorLerp(const Vector3& lhs, const Vector3& rhs, const Vector3& t)
-- Vector4 VectorMax(const Vector4& lhs, const Vector4& rhs)
-- Vector2 VectorMax(const Vector2& lhs, const Vector2& rhs)
-- Vector3 VectorMax(const Vector3& lhs, const Vector3& rhs)
 - IntVector2 VectorMax(const IntVector2& lhs, const IntVector2& rhs)
-- Vector3 VectorMin(const Vector3& lhs, const Vector3& rhs)
-- Vector4 VectorMin(const Vector4& lhs, const Vector4& rhs)
-- IntVector2 VectorMin(const IntVector2& lhs, const IntVector2& rhs)
+- Vector3 VectorMax(const Vector3& lhs, const Vector3& rhs)
+- Vector2 VectorMax(const Vector2& lhs, const Vector2& rhs)
+- Vector4 VectorMax(const Vector4& lhs, const Vector4& rhs)
 - Vector2 VectorMin(const Vector2& lhs, const Vector2& rhs)
+- Vector4 VectorMin(const Vector4& lhs, const Vector4& rhs)
+- Vector3 VectorMin(const Vector3& lhs, const Vector3& rhs)
+- IntVector2 VectorMin(const IntVector2& lhs, const IntVector2& rhs)
+- Vector3 VectorRound(const Vector3& vec)
 - Vector2 VectorRound(const Vector2& vec)
 - Vector4 VectorRound(const Vector4& vec)
-- Vector3 VectorRound(const Vector3& vec)
 - IntVector2 VectorRoundToInt(const Vector2& vec)
 
 
@@ -8659,6 +8685,7 @@ Properties:
 - int KEY_T
 - int KEY_TAB
 - int KEY_U
+- int KEY_UNKNOWN
 - int KEY_UP
 - int KEY_V
 - int KEY_W

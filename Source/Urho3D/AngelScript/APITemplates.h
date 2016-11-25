@@ -691,7 +691,8 @@ template <class T> void RegisterNode(asIScriptEngine* engine, const char* classN
     engine->RegisterObjectMethod(className, "void Scale(float)", asMETHODPR(T, Scale, (float), void), asCALL_THISCALL);
     engine->RegisterObjectMethod(className, "void Scale(const Vector3&in)", asMETHODPR(T, Scale, (const Vector3&), void), asCALL_THISCALL);
     engine->RegisterObjectMethod(className, "void Scale2D(const Vector2&in)", asMETHODPR(T, Scale2D, (const Vector2&), void), asCALL_THISCALL);
-    engine->RegisterObjectMethod(className, "Node@+ CreateChild(const String&in name = String(), CreateMode mode = REPLICATED, uint id = 0)", asMETHODPR(T, CreateChild, (const String&, CreateMode, unsigned), Node*), asCALL_THISCALL);
+    engine->RegisterObjectMethod(className, "Node@+ CreateChild(const String&in name = String(), CreateMode mode = REPLICATED, uint id = 0, bool temporary = false)", asMETHODPR(T, CreateChild, (const String&, CreateMode, unsigned, bool), Node*), asCALL_THISCALL);
+    engine->RegisterObjectMethod(className, "Node@+ CreateTemporaryChild(const String&in name = String(), CreateMode mode = REPLICATED, uint id = 0)", asMETHODPR(T, CreateTemporaryChild, (const String&, CreateMode, unsigned), Node*), asCALL_THISCALL);
     engine->RegisterObjectMethod(className, "void AddChild(Node@+, uint index = M_MAX_UNSIGNED)", asMETHOD(T, AddChild), asCALL_THISCALL);
     engine->RegisterObjectMethod(className, "void RemoveChild(Node@+)", asMETHODPR(T, RemoveChild, (Node*), void), asCALL_THISCALL);
     engine->RegisterObjectMethod(className, "void RemoveAllChildren()", asMETHOD(T, RemoveAllChildren), asCALL_THISCALL);
@@ -918,6 +919,7 @@ template <class T> void RegisterTexture(asIScriptEngine* engine, const char* cla
     engine->RegisterObjectMethod(className, "int get_multiSample() const", asMETHOD(T, GetMultiSample), asCALL_THISCALL);
     engine->RegisterObjectMethod(className, "bool get_autoResolve() const", asMETHOD(T, GetAutoResolve), asCALL_THISCALL);
     engine->RegisterObjectMethod(className, "bool get_resolveDirty() const", asMETHOD(T, IsResolveDirty), asCALL_THISCALL);
+    engine->RegisterObjectMethod(className, "bool get_levelsDirty() const", asMETHOD(T, GetLevelsDirty), asCALL_THISCALL);
     engine->RegisterObjectMethod(className, "void set_backupTexture(Texture@+)", asMETHOD(T, SetBackupTexture), asCALL_THISCALL);
     engine->RegisterObjectMethod(className, "Texture@+ get_backupTexture() const", asMETHOD(T, GetBackupTexture), asCALL_THISCALL);
     engine->RegisterObjectMethod(className, "void set_mipsToSkip(int, int)", asMETHOD(T, SetMipsToSkip), asCALL_THISCALL);
