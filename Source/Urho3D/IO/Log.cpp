@@ -41,6 +41,7 @@ extern "C" void SDL_IOS_LogMessage(const char* message);
 #endif
 
 #include "../DebugNew.h"
+#include "Mono.h"
 
 namespace Urho3D
 {
@@ -141,6 +142,11 @@ void Log::Write(int level, const String& message)
     {
         WriteRaw(message, false);
         return;
+    }
+
+    if (level == LOG_ERROR)
+    {
+        Mono::Callback(Log_Write, 0, 0, level, stringdup(message.CString()));
     }
 
     // No-op if illegal level

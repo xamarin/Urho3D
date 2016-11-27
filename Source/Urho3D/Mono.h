@@ -12,13 +12,21 @@ enum CallbackType
     Component_OnNodeSetEnabled,
 
     RefCounted_AddRef,
-    RefCounted_Delete
+    RefCounted_Delete,
+    
+    Log_Write
 };
 
 class Mono
 {
 public:
-    static void Callback(CallbackType type, void* target = 0, void* param1 = 0, void* param2 = 0, void* param3 = 0, void* param4 = 0);
+    static void Callback(CallbackType type, void* target = 0, void* param1 = 0, int param2 = 0, const char* param3 = 0);
 };
+
+#if UWP
+#define stringdup _strdup
+#else
+#define stringdup strdup
+#endif
 
 }
