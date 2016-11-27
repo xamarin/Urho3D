@@ -3,7 +3,7 @@
 namespace Urho3D
 {
 
-typedef void(*MonoNativeCallback)(CallbackType, void*, void*, void*, void*, void*);
+typedef void(*MonoNativeCallback)(CallbackType, void*, void*, int, const char*);
 MonoNativeCallback nativeCallback;
 
 extern "C"
@@ -15,10 +15,10 @@ void RegisterMonoNativeCallbacks(MonoNativeCallback callback)
     nativeCallback = callback;
 }
 
-void Mono::Callback(CallbackType type, void * target, void * param1, void * param2, void * param3, void * param4)
+void Mono::Callback(CallbackType type, void * target, void * param1, int param2, const char * param3)
 {
     if (nativeCallback)
-        nativeCallback(type, target, param1, param2, param3, param4);
+        nativeCallback(type, target, param1, param2, param3);
 }
 
 }
