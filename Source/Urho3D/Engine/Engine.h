@@ -45,7 +45,7 @@ public:
     /// Initialize engine using parameters given and show the application window. Return true if successful.
     bool Initialize(const VariantMap& parameters);
     /// Run one frame.
-    void RunFrame();
+    int RunFrame();
     /// Create the console and return it. May return null if engine configuration does not allow creation (headless mode.)
     Console* CreateConsole();
     /// Create the debug hud.
@@ -108,7 +108,7 @@ public:
     /// Render after frame update.
     void Render();
     /// Get the timestep for the next frame and sleep for frame limiting if necessary.
-    void ApplyFrameLimit();
+    int ApplyFrameLimit();
 
     /// Parse the engine startup parameters map from command line arguments.
     static VariantMap ParseParameters(const Vector<String>& arguments);
