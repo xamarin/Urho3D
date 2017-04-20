@@ -441,7 +441,7 @@ bool Engine::Initialize(const VariantMap& parameters)
     return true;
 }
 
-void Engine::RunFrame()
+int Engine::RunFrame()
 {
     assert(initialized_);
 
@@ -450,7 +450,7 @@ void Engine::RunFrame()
         exiting_ = true;
 
     if (exiting_)
-        return;
+        return 0;
 
     // Note: there is a minimal performance cost to looking up subsystems (uses a hashmap); if they would be looked up several
     // times per frame it would be better to cache the pointers
@@ -498,9 +498,10 @@ void Engine::RunFrame()
     Update();
     Render();
 #endif
-    ApplyFrameLimit();
+    int elapsed = ApplyFrameLimit();
 
     time->EndFrame();
+    return elapsed;
 }
 
 Console* Engine::CreateConsole()
@@ -699,10 +700,10 @@ void Engine::Render()
     graphics->EndFrame();
 }
 
-void Engine::ApplyFrameLimit()
+int Engine::ApplyFrameLimit()
 {
     if (!initialized_)
-        return;
+        return 0;
 
     unsigned maxFps = maxFps_;
     Input* input = GetSubsystem<Input>();
@@ -772,6 +773,7 @@ void Engine::ApplyFrameLimit()
     }
     else
         timeStep_ = lastTimeSteps_.Back();
+    return elapsed;
 }
 
 VariantMap Engine::ParseParameters(const Vector<String>& arguments)
