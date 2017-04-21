@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -65,10 +65,10 @@ template <class T, class U> U* RefCast(T* t)
 /// Template function for Vector to array conversion.
 template <class T> CScriptArray* VectorToArray(const Vector<T>& vector, const char* arrayName)
 {
-    asIScriptContext* context = asGetActiveContext();
+    Context* context = GetScriptContext();
     if (context)
     {
-        asIObjectType* type = GetScriptContext()->GetSubsystem<Script>()->GetObjectType(arrayName);
+        asITypeInfo* type = context->GetSubsystem<Script>()->GetObjectType(arrayName);
         CScriptArray* arr = CScriptArray::Create(type, vector.Size());
 
         for (unsigned i = 0; i < arr->GetSize(); ++i)
@@ -83,10 +83,10 @@ template <class T> CScriptArray* VectorToArray(const Vector<T>& vector, const ch
 /// Template function for PODVector to array conversion.
 template <class T> CScriptArray* VectorToArray(const PODVector<T>& vector, const char* arrayName)
 {
-    asIScriptContext* context = asGetActiveContext();
+    Context* context = GetScriptContext();
     if (context)
     {
-        asIObjectType* type = GetScriptContext()->GetSubsystem<Script>()->GetObjectType(arrayName);
+        asITypeInfo* type = context->GetSubsystem<Script>()->GetObjectType(arrayName);
         CScriptArray* arr = CScriptArray::Create(type, vector.Size());
 
         for (unsigned i = 0; i < arr->GetSize(); ++i)
@@ -101,10 +101,10 @@ template <class T> CScriptArray* VectorToArray(const PODVector<T>& vector, const
 /// Template function for data buffer to array conversion.
 template <class T> CScriptArray* BufferToArray(const T* buffer, unsigned size, const char* arrayName)
 {
-    asIScriptContext* context = asGetActiveContext();
+    Context* context = GetScriptContext();
     if (context)
     {
-        asIObjectType* type = GetScriptContext()->GetSubsystem<Script>()->GetObjectType(arrayName);
+        asITypeInfo* type = context->GetSubsystem<Script>()->GetObjectType(arrayName);
         CScriptArray* arr = CScriptArray::Create(type, size);
 
         for (unsigned i = 0; i < arr->GetSize(); ++i)
@@ -119,10 +119,10 @@ template <class T> CScriptArray* BufferToArray(const T* buffer, unsigned size, c
 /// Template function for Vector to handle array conversion.
 template <class T> CScriptArray* VectorToHandleArray(const Vector<T*>& vector, const char* arrayName)
 {
-    asIScriptContext* context = asGetActiveContext();
+    Context* context = GetScriptContext();
     if (context)
     {
-        asIObjectType* type = GetScriptContext()->GetSubsystem<Script>()->GetObjectType(arrayName);
+        asITypeInfo* type = context->GetSubsystem<Script>()->GetObjectType(arrayName);
         CScriptArray* arr = CScriptArray::Create(type, vector.Size());
 
         for (unsigned i = 0; i < arr->GetSize(); ++i)
@@ -143,10 +143,10 @@ template <class T> CScriptArray* VectorToHandleArray(const Vector<T*>& vector, c
 /// Template function for PODVector to handle array conversion.
 template <class T> CScriptArray* VectorToHandleArray(const PODVector<T*>& vector, const char* arrayName)
 {
-    asIScriptContext* context = asGetActiveContext();
+    Context* context = GetScriptContext();
     if (context)
     {
-        asIObjectType* type = GetScriptContext()->GetSubsystem<Script>()->GetObjectType(arrayName);
+        asITypeInfo* type = context->GetSubsystem<Script>()->GetObjectType(arrayName);
         CScriptArray* arr = CScriptArray::Create(type, vector.Size());
 
         for (unsigned i = 0; i < arr->GetSize(); ++i)
@@ -167,10 +167,10 @@ template <class T> CScriptArray* VectorToHandleArray(const PODVector<T*>& vector
 /// Template function for shared pointer Vector to handle array conversion.
 template <class T> CScriptArray* VectorToHandleArray(const Vector<SharedPtr<T> >& vector, const char* arrayName)
 {
-    asIScriptContext* context = asGetActiveContext();
+    Context* context = GetScriptContext();
     if (context)
     {
-        asIObjectType* type = GetScriptContext()->GetSubsystem<Script>()->GetObjectType(arrayName);
+        asITypeInfo* type = context->GetSubsystem<Script>()->GetObjectType(arrayName);
         CScriptArray* arr = CScriptArray::Create(type, vector.Size());
 
         for (unsigned i = 0; i < arr->GetSize(); ++i)
@@ -415,7 +415,7 @@ static const AttributeInfo& SerializableGetAttributeInfo(unsigned index, Seriali
     const Vector<AttributeInfo>* attributes = ptr->GetAttributes();
     if (!attributes || index >= attributes->Size())
     {
-        asGetActiveContext()->SetException("Index out of bounds");
+        GetActiveASContext()->SetException("Index out of bounds");
         return noAttributeInfo;
     }
     else
@@ -537,7 +537,7 @@ static Component* NodeGetComponent(unsigned index, Node* ptr)
     const Vector<SharedPtr<Component> >& components = ptr->GetComponents();
     if (index >= components.Size())
     {
-        asGetActiveContext()->SetException("Index out of bounds");
+        GetActiveASContext()->SetException("Index out of bounds");
         return 0;
     }
     else
@@ -612,7 +612,7 @@ static Node* NodeGetChild(unsigned index, Node* ptr)
     const Vector<SharedPtr<Node> >& children = ptr->GetChildren();
     if (index >= children.Size())
     {
-        asGetActiveContext()->SetException("Index out of bounds");
+        GetActiveASContext()->SetException("Index out of bounds");
         return 0;
     }
     else
@@ -722,6 +722,7 @@ template <class T> void RegisterNode(asIScriptEngine* engine, const char* classN
     engine->RegisterObjectMethod(className, "Array<Component@>@ GetComponents(const String&in, bool recursive = false) const", asFUNCTION(NodeGetComponentsWithType), asCALL_CDECL_OBJLAST);
     engine->RegisterObjectMethod(className, "Component@+ GetComponent(const String&in, bool recursive = false) const", asFUNCTION(NodeGetComponentWithType), asCALL_CDECL_OBJLAST);
     engine->RegisterObjectMethod(className, "Component@+ GetParentComponent(const String&in, bool fullTraversal = false) const", asFUNCTION(NodeGetParentComponentWithType), asCALL_CDECL_OBJLAST);
+    engine->RegisterObjectMethod(className, "bool IsChildOf(Node@+) const", asMETHOD(T, IsChildOf), asCALL_THISCALL);
     engine->RegisterObjectMethod(className, "bool HasComponent(const String&in) const", asFUNCTION(NodeHasComponent), asCALL_CDECL_OBJLAST);
     engine->RegisterObjectMethod(className, "bool HasTag(const String&in)", asMETHOD(T, HasTag), asCALL_THISCALL);
     engine->RegisterObjectMethod(className, "Array<String>@ get_tags()", asFUNCTION(NodeGetTags), asCALL_CDECL_OBJLAST);
@@ -791,7 +792,7 @@ static bool ResourceLoadVectorBuffer(VectorBuffer& buffer, Resource* ptr)
 
 static bool ResourceLoadByName(const String& fileName, Resource* ptr)
 {
-    return ptr->Load(fileName);
+    return ptr->LoadFile(fileName);
 }
 
 static bool ResourceSave(File* file, Resource* ptr)
@@ -806,7 +807,7 @@ static bool ResourceSaveVectorBuffer(VectorBuffer& buffer, Resource* ptr)
 
 static bool ResourceSaveByName(const String& fileName, Resource* ptr)
 {
-    return ptr->Save(fileName);
+    return ptr->SaveFile(fileName);
 }
 
 /// Template function for registering a class derived from Resource.

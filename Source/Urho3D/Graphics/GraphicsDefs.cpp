@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -107,7 +107,7 @@ extern URHO3D_API const VertexElement LEGACY_VERTEXELEMENTS[] =
     VertexElement(TYPE_VECTOR4, SEM_TEXCOORD, 4, true),      // Instancematrix1
     VertexElement(TYPE_VECTOR4, SEM_TEXCOORD, 5, true),      // Instancematrix2
     VertexElement(TYPE_VECTOR4, SEM_TEXCOORD, 6, true),      // Instancematrix3
-    VertexElement(TYPE_INT, SEM_OBJECTINDEX, 0, false)      // Objectindex
+    VertexElement(TYPE_INT, SEM_OBJECTINDEX, 0, false)       // Objectindex
 };
 
 extern URHO3D_API const unsigned ELEMENT_TYPESIZES[] =

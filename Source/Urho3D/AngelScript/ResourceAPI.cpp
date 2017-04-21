@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -57,6 +57,18 @@ static File* ResourceCacheGetFile(const String& name, ResourceCache* ptr)
     if (file)
         file->AddRef();
     return file.Get();
+}
+
+static CScriptArray* ResourceCacheGetResources(StringHash type, ResourceCache* ptr)
+{
+    PODVector<Resource*> resources;
+    ptr->GetResources(resources, type);
+    return VectorToHandleArray(resources, "Array<Resource@>");
+}
+
+static CScriptArray* ResourceCacheGetResourcesString(const String& type, ResourceCache* ptr)
+{
+    return ResourceCacheGetResources(StringHash(type), ptr);
 }
 
 static void ResourceCacheReleaseResource(const String& type, const String& name, bool force, ResourceCache* ptr)
@@ -154,6 +166,8 @@ static void RegisterResourceCache(asIScriptEngine* engine)
     engine->RegisterObjectMethod("ResourceCache", "Resource@+ GetExistingResource(const String&in, const String&in)", asFUNCTION(ResourceCacheGetExistingResource), asCALL_CDECL_OBJLAST);
     engine->RegisterObjectMethod("ResourceCache", "Resource@+ GetExistingResource(StringHash, const String&in)", asMETHODPR(ResourceCache, GetExistingResource, (StringHash, const String&), Resource*), asCALL_THISCALL);
     engine->RegisterObjectMethod("ResourceCache", "bool BackgroundLoadResource(const String&in, const String&in, bool sendEventOnFailure = true)", asFUNCTION(ResourceCacheBackgroundLoadResource), asCALL_CDECL_OBJLAST);
+    engine->RegisterObjectMethod("ResourceCache", "Array<Resource@>@ GetResources(const String&in)", asFUNCTION(ResourceCacheGetResourcesString), asCALL_CDECL_OBJLAST);
+    engine->RegisterObjectMethod("ResourceCache", "Array<Resource@>@ GetResources(StringHash)", asFUNCTION(ResourceCacheGetResources), asCALL_CDECL_OBJLAST);
     engine->RegisterObjectMethod("ResourceCache", "void set_memoryBudget(const String&in, uint64)", asFUNCTION(ResourceCacheSetMemoryBudget), asCALL_CDECL_OBJLAST);
     engine->RegisterObjectMethod("ResourceCache", "uint64 get_memoryBudget(const String&in) const", asFUNCTION(ResourceCacheGetMemoryBudget), asCALL_CDECL_OBJLAST);
     engine->RegisterObjectMethod("ResourceCache", "uint64 get_memoryUse(const String&in) const", asFUNCTION(ResourceCacheGetMemoryUse), asCALL_CDECL_OBJLAST);
@@ -454,6 +468,7 @@ static void RegisterXMLElement(asIScriptEngine* engine)
     engine->RegisterObjectBehaviour("XMLElement", asBEHAVE_DESTRUCT, "void f()", asFUNCTION(DestructXMLElement), asCALL_CDECL_OBJLAST);
     engine->RegisterObjectMethod("XMLElement", "XMLElement& opAssign(const XMLElement&in)", asMETHOD(XMLElement, operator =), asCALL_THISCALL);
     engine->RegisterObjectMethod("XMLElement", "XMLElement CreateChild(const String&in)", asMETHODPR(XMLElement, CreateChild, (const String&), XMLElement), asCALL_THISCALL);
+    engine->RegisterObjectMethod("XMLElement", "XMLElement GetOrCreateChild(const String&in)", asMETHODPR(XMLElement, GetOrCreateChild, (const String&), XMLElement), asCALL_THISCALL);
     engine->RegisterObjectMethod("XMLElement", "bool RemoveChild(const XMLElement&in)", asMETHODPR(XMLElement, RemoveChild, (const XMLElement&), bool), asCALL_THISCALL);
     engine->RegisterObjectMethod("XMLElement", "bool RemoveChild(const String&in)", asMETHODPR(XMLElement, RemoveChild, (const String&), bool), asCALL_THISCALL);
     engine->RegisterObjectMethod("XMLElement", "bool RemoveChildren(const String&in name = String())", asMETHODPR(XMLElement, RemoveChildren, (const String&), bool), asCALL_THISCALL);
@@ -472,8 +487,11 @@ static void RegisterXMLElement(asIScriptEngine* engine)
     engine->RegisterObjectMethod("XMLElement", "bool SetDouble(const String&in, double)", asMETHOD(XMLElement, SetDouble), asCALL_THISCALL);
     engine->RegisterObjectMethod("XMLElement", "bool SetInt(const String&in, int)", asMETHOD(XMLElement, SetInt), asCALL_THISCALL);
     engine->RegisterObjectMethod("XMLElement", "bool SetUInt(const String&in, uint)", asMETHOD(XMLElement, SetUInt), asCALL_THISCALL);
+    engine->RegisterObjectMethod("XMLElement", "bool SetInt64(const String&in, int64)", asMETHOD(XMLElement, SetInt64), asCALL_THISCALL);
+    engine->RegisterObjectMethod("XMLElement", "bool SetUInt64(const String&in, uint64)", asMETHOD(XMLElement, SetUInt64), asCALL_THISCALL);
     engine->RegisterObjectMethod("XMLElement", "bool SetIntRect(const String&in, const IntRect&in)", asMETHOD(XMLElement, SetIntRect), asCALL_THISCALL);
     engine->RegisterObjectMethod("XMLElement", "bool SetIntVector2(const String&in, const IntVector2&in)", asMETHOD(XMLElement, SetIntVector2), asCALL_THISCALL);
+    engine->RegisterObjectMethod("XMLElement", "bool SetIntVector3(const String&in, const IntVector3&in)", asMETHOD(XMLElement, SetIntVector3), asCALL_THISCALL);
     engine->RegisterObjectMethod("XMLElement", "bool SetQuaternion(const String&in, const Quaternion&in)", asMETHOD(XMLElement, SetQuaternion), asCALL_THISCALL);
     engine->RegisterObjectMethod("XMLElement", "bool SetVariant(const Variant&in)", asMETHOD(XMLElement, SetVariant), asCALL_THISCALL);
     engine->RegisterObjectMethod("XMLElement", "bool SetResourceRef(const String&in, const ResourceRef&in)", asMETHOD(XMLElement, SetResourceRef), asCALL_THISCALL);
@@ -503,8 +521,11 @@ static void RegisterXMLElement(asIScriptEngine* engine)
     engine->RegisterObjectMethod("XMLElement", "double GetDouble(const String&in) const", asMETHOD(XMLElement, GetDouble), asCALL_THISCALL);
     engine->RegisterObjectMethod("XMLElement", "uint GetUInt(const String&in) const", asMETHOD(XMLElement, GetUInt), asCALL_THISCALL);
     engine->RegisterObjectMethod("XMLElement", "int GetInt(const String&in) const", asMETHOD(XMLElement, GetInt), asCALL_THISCALL);
+    engine->RegisterObjectMethod("XMLElement", "uint64 GetUInt64(const String&in) const", asMETHOD(XMLElement, GetUInt64), asCALL_THISCALL);
+    engine->RegisterObjectMethod("XMLElement", "int64 GetInt64(const String&in) const", asMETHOD(XMLElement, GetInt64), asCALL_THISCALL);
     engine->RegisterObjectMethod("XMLElement", "IntRect GetIntRect(const String&in) const", asMETHOD(XMLElement, GetIntRect), asCALL_THISCALL);
     engine->RegisterObjectMethod("XMLElement", "IntVector2 GetIntVector2(const String&in) const", asMETHOD(XMLElement, GetIntVector2), asCALL_THISCALL);
+    engine->RegisterObjectMethod("XMLElement", "IntVector3 GetIntVector3(const String&in) const", asMETHOD(XMLElement, GetIntVector3), asCALL_THISCALL);
     engine->RegisterObjectMethod("XMLElement", "Quaternion GetQuaternion(const String&in) const", asMETHOD(XMLElement, GetQuaternion), asCALL_THISCALL);
     engine->RegisterObjectMethod("XMLElement", "Variant GetVariant() const", asMETHOD(XMLElement, GetVariant), asCALL_THISCALL);
     engine->RegisterObjectMethod("XMLElement", "ResourceRef GetResourceRef() const", asMETHOD(XMLElement, GetResourceRef), asCALL_THISCALL);
@@ -569,6 +590,7 @@ static void RegisterXMLFile(asIScriptEngine* engine)
 {
     engine->RegisterObjectMethod("XMLFile", "bool FromString(const String&in)", asMETHOD(XMLFile, FromString), asCALL_THISCALL);
     engine->RegisterObjectMethod("XMLFile", "XMLElement CreateRoot(const String&in)", asMETHOD(XMLFile, CreateRoot), asCALL_THISCALL);
+    engine->RegisterObjectMethod("XMLFile", "XMLElement GetOrCreateRoot(const String&in)", asMETHOD(XMLFile, GetOrCreateRoot), asCALL_THISCALL);
     engine->RegisterObjectMethod("XMLFile", "XMLElement GetRoot(const String&in name = String())", asMETHOD(XMLFile, GetRoot), asCALL_THISCALL);
     engine->RegisterObjectMethod("XMLFile", "bool Save(File@+, const String&in) const", asFUNCTION(XMLFileSave), asCALL_CDECL_OBJLAST);
     engine->RegisterObjectMethod("XMLFile", "String ToString(const String&in = String(\"\t\")) const", asMETHOD(XMLFile, ToString), asCALL_THISCALL);

@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,7 @@
 #endif
 #include <Urho3D/Core/Main.h>
 #include <Urho3D/Engine/Engine.h>
+#include <Urho3D/Engine/EngineDefs.h>
 #include <Urho3D/IO/FileSystem.h>
 #include <Urho3D/IO/Log.h>
 #ifdef URHO3D_LUA
@@ -41,7 +42,8 @@
 URHO3D_DEFINE_APPLICATION_MAIN(Urho3DPlayer);
 
 Urho3DPlayer::Urho3DPlayer(Context* context) :
-    Application(context)
+    Application(context),
+    commandLineRead_(false)
 {
 }
 
@@ -58,23 +60,29 @@ void Urho3DPlayer::Setup()
     if (GetArguments().Empty() && filesystem->FileExists(commandFileName))
     {
         SharedPtr<File> commandFile(new File(context_, commandFileName));
-        String commandLine = commandFile->ReadLine();
-        commandFile->Close();
-        ParseArguments(commandLine, false);
-        // Reparse engine startup parameters now
-        engineParameters_ = Engine::ParseParameters(GetArguments());
+        if (commandFile->IsOpen())
+        {
+            commandLineRead_ = true;
+            String commandLine = commandFile->ReadLine();
+            commandFile->Close();
+            ParseArguments(commandLine, false);
+            // Reparse engine startup parameters now
+            engineParameters_ = Engine::ParseParameters(GetArguments());
+        }
     }
+#endif
 
     // Check for script file name from the arguments
     GetScriptFileName();
 
+#ifndef __EMSCRIPTEN__
     // Show usage if not found
-    if (scriptFileName_.Empty())
+    if ((GetArguments().Size() || commandLineRead_) && scriptFileName_.Empty())
     {
         ErrorExit("Usage: Urho3DPlayer <scriptfile> [options]\n\n"
             "The script file should implement the function void Start() for initializing the "
             "application and subscribing to all necessary events, such as the frame update.\n"
-            #ifndef WIN32
+            #ifndef _WIN32
             "\nCommand line options:\n"
             "-x <res>     Horizontal resolution\n"
             "-y <res>     Vertical resolution\n"
@@ -83,7 +91,6 @@ void Urho3DPlayer::Setup()
             "-t           Enable triple buffering\n"
             "-w           Start in windowed mode\n"
             "-s           Enable resizing when in windowed mode\n"
-            "-hd          Enable high DPI, only supported by Apple platforms (OSX, iOS, and tvOS)\n"
             "-q           Enable quiet mode which does not log to standard output stream\n"
             "-b <length>  Sound buffer length in milliseconds\n"
             "-r <freq>    Sound mixing frequency in Hz\n"
@@ -105,6 +112,8 @@ void Urho3DPlayer::Setup()
             "-headless    Headless mode. No application window will be created\n"
             "-landscape   Use landscape orientations (iOS only, default)\n"
             "-portrait    Use portrait orientations (iOS only)\n"
+            "-monitor <num> Monitor number to use\n"
+            "-hz <freq>   Monitor refresh rate to use\n"
             "-prepass     Use light pre-pass rendering\n"
             "-deferred    Use deferred rendering\n"
             "-renderpath <name> Use the named renderpath (must enter full resource name)\n"
@@ -121,25 +130,25 @@ void Urho3DPlayer::Setup()
     else
     {
         // Use the script file name as the base name for the log file
-        engineParameters_["LogName"] = filesystem->GetAppPreferencesDir("urho3d", "logs") + GetFileNameAndExtension(scriptFileName_) + ".log";
+        engineParameters_[EP_LOG_NAME] = filesystem->GetAppPreferencesDir("urho3d", "logs") + GetFileNameAndExtension(scriptFileName_) + ".log";
     }
 #else
     // On Web platform setup a default windowed resolution similar to the executable samples
-    engineParameters_["FullScreen"]  = false;
+    engineParameters_[EP_FULL_SCREEN]  = false;
 #endif
 
     // Construct a search path to find the resource prefix with two entries:
     // The first entry is an empty path which will be substituted with program/bin directory -- this entry is for binary when it is still in build tree
     // The second and third entries are possible relative paths from the installed program/bin directory to the asset directory -- these entries are for binary when it is in the Urho3D SDK installation location
-    if (!engineParameters_.Contains("ResourcePrefixPaths"))
-        engineParameters_["ResourcePrefixPaths"] = ";../share/Resources;../share/Urho3D/Resources";
+    if (!engineParameters_.Contains(EP_RESOURCE_PREFIX_PATHS))
+        engineParameters_[EP_RESOURCE_PREFIX_PATHS] = ";../share/Resources;../share/Urho3D/Resources";
 }
 
 void Urho3DPlayer::Start()
 {
-    // Reattempt reading the command line now on Web platform
-#ifdef __EMSCRIPTEN__
-    if (GetArguments().Empty())
+    // Reattempt reading the command line from the resource system now if not read before
+    // Note that the engine can not be reconfigured at this point; only the script name can be specified
+    if (GetArguments().Empty() && !commandLineRead_)
     {
         SharedPtr<File> commandFile = GetSubsystem<ResourceCache>()->GetFile("CommandLine.txt", false);
         if (commandFile)
@@ -148,16 +157,15 @@ void Urho3DPlayer::Start()
             commandFile->Close();
             ParseArguments(commandLine, false);
         }
-    }
 
-    GetScriptFileName();
+        GetScriptFileName();
+    }
 
     if (scriptFileName_.Empty())
     {
         ErrorExit("Script file name not specified; cannot proceed");
         return;
     }
-#endif
 
     String extension = GetExtension(scriptFileName_);
     if (extension != ".lua" && extension != ".luc")

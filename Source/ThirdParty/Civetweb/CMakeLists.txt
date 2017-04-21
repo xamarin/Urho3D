@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2008-2016 the Urho3D project.
+# Copyright (c) 2008-2017 the Urho3D project.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -33,6 +33,12 @@ if (WIN32)
         if (NOT HAVE__TIMESPEC_DEFINED)
             add_definitions (-D_TIMESPEC_DEFINED)
         endif ()
+    endif ()
+elseif (APPLE AND (NOT IOS OR IPHONEOS_DEPLOYMENT_TARGET STREQUAL "" OR NOT IPHONEOS_DEPLOYMENT_TARGET VERSION_LESS 10.0))    # We cheat a little bit here with a hard-coded check because iOS 10.3 SDK when targeting 9.3 has strong symbol for iPhoneOS archs but weak symbol for iPhoneSimulator archs
+    include (CheckLibraryExists)
+    check_library_exists (c clock_gettime "" FOUND_CLOCK_GETTIME_IN_C)
+    if (FOUND_CLOCK_GETTIME_IN_C)
+        add_definitions (-DHAVE_CLOCK_GETTIME)
     endif ()
 endif ()
 

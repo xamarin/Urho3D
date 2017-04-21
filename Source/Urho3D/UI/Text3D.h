@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -133,6 +133,8 @@ public:
     float GetEffectDepthBias() const;
     /// Return text width.
     int GetWidth() const;
+    /// Return text height.
+    int GetHeight() const;
     /// Return row height.
     int GetRowHeight() const;
     /// Return number of rows.

@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -32,9 +32,10 @@
 #include <JO/jo_jpeg.h>
 #include <SDL/SDL_surface.h>
 #define STB_IMAGE_IMPLEMENTATION
-#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <STB/stb_image.h>
+#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <STB/stb_image_write.h>
+
 #include "../DebugNew.h"
 
 #ifndef MAKEFOURCC
@@ -775,7 +776,7 @@ bool Image::Save(Serializer& dest) const
     return success;
 }
 
-bool Image::Save(const String& fileName) const
+bool Image::SaveFile(const String& fileName) const
 {
     if (fileName.EndsWith(".dds", false))
         return SaveDDS(fileName);

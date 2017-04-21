@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -308,6 +308,7 @@ bool TextureCube::SetSize(int size, unsigned format, TextureUsage usage, int mul
 
     width_ = size;
     height_ = size;
+    depth_ = 1;
     format_ = format;
     multiSample_ = multiSample;
     autoResolve_ = multiSample > 1;

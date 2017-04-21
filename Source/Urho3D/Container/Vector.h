@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -340,7 +340,7 @@ public:
         Iterator i = Find(value);
         if (i != End())
         {
-            EraseSwap(i);
+            EraseSwap(i - Begin());
             return true;
         }
         else
@@ -407,6 +407,12 @@ public:
         while (it != End() && *it != value)
             ++it;
         return it;
+    }
+
+    /// Return index of value in vector, or size if not found.
+    unsigned IndexOf(const T& value) const
+    {
+        return Find(value) - Begin();
     }
 
     /// Return whether contains a specific value.
@@ -908,7 +914,7 @@ public:
         Iterator i = Find(value);
         if (i != End())
         {
-            EraseSwap(i);
+            EraseSwap(i - Begin());
             return true;
         }
         else
@@ -987,6 +993,12 @@ public:
         while (it != End() && *it != value)
             ++it;
         return it;
+    }
+
+    /// Return index of value in vector, or size if not found.
+    unsigned IndexOf(const T& value) const
+    {
+        return Find(value) - Begin();
     }
 
     /// Return whether contains a specific value.

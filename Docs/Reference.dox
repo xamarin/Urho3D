@@ -151,7 +151,7 @@ void MyObject::OnUpdate(StringHash type, VariantMap& args)
 
 }
 
-SubscribeToEvent(E_UPDATE, std::bind(&MyObject::OnUpdate, this)));
+SubscribeToEvent(E_UPDATE, std::bind(&MyObject::OnUpdate, this, std::placeholders::_1, std::placeholders::_2)));
 \endcode
 
 std::bind() discarding unneeded parameters:
@@ -161,6 +161,8 @@ void Class::OnUpdate(VariantMap& args)
 {
 
 }
+
+using namespace std::placeholders;
 
 SubscribeToEvent(E_UPDATE, std::bind(&Class::OnUpdate, this, _2)));
 \endcode
@@ -178,7 +180,7 @@ There is only one parameter pair in the above example, however, this overload me
 
 Before a Urho3D application can enter its main loop, the Engine subsystem object must be created and initialized by calling its \ref Engine::Initialize "Initialize()" function. Parameters sent in a VariantMap can be used to direct how the Engine initializes itself and the subsystems. One way to configure the parameters is to parse them from the command line like the Urho3DPlayer application does: this is accomplished by the helper function \ref Engine::ParseParameters "ParseParameters()".
 
-The full list of supported parameters, their datatypes and default values:
+The full list of supported parameters, their datatypes and default values: (also defined as constants in Engine/EngineDefs.h)
 
 - Headless (bool) Headless mode enable. Default false.
 - LogLevel (int) %Log verbosity level. Default LOG_INFO in release builds and LOG_DEBUG in debug builds.
@@ -186,7 +188,7 @@ The full list of supported parameters, their datatypes and default values:
 - LogName (string) %Log filename. Default "Urho3D.log".
 - FrameLimiter (bool) Whether to cap maximum framerate to 200 (desktop) or 60 (Android/iOS.) Default true.
 - WorkerThreads (bool) Whether to create worker threads for the %WorkQueue subsystem according to available CPU cores. Default true.
-- EventProfiler (bool) Whether to create the EventProfiler subsystem. Default true.
+- %EventProfiler (bool) Whether to create the EventProfiler subsystem. Default true.
 - ResourcePrefixPaths (string) A semicolon-separated list of resource prefix paths to use. If not specified then the default prefix path is set to executable path. The resource prefix paths can also be defined using URHO3D_PREFIX_PATH env-var. When both are defined, the paths set by -pp takes higher precedence.
 - ResourcePaths (string) A semicolon-separated list of resource paths to use. If corresponding packages (ie. Data.pak for Data directory) exist they will be used instead. Default "Data;CoreData".
 - ResourcePackages (string) A semicolon-separated list of resource packages to use. Default empty.
@@ -201,13 +203,15 @@ The full list of supported parameters, their datatypes and default values:
 - FullScreen (bool) Whether to create a full-screen window. Default true.
 - Borderless (bool) Whether to create the window as borderless. Default false.
 - WindowResizable (bool) Whether window is resizable. Default false.
-- HighDPI (bool) Whether window is high DPI. Default false. Currently only supported by Apple platforms (OSX, iOS, and tvOS).
+- HighDPI (bool) Whether window is high DPI. Default true. Currently only supported by Apple platforms (OSX, iOS, and tvOS).
 - TripleBuffer (bool) Whether to use triple-buffering. Default false.
 - VSync (bool) Whether to wait for vertical sync when presenting rendering window contents. Default false.
 - FlushGPU (bool) Whether to flush GPU command buffer each frame (Direct3D9) or limit the amount of buffered frames (Direct3D11) for less input latency. Ineffective on OpenGL. Default false.
 - ForceGL2 (bool) When true, forces OpenGL 2 use even if OpenGL 3 is available. No effect on Direct3D or mobile builds. Default false.
 - Multisample (int) Hardware multisampling level. Default 1 (no multisampling.)
 - Orientations (string) Space-separated list of allowed orientations. Effective only on iOS. All possible values are "LandscapeLeft", "LandscapeRight", "Portrait" and "PortraitUpsideDown". Default "LandscapeLeft LandscapeRight".
+- Monitor (int) Monitor number to use. 0 is the default (primary) monitor.
+- RefreshRate (int) Monitor refresh rate in Hz to use.
 - DumpShaders (string) Filename to dump used shader variations to for precaching.
 - %RenderPath (string) Default renderpath resource name. Default empty, which causes forward rendering (bin/CoreData/RenderPaths/Forward.xml) to be used.
 - Shadows (bool) Shadow rendering enable. Default true.
@@ -395,6 +399,12 @@ Just loading or saving whole scenes is not flexible enough for eg. games where n
 - Using the "node" command in AssetImporter, which will save the scene node hierarchy and any models contained in the input asset (eg. a Collada file)
 
 To instantiate the saved node into a scene, call \ref Scene::Instantiate "Instantiate()", \ref Scene::InstantiateJSON() or \ref Scene::InstantiateXML "InstantiateXML()" depending on the format. The node will be created as a child of the Scene but can be freely reparented after that. Position and rotation for placing the node need to be specified. The NinjaSnowWar example uses XML format for its object prefabs; these exist in the bin/Data/Objects directory.
+
+\section SceneModel_Events Scene graph events
+
+The Scene object sends events on scene graph modification, such as nodes or components being added or removed, the enabled status of a node or component being 
+changed, or name or tags being changed. These are used in the Editor to implement keeping the scene hierarchy window up to date. See the include file
+SceneEvents.h. Note that when a node is removed from the scene, individual component removals are not signaled.
 
 \section SceneModel_FurtherInformation Further information
 
@@ -1089,6 +1099,8 @@ These differences need to be observed when using the low-level rendering functio
 
 - Direct3D11 is strict about vertex attributes referenced by shaders. A model will not render (input layout fails to create) if the shader for example asks for UV coordinates and the model does not have them. For this particular case, see the NOUV define in LitSolid shader, which is defined in the NoTexture family of techniques to prevent the attempted reading of UV coords.
 
+- Nearest texture filtering with anisotropy is not supported properly on Direct3D11. Depending on the GPU, it may also fail on Direct3D9.
+
 - Alpha-to-coverage is not supported on Direct3D9.
 
 - Bool and int shader uniforms are not supported on Direct3D9.
@@ -1233,7 +1245,7 @@ Textures can have an accompanying XML file which specifies load-time parameters,
 <texture>
     <address coord="u|v|w" mode="wrap|mirror|clamp|border" />
     <border color="r g b a" />
-    <filter mode="nearest|bilinear|trilinear|anisotropic|default" anisotropy="x" />
+    <filter mode="nearest|bilinear|trilinear|anisotropic|nearestanisotropic|default" anisotropy="x" />
     <mipmap enable="false|true" />
     <quality low="x" medium="y" high="z" />
     <srgb enable="false|true" />
@@ -2716,6 +2728,8 @@ There are some things to watch out for:
 
 - Nodes have the concept of the \ref Node::SetOwner "owner connection" (for example the player that is controlling a specific game object), which can be set in server code. This property is not replicated to the client. Messages or remote events can be used instead to tell the players what object they control.
 
+- If you want to run the same server logic for both the locally connecting client as well as remote clients, you can use both the server & client functionality in Network subsystem simultaneously. However in this case you need 2 copies of the scene: server and client. Only the client scene should be rendered on the local client, while the server scene is used for simulation only.
+
 \section Network_InterestManagement Interest management
 
 %Scene replication includes a simple, distance-based interest management mechanism for reducing bandwidth use. To use, create the NetworkPriority component to a Node you wish to apply interest management to. The component can be created as local, as it is not important to the clients.
@@ -3209,11 +3223,13 @@ The -c option enables LZ4 compression on the files. The -q option enables the op
 \section Tools_RampGenerator RampGenerator
 
 Creates 1D and 2D ramp textures for use in light attenuation and spotlight spot shapes.
+Alternatively bakes the image from .ies input file.
 
 Usage:
 
 \verbatim
 RampGenerator <output file> <width> <power> [dimensions]
+RampGenerator <input file> <output png file> <width> [dimensions]
 \endverbatim
 
 The output is saved in PNG format. The power parameter is fed into the pow() function to determine ramp shape; higher value gives more brightness and more abrupt fade at the edge.
@@ -3496,7 +3512,7 @@ When contributing code to the Urho3D project, there are a few things to check so
 
 First of all, the contribution should be wholly your own, so that you hold the copyright. If you are borrowing anything (for example a specific implementation of a math formula), you must be sure that you're allowed to do so, and give credit appropriately. For example borrowing code that is in the public domain would be OK.
 
-Second, you need to agree that code is released under the MIT license with the copyright statement "Copyright (c) 2008-2016 the Urho3D project." Note here that "Urho3D project" is not an actual legal entity, but just shorthand to avoid listing all the contributors. You certainly retain your individual copyright. You should copy-paste the license statement from an existing .cpp or .h file to each new file that you contribute, to avoid having to add it later.
+Second, you need to agree that code is released under the MIT license with the copyright statement "Copyright (c) 2008-2017 the Urho3D project." Note here that "Urho3D project" is not an actual legal entity, but just shorthand to avoid listing all the contributors. You certainly retain your individual copyright. You should copy-paste the license statement from an existing .cpp or .h file to each new file that you contribute, to avoid having to add it later.
 
 Third, there are requirements for new code that come from Urho3D striving to be a cohesive, easy-to-use package where features like events, serialization and script bindings integrate tightly. Check all that apply:
 
@@ -3522,7 +3538,7 @@ Third, there are requirements for new code that come from Urho3D striving to be 
 
 \section ContributionThirdParty Third party library considerations
 
-- When you add a new third-party library, insert its license statement to the License.txt in the root directory. Only libraries with permissive licenses such as BSD/MIT/zlib are accepted, because complying for example with the LGPL is difficult on mobile platforms, and would leave the application in a legal grey area.
+- When you add a new third-party library, insert its license statement to the LICENSE in the Source\ThirdParty directory. Only libraries with permissive licenses such as BSD/MIT/zlib are accepted, because complying for example with the LGPL is difficult on mobile platforms, and would leave the application in a legal grey area.
 
 - Prefer small and well-focused libraries for the Urho3D runtime. For example we use stb_image instead of FreeImage to load images, as it's assumed that the application developer can control the data and do offline conversion to supported formats as necessary.
 

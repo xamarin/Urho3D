@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -1931,8 +1931,18 @@ Animatable* UIElement::FindAttributeAnimationTarget(const String& name, String& 
                 return 0;
             }
 
-            unsigned index = (unsigned)ToInt(names[i].Substring(1, names[i].Length() - 1));
-            element = element->GetChild(index);
+            String name = names[i].Substring(1, names[i].Length() - 1);
+            char s = name.Front();
+            if (s >= '0' && s <= '9')
+            {
+                unsigned index = ToUInt(name);
+                element = element->GetChild(index);
+            }
+            else
+            {
+                element = element->GetChild(name, true);
+            }
+
             if (!element)
             {
                 URHO3D_LOGERROR("Could not find element by name " + name);

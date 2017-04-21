@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -460,8 +460,8 @@ bool Texture2D::Create()
         requestedLevels_ = 1;
     else if (usage_ == TEXTURE_RENDERTARGET)
     {
-#ifdef __EMSCRIPTEN__
-        // glGenerateMipmap appears to not be working on WebGL, disable rendertarget mipmaps for now
+#if defined(__EMSCRIPTEN__) || defined(IOS)
+        // glGenerateMipmap appears to not be working on WebGL or iOS, disable rendertarget mipmaps for now
         requestedLevels_ = 1;
 #else
         if (requestedLevels_ != 1)

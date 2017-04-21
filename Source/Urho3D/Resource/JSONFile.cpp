@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -186,8 +186,8 @@ static void ToRapidjsonValue(rapidjson::Value& rapidjsonValue, const JSONValue& 
             for (unsigned i = 0; i < jsonArray.Size(); ++i)
             {
                 rapidjson::Value value;
+                ToRapidjsonValue(value, jsonArray[i], allocator);
                 rapidjsonValue.PushBack(value, allocator);
-                ToRapidjsonValue(rapidjsonValue[i], jsonArray[i], allocator);
             }
         }
         break;
@@ -201,8 +201,8 @@ static void ToRapidjsonValue(rapidjson::Value& rapidjsonValue, const JSONValue& 
             {
                 const char* name = i->first_.CString();
                 rapidjson::Value value;
+                ToRapidjsonValue(value, i->second_, allocator);
                 rapidjsonValue.AddMember(name, value, allocator);
-                ToRapidjsonValue(rapidjsonValue[name], i->second_, allocator);
             }
         }
         break;

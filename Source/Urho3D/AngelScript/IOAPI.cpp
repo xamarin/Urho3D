@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -309,8 +309,8 @@ static void RegisterSerialization(asIScriptEngine* engine)
     engine->RegisterObjectMethod("NamedPipe", "void Close()", asMETHOD(NamedPipe, Close), asCALL_THISCALL);
     engine->RegisterObjectMethod("NamedPipe", "bool get_server() const", asMETHOD(NamedPipe, IsServer), asCALL_THISCALL);
     engine->RegisterObjectMethod("NamedPipe", "bool get_open() const", asMETHOD(NamedPipe, IsOpen), asCALL_THISCALL);
-    RegisterSerializer<File>(engine, "NamedPipe");
-    RegisterDeserializer<File>(engine, "NamedPipe");
+    RegisterSerializer<NamedPipe>(engine, "NamedPipe");
+    RegisterDeserializer<NamedPipe>(engine, "NamedPipe");
 
     engine->RegisterObjectBehaviour("VectorBuffer", asBEHAVE_CONSTRUCT, "void f()", asFUNCTION(ConstructVectorBuffer), asCALL_CDECL_OBJLAST);
     engine->RegisterObjectBehaviour("VectorBuffer", asBEHAVE_CONSTRUCT, "void f(const VectorBuffer&in)", asFUNCTION(ConstructVectorBufferCopy), asCALL_CDECL_OBJLAST);

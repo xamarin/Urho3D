@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -277,7 +277,7 @@ Renderer::Renderer(Context* context) :
     shadowMapSize_(1024),
     shadowQuality_(SHADOWQUALITY_PCF_16BIT),
     shadowSoftness_(1.0f),
-    vsmShadowParams_(0.0000001f, 0.2f),
+    vsmShadowParams_(0.0000001f, 0.9f),
     vsmMultiSample_(1),
     maxShadowMaps_(1),
     minInstances_(2),
@@ -759,6 +759,9 @@ void Renderer::Render()
 
     // Remove unused occlusion buffers and renderbuffers
     RemoveUnusedBuffers();
+
+    // All views done, custom rendering can now be done before UI
+    SendEvent(E_ENDALLVIEWSRENDER);
 }
 
 void Renderer::DrawDebugGeometry(bool depthTest)
