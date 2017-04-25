@@ -306,6 +306,17 @@ UIKit_SetWindowFullscreen(_THIS, SDL_Window * window, SDL_VideoDisplay * display
 }
 
 void
+UIKit_StopRenderLoop(SDL_Window * window)
+{
+    @autoreleasepool {
+        if (window->driverdata != NULL) {
+            SDL_WindowData *data = (SDL_WindowData *) CFBridgingRelease(window->driverdata);
+            [data.viewcontroller stopAnimation];
+        }
+    }
+}
+
+void
 UIKit_DestroyWindow(_THIS, SDL_Window * window)
 {
     @autoreleasepool {

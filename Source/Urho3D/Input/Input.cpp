@@ -386,8 +386,10 @@ void Input::Update()
     ResetInputAccumulation();
 
     SDL_Event evt;
-    while (SDL_PollEvent(&evt))
+    while (enabled_ && SDL_PollEvent(&evt))
         HandleSDLEvent(&evt);
+    
+    if (!enabled_) return;
 
     if (suppressNextMouseMove_ && (mouseMove_ != IntVector2::ZERO || mouseMoved))
         UnsuppressMouseMove();
@@ -1864,7 +1866,10 @@ void Input::HandleSDLEvent(void* sdlEvent)
         if (eventData[P_CONSUMED].GetBool())
             return;
     }
-
+    
+    if (!enabled_)
+        return;
+    
     switch (evt.type)
     {
         case SDL_KEYDOWN:
