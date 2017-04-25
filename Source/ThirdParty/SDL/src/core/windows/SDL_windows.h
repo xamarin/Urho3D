@@ -31,7 +31,7 @@
 #define UNICODE 1
 #endif
 #undef _WIN32_WINNT
-#define _WIN32_WINNT  0x501   /* Need 0x410 for AlphaBlend() and 0x500 for EnumDisplayDevices(), 0x501 for raw input */
+#define _WIN32_WINNT  _WIN32_WINNT_WIN10 //0x501   /* Need 0x410 for AlphaBlend() and 0x500 for EnumDisplayDevices(), 0x501 for raw input */
 #endif
 
 #include <windows.h>
@@ -58,9 +58,6 @@ extern void WIN_CoUninitialize(void);
 
 /* Returns SDL_TRUE if we're running on Windows Vista and newer */
 extern BOOL WIN_IsWindowsVistaOrGreater();
-
-/* You need to SDL_free() the result of this call. */
-extern char *WIN_LookupAudioDeviceName(const WCHAR *name, const GUID *guid);
 
 #endif /* _INCLUDED_WINDOWS_H */
 
