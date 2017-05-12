@@ -137,6 +137,8 @@ public:
     bool SaveBMP(const String& fileName) const;
     /// Save in PNG format. Return true if successful.
     bool SavePNG(const String& fileName) const;
+    /// Save in PNG format. Return true if successful.
+    unsigned char* SavePNG(int* len) const;
     /// Save in TGA format. Return true if successful.
     bool SaveTGA(const String& fileName) const;
     /// Save in JPG format with compression quality. Return true if successful.

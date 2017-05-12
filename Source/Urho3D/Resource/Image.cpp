@@ -1168,6 +1168,23 @@ bool Image::SaveBMP(const String& fileName) const
         return false;
 }
 
+unsigned char* Image::SavePNG(int *len) const
+{
+    URHO3D_PROFILE(SaveImagePNG);
+    if (IsCompressed())
+    {
+        URHO3D_LOGERROR("Can not save compressed image " + GetName());
+        return 0;
+    }
+
+    if (!data_)
+    {
+        URHO3D_LOGERROR("Can not save zero-sized image " + GetName());
+        return 0;
+    }
+    return stbi_write_png_to_mem(data_.Get(), 0, width_, height_, components_, len);
+}
+
 bool Image::SavePNG(const String& fileName) const
 {
     URHO3D_PROFILE(SaveImagePNG);
