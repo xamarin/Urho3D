@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -91,6 +91,13 @@ inline T Abs(T value) { return value >= 0.0 ? value : -value; }
 template <class T>
 inline T Sign(T value) { return value > 0.0 ? 1.0 : (value < 0.0 ? -1.0 : 0.0); }
 
+/// Return a representation of the specified floating-point value as a single format bit layout.
+inline unsigned FloatToRawIntBits(float value)
+{
+    unsigned u = *((unsigned*)&value);
+    return u;
+}
+
 /// Check whether a floating point value is NaN.
 /// Use a workaround for GCC, see https://github.com/urho3d/Urho3D/issues/655
 #ifndef __GNUC__
@@ -99,7 +106,7 @@ inline bool IsNaN(float value) { return value != value; }
 
 inline bool IsNaN(float value)
 {
-    unsigned u = *(unsigned*)(&value);
+    unsigned u = FloatToRawIntBits(value);
     return (u & 0x7fffffff) > 0x7f800000;
 }
 
@@ -149,6 +156,9 @@ template <class T> inline T Atan2(T y, T x) { return M_RADTODEG * atan2(y, x); }
 /// Return X in power Y.
 template <class T> T Pow(T x, T y) { return pow(x, y); }
 
+/// Return natural logarithm of X.
+template <class T> T Ln(T x) { return log(x); }
+
 /// Return square root of X.
 template <class T> T Sqrt(T x) { return sqrt(x); }
 
@@ -195,6 +205,16 @@ inline unsigned NextPowerOfTwo(unsigned value)
     return ++value;
 }
 
+/// Return log base two or the MSB position of the given value.
+inline unsigned LogBaseTwo(unsigned value)
+{
+    // http://graphics.stanford.edu/~seander/bithacks.html#IntegerLogObvious
+    unsigned ret = 0;
+    while (value >>= 1)     // Unroll for more speed...
+        ++ret;
+    return ret;
+}
+
 /// Count the number of set bits in a mask.
 inline unsigned CountSetBits(unsigned value)
 {
@@ -229,7 +249,7 @@ inline float RandomNormal(float meanValue, float variance) { return RandStandard
 /// Convert float to half float. From https://gist.github.com/martinkallman/5049614
 inline unsigned short FloatToHalf(float value)
 {
-    unsigned inu = *((unsigned*)&value);
+    unsigned inu = FloatToRawIntBits(value);
     unsigned t1 = inu & 0x7fffffff;         // Non-sign bits
     unsigned t2 = inu & 0x80000000;         // Sign bit
     unsigned t3 = inu & 0x7f800000;         // Exponent

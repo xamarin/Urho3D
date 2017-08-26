@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -422,23 +422,14 @@ void CollisionShape::RegisterObject(Context* context)
     context->RegisterFactory<CollisionShape>(PHYSICS_CATEGORY);
 
     URHO3D_ACCESSOR_ATTRIBUTE("Is Enabled", IsEnabled, SetEnabled, bool, true, AM_DEFAULT);
-    URHO3D_ENUM_ATTRIBUTE("Shape Type", shapeType_, typeNames, SHAPE_BOX, AM_DEFAULT);
-    URHO3D_ATTRIBUTE("Size", Vector3, size_, Vector3::ONE, AM_DEFAULT);
+    URHO3D_ENUM_ACCESSOR_ATTRIBUTE("Shape Type", GetShapeType, SetShapeTypeAttr, ShapeType, typeNames, SHAPE_BOX, AM_DEFAULT);
+    URHO3D_ACCESSOR_ATTRIBUTE("Size", GetSize, SetSizeAttr, Vector3, Vector3::ONE, AM_DEFAULT);
     URHO3D_ACCESSOR_ATTRIBUTE("Offset Position", GetPosition, SetPosition, Vector3, Vector3::ZERO, AM_DEFAULT);
     URHO3D_ACCESSOR_ATTRIBUTE("Offset Rotation", GetRotation, SetRotation, Quaternion, Quaternion::IDENTITY, AM_DEFAULT);
     URHO3D_MIXED_ACCESSOR_ATTRIBUTE("Model", GetModelAttr, SetModelAttr, ResourceRef, ResourceRef(Model::GetTypeStatic()), AM_DEFAULT);
-    URHO3D_ATTRIBUTE("LOD Level", int, lodLevel_, 0, AM_DEFAULT);
-    URHO3D_ATTRIBUTE("Collision Margin", float, margin_, DEFAULT_COLLISION_MARGIN, AM_DEFAULT);
-    URHO3D_ATTRIBUTE("CustomGeometry ComponentID", unsigned, customGeometryID_, 0, AM_DEFAULT | AM_COMPONENTID);
-}
-
-void CollisionShape::OnSetAttribute(const AttributeInfo& attr, const Variant& src)
-{
-    Serializable::OnSetAttribute(attr, src);
-
-    // Change of any non-accessor attribute requires recreation of the collision shape
-    if (!attr.accessor_)
-        recreateShape_ = true;
+    URHO3D_ACCESSOR_ATTRIBUTE("LOD Level", GetLodLevel, SetLodLevelAttr, unsigned, 0, AM_DEFAULT);
+    URHO3D_ACCESSOR_ATTRIBUTE("Collision Margin", GetMargin, SetMarginAttr, float, DEFAULT_COLLISION_MARGIN, AM_DEFAULT);
+    URHO3D_ACCESSOR_ATTRIBUTE("CustomGeometry ComponentID", GetCustomGeometryID, SetCustomGeometryIDAttr, unsigned, 0, AM_DEFAULT | AM_COMPONENTID);
 }
 
 void CollisionShape::ApplyAttributes()
@@ -459,9 +450,6 @@ void CollisionShape::DrawDebugGeometry(DebugRenderer* debug, bool depthTest)
 {
     if (debug && physicsWorld_ && shape_ && node_ && IsEnabledEffective())
     {
-        physicsWorld_->SetDebugRenderer(debug);
-        physicsWorld_->SetDebugDepthTest(depthTest);
-
         // Use the rigid body's world transform if possible, as it may be different from the rendering transform
         Matrix3x4 worldTransform;
         RigidBody* body = GetComponent<RigidBody>();
@@ -474,22 +462,49 @@ void CollisionShape::DrawDebugGeometry(DebugRenderer* debug, bool depthTest)
         else
             worldTransform = node_->GetWorldTransform();
 
-        Vector3 position = position_;
-        // For terrains, undo the height centering performed automatically by Bullet
-        if (shapeType_ == SHAPE_TERRAIN && geometry_)
+        // Special case code for convex hull: bypass Bullet's own rendering to draw triangles correctly, not just edges
+        if (shapeType_ == SHAPE_CONVEXHULL)
         {
-            HeightfieldData* heightfield = static_cast<HeightfieldData*>(geometry_.Get());
-            position.y_ += (heightfield->minHeight_ + heightfield->maxHeight_) * 0.5f;
+            ConvexData *convexData = static_cast<ConvexData*>(GetGeometryData());
+            RigidBody* body = GetComponent<RigidBody>();
+            Color color = bodyActive ? Color::WHITE : Color::GREEN;
+            Matrix3x4 shapeTransform(worldTransform * position_, worldTransform.Rotation() * rotation_, worldTransform.Scale());
+
+            if (convexData)
+            {
+                for (unsigned i = 0; i < convexData->indexCount_; i += 3)
+                {
+                    Vector3 a = shapeTransform * convexData->vertexData_[convexData->indexData_[i + 0]];
+                    Vector3 b = shapeTransform * convexData->vertexData_[convexData->indexData_[i + 1]];
+                    Vector3 c = shapeTransform * convexData->vertexData_[convexData->indexData_[i + 2]];
+                    debug->AddLine(a, b, color, depthTest);
+                    debug->AddLine(b, c, color, depthTest);
+                    debug->AddLine(a, c, color, depthTest);
+                }
+             }
         }
+        else
+        {
+            physicsWorld_->SetDebugRenderer(debug);
+            physicsWorld_->SetDebugDepthTest(depthTest);
 
-        Vector3 worldPosition(worldTransform * position);
-        Quaternion worldRotation(worldTransform.Rotation() * rotation_);
+            Vector3 position = position_;
+            // For terrains, undo the height centering performed automatically by Bullet
+            if (shapeType_ == SHAPE_TERRAIN && geometry_)
+            {
+                HeightfieldData* heightfield = static_cast<HeightfieldData*>(geometry_.Get());
+                position.y_ += (heightfield->minHeight_ + heightfield->maxHeight_) * 0.5f;
+            }
 
-        btDiscreteDynamicsWorld* world = physicsWorld_->GetWorld();
-        world->debugDrawObject(btTransform(ToBtQuaternion(worldRotation), ToBtVector3(worldPosition)), shape_.Get(), bodyActive ?
-            WHITE : GREEN);
+            Vector3 worldPosition(worldTransform * position);
+            Quaternion worldRotation(worldTransform.Rotation() * rotation_);
 
-        physicsWorld_->SetDebugRenderer(0);
+            btDiscreteDynamicsWorld* world = physicsWorld_->GetWorld();
+            world->debugDrawObject(btTransform(ToBtQuaternion(worldRotation), ToBtVector3(worldPosition)), shape_.Get(), bodyActive ?
+                WHITE : GREEN);
+
+            physicsWorld_->SetDebugRenderer(0);
+        }
     }
 }
 
@@ -873,10 +888,45 @@ void CollisionShape::NotifyRigidBody(bool updateMass)
     }
 }
 
+void CollisionShape::SetShapeTypeAttr(ShapeType type)
+{
+    shapeType_ = type;
+    recreateShape_ = true;
+    MarkNetworkUpdate();
+}
+
+void CollisionShape::SetSizeAttr(const Vector3& value)
+{
+    size_ = value;
+    recreateShape_ = true;
+    MarkNetworkUpdate();
+}
+
 void CollisionShape::SetModelAttr(const ResourceRef& value)
 {
     ResourceCache* cache = GetSubsystem<ResourceCache>();
     model_ = cache->GetResource<Model>(value.name_);
+    recreateShape_ = true;
+    MarkNetworkUpdate();
+}
+
+void CollisionShape::SetLodLevelAttr(unsigned value)
+{
+    lodLevel_ = value;
+    recreateShape_ = true;
+    MarkNetworkUpdate();
+}
+
+void CollisionShape::SetMarginAttr(float value)
+{
+    margin_ = value;
+    recreateShape_ = true;
+    MarkNetworkUpdate();
+}
+
+void CollisionShape::SetCustomGeometryIDAttr(unsigned componentID)
+{
+    customGeometryID_ = componentID;
     recreateShape_ = true;
     MarkNetworkUpdate();
 }

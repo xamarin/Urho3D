@@ -63,6 +63,8 @@ float uiMinOpacity = 0.3;
 float uiMaxOpacity = 0.7;
 bool uiHidden = false;
 
+TerrainEditor terrainEditor;
+
 void CreateUI()
 {
     // Remove all existing UI content in case we are reloading the editor script
@@ -96,6 +98,8 @@ void CreateUI()
     CreateCamera();
     CreateLayerEditor();
     CreateColorWheel();
+
+	terrainEditor.Create();
 
     SubscribeToEvent("ScreenMode", "ResizeUI");
     SubscribeToEvent("MenuSelected", "HandleMenuSelected");
@@ -525,6 +529,7 @@ void CreateMenuBar()
         popup.AddChild(CreateMenuItem("Resource browser", @ToggleResourceBrowserWindow, KEY_B, QUAL_CTRL));
         popup.AddChild(CreateMenuItem("Material editor", @ToggleMaterialEditor));
         popup.AddChild(CreateMenuItem("Particle editor", @ToggleParticleEffectEditor));
+        popup.AddChild(CreateMenuItem("Terrain editor", TerrainEditorShowCallback(terrainEditor.Show)));
         popup.AddChild(CreateMenuItem("Spawn editor", @ToggleSpawnEditor));
         popup.AddChild(CreateMenuItem("Sound Type editor", @ToggleSoundTypeEditor));
         popup.AddChild(CreateMenuItem("Editor settings", @ToggleEditorSettingsDialog));
@@ -538,11 +543,6 @@ void CreateMenuBar()
     BorderImage@ spacer = BorderImage("MenuBarSpacer");
     uiMenuBar.AddChild(spacer);
     spacer.style = "EditorMenuBar";
-
-    BorderImage@ logo = BorderImage("Logo");
-    logo.texture = cache.GetResource("Texture2D", "Textures/Logo.png");
-    logo.SetFixedWidth(64);
-    uiMenuBar.AddChild(logo);
 }
 
 bool Exit()
@@ -1114,7 +1114,7 @@ void CreateDebugHud()
 void CenterDialog(UIElement@ element)
 {
     IntVector2 size = element.size;
-    element.SetPosition((graphics.width - size.x) / 2, (graphics.height - size.y) / 2);
+    element.SetPosition((ui.root.width - size.x) / 2, (ui.root.height - size.y) / 2);
 }
 
 void CreateContextMenu()
@@ -1176,6 +1176,7 @@ void HandleOpenSceneFile(StringHash eventType, VariantMap& eventData)
 {
     CloseFileSelector(uiSceneFilter, uiScenePath);
     LoadScene(ExtractFileName(eventData));
+    SendEvent(EDITOR_EVENT_SCENE_LOADED);
 }
 
 void HandleSaveSceneFile(StringHash eventType, VariantMap& eventData)
@@ -1247,7 +1248,13 @@ void ExecuteScript(const String&in fileName)
 void HandleRunScript(StringHash eventType, VariantMap& eventData)
 {
     CloseFileSelector(uiScriptFilter, uiScriptPath);
+
+    suppressSceneChanges = true;
     ExecuteScript(ExtractFileName(eventData));
+    suppressSceneChanges = false;
+
+    UpdateHierarchyItem(editorScene, true);
+    UpdateHierarchyItem(editorUIElement, true);
 }
 
 void HandleResourcePath(StringHash eventType, VariantMap& eventData)
@@ -1750,6 +1757,7 @@ void SetIconEnabledColor(UIElement@ element, bool enabled, bool partial = false)
 void UpdateDirtyUI()
 {
     UpdateDirtyToolBar();
+	terrainEditor.UpdateDirty();
 
     // Perform hierarchy selection latently after the new selections are finalized (used in undo/redo action)
     if (!hierarchyUpdateSelections.empty)
@@ -1952,7 +1960,15 @@ bool ColorWheelBuildMenuSelectTypeColor()
 
         actions.Push(CreateContextMenuItem("Cancel", "HandleColorWheelMenu", "menuCancel"));
     }
-
+    else if (coloringComponent.typeName == "Text3D")
+    {
+        actions.Push(CreateContextMenuItem("Color", "HandleColorWheelMenu", "c"));
+        actions.Push(CreateContextMenuItem("Top left color", "HandleColorWheelMenu", "tl"));
+        actions.Push(CreateContextMenuItem("Top right color", "HandleColorWheelMenu", "tr"));
+        actions.Push(CreateContextMenuItem("Bottom left color", "HandleColorWheelMenu", "bl"));
+        actions.Push(CreateContextMenuItem("Bottom right color", "HandleColorWheelMenu", "br"));
+        actions.Push(CreateContextMenuItem("Cancel", "HandleColorWheelMenu", "menuCancel"));
+    }
     if (actions.length > 0) {
         ActivateContextMenu(actions);
         return true;
@@ -2084,6 +2100,24 @@ void HandleWheelChangeColor(StringHash eventType, VariantMap& eventData)
                     zone.fogColor = c;
                 }
 
+                attributesDirty = true;
+            }
+        }
+        else if (coloringComponent.typeName == "Text3D") 
+        {
+            Text3D@ txt = cast<Text3D>(coloringComponent);
+            if (txt !is null) 
+            {
+                if (coloringPropertyName == "c")
+                    txt.color = c;
+                else if (coloringPropertyName == "tl") 
+                    txt.colors[C_TOPLEFT] = c;
+                else if (coloringPropertyName == "tr") 
+                    txt.colors[C_TOPRIGHT] = c;
+                else if (coloringPropertyName == "bl") 
+                    txt.colors[C_BOTTOMLEFT] = c;
+                else if (coloringPropertyName == "br") 
+                    txt.colors[C_BOTTOMRIGHT] = c;
                 attributesDirty = true;
             }
         }

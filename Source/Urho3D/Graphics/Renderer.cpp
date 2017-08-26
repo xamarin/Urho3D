@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -277,7 +277,7 @@ Renderer::Renderer(Context* context) :
     shadowMapSize_(1024),
     shadowQuality_(SHADOWQUALITY_PCF_16BIT),
     shadowSoftness_(1.0f),
-    vsmShadowParams_(0.0000001f, 0.2f),
+    vsmShadowParams_(0.0000001f, 0.9f),
     vsmMultiSample_(1),
     maxShadowMaps_(1),
     minInstances_(2),
@@ -574,6 +574,23 @@ Viewport* Renderer::GetViewport(unsigned index) const
     return index < viewports_.Size() ? viewports_[index] : (Viewport*)0;
 }
 
+Viewport* Renderer::GetViewportForScene(Scene* scene, unsigned index) const
+{
+    for (unsigned i = 0; i < viewports_.Size(); ++i)
+    {
+        Viewport* viewport = viewports_[i];
+        if (viewport && viewport->GetScene() == scene)
+        {
+            if (index == 0)
+                return viewport;
+            else
+                --index;
+        }
+    }
+    return 0;
+}
+
+
 RenderPath* Renderer::GetDefaultRenderPath() const
 {
     return defaultRenderPath_;
@@ -687,7 +704,7 @@ void Renderer::Update(float timeStep)
         LoadShaders();
 
     // Queue update of the main viewports. Use reverse order, as rendering order is also reverse
-    // to render auxiliary views before dependant main views
+    // to render auxiliary views before dependent main views
     for (unsigned i = viewports_.Size() - 1; i < viewports_.Size(); --i)
         QueueViewport(0, viewports_[i]);
 
@@ -759,6 +776,9 @@ void Renderer::Render()
 
     // Remove unused occlusion buffers and renderbuffers
     RemoveUnusedBuffers();
+
+    // All views done, custom rendering can now be done before UI
+    SendEvent(E_ENDALLVIEWSRENDER);
 }
 
 void Renderer::DrawDebugGeometry(bool depthTest)
@@ -956,6 +976,9 @@ Texture2D* Renderer::GetShadowMap(Light* light, Camera* camera, unsigned viewWid
     int retries = 3;
     unsigned dummyColorFormat = graphics_->GetDummyColorFormat();
 
+    // Disable mipmaps from the shadow map
+    newShadowMap->SetNumLevels(1);
+
     while (retries)
     {
         if (!newShadowMap->SetSize(width, height, shadowMapFormat, shadowMapUsage, multiSample))
@@ -984,6 +1007,7 @@ Texture2D* Renderer::GetShadowMap(Light* light, Camera* camera, unsigned viewWid
                 if (!colorShadowMaps_.Contains(searchKey))
                 {
                     colorShadowMaps_[searchKey] = new Texture2D(context_);
+                    colorShadowMaps_[searchKey]->SetNumLevels(1);
                     colorShadowMaps_[searchKey]->SetSize(width, height, dummyColorFormat, TEXTURE_RENDERTARGET);
                 }
                 // Link the color rendertarget to the shadow map
@@ -1040,8 +1064,9 @@ Texture* Renderer::GetScreenBuffer(int width, int height, unsigned format, int m
         screenBufferAllocations_[searchKey] = 0;
 
     // Reuse depth-stencil buffers whenever the size matches, instead of allocating new
+    // Unless persistency specified
     unsigned allocations = screenBufferAllocations_[searchKey];
-    if (!depthStencil)
+    if (!depthStencil || persistentKey)
         ++screenBufferAllocations_[searchKey];
 
     if (allocations >= screenBuffers_[searchKey].Size())
@@ -1051,6 +1076,8 @@ Texture* Renderer::GetScreenBuffer(int width, int height, unsigned format, int m
         if (!cubemap)
         {
             SharedPtr<Texture2D> newTex2D(new Texture2D(context_));
+            /// \todo Mipmaps disabled for now. Allow to request mipmapped buffer?
+            newTex2D->SetNumLevels(1);
             newTex2D->SetSize(width, height, format, depthStencil ? TEXTURE_DEPTHSTENCIL : TEXTURE_RENDERTARGET, multiSample, autoResolve);
 
 #ifdef URHO3D_OPENGL
@@ -1072,6 +1099,7 @@ Texture* Renderer::GetScreenBuffer(int width, int height, unsigned format, int m
         else
         {
             SharedPtr<TextureCube> newTexCube(new TextureCube(context_));
+            newTexCube->SetNumLevels(1);
             newTexCube->SetSize(width, format, TEXTURE_RENDERTARGET, multiSample);
 
             newBuffer = newTexCube;
@@ -1375,17 +1403,6 @@ bool Renderer::ResizeInstancingBuffer(unsigned numInstances)
     URHO3D_LOGDEBUG("Resized instancing buffer to " + String(newSize));
     return true;
 }
-
-void Renderer::SaveScreenBufferAllocations()
-{
-    savedScreenBufferAllocations_ = screenBufferAllocations_;
-}
-
-void Renderer::RestoreScreenBufferAllocations()
-{
-    screenBufferAllocations_ = savedScreenBufferAllocations_;
-}
-
 
 void Renderer::OptimizeLightByScissor(Light* light, Camera* camera)
 {

@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -45,6 +45,11 @@ Deserializer::Deserializer(unsigned size) :
 
 Deserializer::~Deserializer()
 {
+}
+
+unsigned Deserializer::SeekRelative(int delta)
+{
+    return Seek(GetPosition() + delta);
 }
 
 const String& Deserializer::GetName() const
@@ -144,6 +149,13 @@ IntVector2 Deserializer::ReadIntVector2()
     int data[2];
     Read(data, sizeof data);
     return IntVector2(data);
+}
+
+IntVector3 Deserializer::ReadIntVector3()
+{
+    int data[3];
+    Read(data, sizeof data);
+    return IntVector3(data);
 }
 
 Rect Deserializer::ReadRect()
@@ -302,6 +314,9 @@ Variant Deserializer::ReadVariant(VariantType type)
     case VAR_INT:
         return Variant(ReadInt());
 
+    case VAR_INT64:
+        return Variant(ReadInt64());
+
     case VAR_BOOL:
         return Variant(ReadBool());
 
@@ -355,6 +370,9 @@ Variant Deserializer::ReadVariant(VariantType type)
 
     case VAR_INTVECTOR2:
         return Variant(ReadIntVector2());
+
+    case VAR_INTVECTOR3:
+        return Variant(ReadIntVector3());
 
     case VAR_MATRIX3:
         return Variant(ReadMatrix3());

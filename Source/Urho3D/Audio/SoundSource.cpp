@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -142,6 +142,30 @@ void SoundSource::RegisterObject(Context* context)
     URHO3D_ACCESSOR_ATTRIBUTE("Is Playing", IsPlaying, SetPlayingAttr, bool, false, AM_DEFAULT);
     URHO3D_ENUM_ATTRIBUTE("Autoremove Mode", autoRemove_, autoRemoveModeNames, REMOVE_DISABLED, AM_DEFAULT);
     URHO3D_ACCESSOR_ATTRIBUTE("Play Position", GetPositionAttr, SetPositionAttr, int, 0, AM_FILE);
+}
+
+void SoundSource::Seek(float seekTime)
+{
+    // Ignore buffered sound stream
+    if (!audio_ || !sound_ || (soundStream_ && !sound_->IsCompressed()))
+        return;
+
+    // Set to valid range
+    seekTime = Clamp(seekTime, 0.0f, sound_->GetLength());
+
+    if (!soundStream_)
+    {
+        // Raw or wav format
+        SetPositionAttr((int)(seekTime * (sound_->GetSampleSize() * sound_->GetFrequency())));
+    }
+    else
+    {
+        // Ogg format
+        if (soundStream_->Seek((unsigned)(seekTime * soundStream_->GetFrequency())))
+        {
+            timePosition_ = seekTime;
+        }
+    }
 }
 
 void SoundSource::Play(Sound* sound)

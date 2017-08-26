@@ -39,7 +39,7 @@ void match_features(const struct feature_map_t* matchtable, int count, uint32_t 
 {
 	int i;
 	for (i = 0; i < count; i++)
-		if (reg & (1 << matchtable[i].bit))
+		if (reg & (1u << matchtable[i].bit))
 			data->flags[matchtable[i].feature] = 1;
 }
 
@@ -97,7 +97,7 @@ static int score(const struct match_entry_t* entry, const struct cpu_id_t* data,
 	return res;
 }
 
-void match_cpu_codename(const struct match_entry_t* matchtable, int count,
+int match_cpu_codename(const struct match_entry_t* matchtable, int count,
                         struct cpu_id_t* data, int brand_code, int model_code)
 {
 	int bestscore = -1;
@@ -118,6 +118,7 @@ void match_cpu_codename(const struct match_entry_t* matchtable, int count,
 		}
 	}
 	strcpy(data->cpu_codename, matchtable[bestindex].name);
+	return bestscore;
 }
 
 void generic_get_cpu_list(const struct match_entry_t* matchtable, int count,

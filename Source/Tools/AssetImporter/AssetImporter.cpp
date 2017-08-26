@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -1192,8 +1192,9 @@ void BuildAndSaveModel(OutModel& model)
 
             aiMatrix4x4 transform = boneNode->mTransformation;
             // Make the root bone transform relative to the model's root node, if it is not already
+            // (in case there are nodes between that are not accounted for otherwise)
             if (boneNode == model.rootBone_)
-                transform = GetDerivedTransform(boneNode, model.rootNode_);
+                transform = GetDerivedTransform(boneNode, model.rootNode_, false);
 
             GetPosRotScale(transform, newBone.initialPosition_, newBone.initialRotation_, newBone.initialScale_);
 
@@ -1260,9 +1261,12 @@ void BuildAndSaveAnimations(OutModel* model)
         String animName = FromAIString(anim->mName);
         String animOutName;
 
+        float thisImportEndTime = importEndTime_;
+        float thisImportStartTime = importStartTime_;
+
         // If no animation split specified, set the end time to duration
-        if (importEndTime_ == 0.0f)
-            importEndTime_ = duration;
+        if (thisImportEndTime == 0.0f)
+            thisImportEndTime = duration;
 
         if (animName.Empty())
             animName = "Anim" + String(i + 1);
@@ -1287,12 +1291,12 @@ void BuildAndSaveAnimations(OutModel* model)
                 startTime = Min(startTime, (float)channel->mPositionKeys[0].mTime);
             if (channel->mNumRotationKeys > 0)
                 startTime = Min(startTime, (float)channel->mRotationKeys[0].mTime);
-            if (channel->mScalingKeys > 0)
+            if (channel->mNumScalingKeys > 0)
                 startTime = Min(startTime, (float)channel->mScalingKeys[0].mTime);
         }
-        if (startTime > importStartTime_)
-            importStartTime_ = startTime;
-        duration = importEndTime_ - importStartTime_;
+        if (startTime > thisImportStartTime)
+            thisImportStartTime = startTime;
+        duration = thisImportEndTime - thisImportStartTime;
 
         SharedPtr<Animation> outAnim(new Animation(context_));
         outAnim->SetAnimationName(animName);
@@ -1304,7 +1308,6 @@ void BuildAndSaveAnimations(OutModel* model)
             aiNodeAnim* channel = anim->mChannels[j];
             String channelName = FromAIString(channel->mNodeName);
             aiNode* boneNode = 0;
-            bool isRootBone = false;
 
             if (model)
             {
@@ -1341,7 +1344,6 @@ void BuildAndSaveAnimations(OutModel* model)
 
                     boneNode = model->pivotlessBones_[boneIndex];
                 }
-                isRootBone = boneIndex == 0;
             }
             else
             {
@@ -1455,16 +1457,19 @@ void BuildAndSaveAnimations(OutModel* model)
                 if (track->channelMask_ & CHANNEL_SCALE && k < channel->mNumScalingKeys)
                     scale = channel->mScalingKeys[k].mValue;
 
-                // If root bone, transform with the model root node transform
-                if (model && isRootBone)
+                // If root bone, transform with nodes in between model root node (if any)
+                if (model && boneNode == model->rootBone_)
                 {
                     aiMatrix4x4 transMat, scaleMat, rotMat;
                     aiMatrix4x4::Translation(pos, transMat);
                     aiMatrix4x4::Scaling(scale, scaleMat);
                     rotMat = aiMatrix4x4(rot.GetMatrix());
                     aiMatrix4x4 tform = transMat * rotMat * scaleMat;
-                    tform = GetDerivedTransform(tform, boneNode, model->rootNode_);
-                    tform.Decompose(scale, rot, pos);
+                    aiMatrix4x4 tformOld = tform;
+                    tform = GetDerivedTransform(tform, boneNode, model->rootNode_, false);
+                    // Do not decompose if did not actually change
+                    if (tform != tformOld)
+                        tform.Decompose(scale, rot, pos);
                 }
 
                 if (track->channelMask_ & CHANNEL_POSITION)
@@ -1473,9 +1478,9 @@ void BuildAndSaveAnimations(OutModel* model)
                     kf.rotation_ = ToQuaternion(rot);
                 if (track->channelMask_ & CHANNEL_SCALE)
                     kf.scale_ = ToVector3(scale);
-                if (kf.time_ >= importStartTime_ && kf.time_ <= importEndTime_)
+                if (kf.time_ >= thisImportStartTime && kf.time_ <= thisImportEndTime)
                 {
-                    kf.time_ = (kf.time_ - importStartTime_) * tickConversion;
+                    kf.time_ = (kf.time_ - thisImportStartTime) * tickConversion;
                     track->keyFrames_.Push(kf);
                 }
             }

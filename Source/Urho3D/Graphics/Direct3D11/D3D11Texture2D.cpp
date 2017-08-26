@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -299,6 +299,15 @@ bool Texture2D::GetData(unsigned level, void* dest) const
         return false;
     }
 
+    if (multiSample_ > 1 && !autoResolve_)
+    {
+        URHO3D_LOGERROR("Can not get data from multisampled texture without autoresolve");
+        return false;
+    }
+
+    if (resolveDirty_)
+        graphics_->ResolveToTexture(const_cast<Texture2D*>(this));
+
     int levelWidth = GetLevelWidth(level);
     int levelHeight = GetLevelHeight(level);
 
@@ -323,7 +332,9 @@ bool Texture2D::GetData(unsigned level, void* dest) const
         return false;
     }
 
+    ID3D11Resource* srcResource = (ID3D11Resource*)(resolveTexture_ ? resolveTexture_ : object_.ptr_);
     unsigned srcSubResource = D3D11CalcSubresource(level, 0, levels_);
+
     D3D11_BOX srcBox;
     srcBox.left = 0;
     srcBox.right = (UINT)levelWidth;
@@ -331,7 +342,7 @@ bool Texture2D::GetData(unsigned level, void* dest) const
     srcBox.bottom = (UINT)levelHeight;
     srcBox.front = 0;
     srcBox.back = 1;
-    graphics_->GetImpl()->GetDeviceContext()->CopySubresourceRegion(stagingTexture, 0, 0, 0, 0, (ID3D11Resource*)object_.ptr_,
+    graphics_->GetImpl()->GetDeviceContext()->CopySubresourceRegion(stagingTexture, 0, 0, 0, 0, srcResource,
         srcSubResource, &srcBox);
 
     D3D11_MAPPED_SUBRESOURCE mappedData;
@@ -367,13 +378,29 @@ bool Texture2D::Create()
 
     D3D11_TEXTURE2D_DESC textureDesc;
     memset(&textureDesc, 0, sizeof textureDesc);
+    textureDesc.Format = (DXGI_FORMAT)(sRGB_ ? GetSRGBFormat(format_) : format_);
+
+    // Disable multisampling if not supported
+    if (multiSample_ > 1 && !graphics_->GetImpl()->CheckMultiSampleSupport(textureDesc.Format, multiSample_))
+    {
+        multiSample_ = 1;
+        autoResolve_ = false;
+    }
+
+    // Set mipmapping
+    if (usage_ == TEXTURE_DEPTHSTENCIL)
+        levels_ = 1;
+    else if (usage_ == TEXTURE_RENDERTARGET && levels_ != 1 && multiSample_ == 1)
+        textureDesc.MiscFlags |= D3D11_RESOURCE_MISC_GENERATE_MIPS;
+    
     textureDesc.Width = (UINT)width_;
     textureDesc.Height = (UINT)height_;
-    textureDesc.MipLevels = levels_;
+    // Disable mip levels from the multisample texture. Rather create them to the resolve texture
+    textureDesc.MipLevels = multiSample_ == 1 ? levels_ : 1;
     textureDesc.ArraySize = 1;
-    textureDesc.Format = (DXGI_FORMAT)(sRGB_ ? GetSRGBFormat(format_) : format_);
     textureDesc.SampleDesc.Count = (UINT)multiSample_;
-    textureDesc.SampleDesc.Quality = multiSample_ > 1 ? 0xffffffff : 0;
+    textureDesc.SampleDesc.Quality = graphics_->GetImpl()->GetMultiSampleQuality(textureDesc.Format, multiSample_);
+
     textureDesc.Usage = usage_ == TEXTURE_DYNAMIC ? D3D11_USAGE_DYNAMIC : D3D11_USAGE_DEFAULT;
     textureDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
     if (usage_ == TEXTURE_RENDERTARGET)
@@ -381,6 +408,10 @@ bool Texture2D::Create()
     else if (usage_ == TEXTURE_DEPTHSTENCIL)
         textureDesc.BindFlags |= D3D11_BIND_DEPTH_STENCIL;
     textureDesc.CPUAccessFlags = usage_ == TEXTURE_DYNAMIC ? D3D11_CPU_ACCESS_WRITE : 0;
+
+    // D3D feature level 10.0 or below does not support readable depth when multisampled
+    if (usage_ == TEXTURE_DEPTHSTENCIL && multiSample_ > 1 && graphics_->GetImpl()->GetDevice()->GetFeatureLevel() < D3D_FEATURE_LEVEL_10_1)
+        textureDesc.BindFlags &= ~D3D11_BIND_SHADER_RESOURCE;
 
     HRESULT hr = graphics_->GetImpl()->GetDevice()->CreateTexture2D(&textureDesc, 0, (ID3D11Texture2D**)&object_);
     if (FAILED(hr))
@@ -393,8 +424,12 @@ bool Texture2D::Create()
     // Create resolve texture for multisampling if necessary
     if (multiSample_ > 1 && autoResolve_)
     {
+        textureDesc.MipLevels = levels_;
         textureDesc.SampleDesc.Count = 1;
         textureDesc.SampleDesc.Quality = 0;
+        if (levels_ != 1)
+            textureDesc.MiscFlags |= D3D11_RESOURCE_MISC_GENERATE_MIPS;
+
         HRESULT hr = graphics_->GetImpl()->GetDevice()->CreateTexture2D(&textureDesc, 0, (ID3D11Texture2D**)&resolveTexture_);
         if (FAILED(hr))
         {
@@ -404,22 +439,25 @@ bool Texture2D::Create()
         }
     }
 
-    D3D11_SHADER_RESOURCE_VIEW_DESC resourceViewDesc;
-    memset(&resourceViewDesc, 0, sizeof resourceViewDesc);
-    resourceViewDesc.Format = (DXGI_FORMAT)GetSRVFormat(textureDesc.Format);
-    resourceViewDesc.ViewDimension = (multiSample_ > 1 && !autoResolve_) ? D3D11_SRV_DIMENSION_TEXTURE2DMS :
-        D3D11_SRV_DIMENSION_TEXTURE2D;
-    resourceViewDesc.Texture2D.MipLevels = (UINT)levels_;
-
-    // Sample the resolve texture if created, otherwise the original
-    ID3D11Resource* viewObject = resolveTexture_ ? (ID3D11Resource*)resolveTexture_ : (ID3D11Resource*)object_.ptr_;
-    hr = graphics_->GetImpl()->GetDevice()->CreateShaderResourceView(viewObject, &resourceViewDesc,
-        (ID3D11ShaderResourceView**)&shaderResourceView_);
-    if (FAILED(hr))
+    if (textureDesc.BindFlags & D3D11_BIND_SHADER_RESOURCE)
     {
-        URHO3D_LOGD3DERROR("Failed to create shader resource view for texture", hr);
-        URHO3D_SAFE_RELEASE(shaderResourceView_);
-        return false;
+        D3D11_SHADER_RESOURCE_VIEW_DESC resourceViewDesc;
+        memset(&resourceViewDesc, 0, sizeof resourceViewDesc);
+        resourceViewDesc.Format = (DXGI_FORMAT)GetSRVFormat(textureDesc.Format);
+        resourceViewDesc.ViewDimension = (multiSample_ > 1 && !autoResolve_) ? D3D11_SRV_DIMENSION_TEXTURE2DMS :
+            D3D11_SRV_DIMENSION_TEXTURE2D;
+        resourceViewDesc.Texture2D.MipLevels = (UINT)levels_;
+
+        // Sample the resolve texture if created, otherwise the original
+        ID3D11Resource* viewObject = resolveTexture_ ? (ID3D11Resource*)resolveTexture_ : (ID3D11Resource*)object_.ptr_;
+        hr = graphics_->GetImpl()->GetDevice()->CreateShaderResourceView(viewObject, &resourceViewDesc,
+            (ID3D11ShaderResourceView**)&shaderResourceView_);
+        if (FAILED(hr))
+        {
+            URHO3D_LOGD3DERROR("Failed to create shader resource view for texture", hr);
+            URHO3D_SAFE_RELEASE(shaderResourceView_);
+            return false;
+        }
     }
 
     if (usage_ == TEXTURE_RENDERTARGET)
@@ -455,13 +493,17 @@ bool Texture2D::Create()
         }
 
         // Create also a read-only version of the view for simultaneous depth testing and sampling in shader
-        depthStencilViewDesc.Flags = D3D11_DSV_READ_ONLY_DEPTH;
-        hr = graphics_->GetImpl()->GetDevice()->CreateDepthStencilView((ID3D11Resource*)object_.ptr_, &depthStencilViewDesc,
-            (ID3D11DepthStencilView**)&renderSurface_->readOnlyView_);
-        if (FAILED(hr))
+        // Requires feature level 11
+        if (graphics_->GetImpl()->GetDevice()->GetFeatureLevel() >= D3D_FEATURE_LEVEL_11_0)
         {
-            URHO3D_LOGD3DERROR("Failed to create read-only depth-stencil view for texture", hr);
-            URHO3D_SAFE_RELEASE(renderSurface_->readOnlyView_);
+            depthStencilViewDesc.Flags = D3D11_DSV_READ_ONLY_DEPTH;
+            hr = graphics_->GetImpl()->GetDevice()->CreateDepthStencilView((ID3D11Resource*)object_.ptr_, &depthStencilViewDesc,
+                (ID3D11DepthStencilView**)&renderSurface_->readOnlyView_);
+            if (FAILED(hr))
+            {
+                URHO3D_LOGD3DERROR("Failed to create read-only depth-stencil view for texture", hr);
+                URHO3D_SAFE_RELEASE(renderSurface_->readOnlyView_);
+            }
         }
     }
 

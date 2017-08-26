@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -81,12 +81,22 @@ static const D3DCMPFUNC d3dCmpFunc[] =
     D3DCMP_GREATEREQUAL
 };
 
-static const D3DTEXTUREFILTERTYPE d3dMinMagFilter[] =
+static const D3DTEXTUREFILTERTYPE d3dMinFilter[] =
 {
     D3DTEXF_POINT,
     D3DTEXF_LINEAR,
     D3DTEXF_LINEAR,
+    D3DTEXF_ANISOTROPIC,
     D3DTEXF_ANISOTROPIC
+};
+
+static const D3DTEXTUREFILTERTYPE d3dMagFilter[] =
+{
+    D3DTEXF_POINT,
+    D3DTEXF_LINEAR,
+    D3DTEXF_LINEAR,
+    D3DTEXF_ANISOTROPIC,
+    D3DTEXF_POINT,
 };
 
 static const D3DTEXTUREFILTERTYPE d3dMipFilter[] =
@@ -94,6 +104,7 @@ static const D3DTEXTUREFILTERTYPE d3dMipFilter[] =
     D3DTEXF_POINT,
     D3DTEXF_POINT,
     D3DTEXF_LINEAR,
+    D3DTEXF_ANISOTROPIC,
     D3DTEXF_ANISOTROPIC
 };
 
@@ -253,6 +264,8 @@ Graphics::Graphics(Context* context) :
     resizable_(false),
     highDPI_(false),
     vsync_(false),
+    monitor_(0),
+    refreshRate_(0),
     tripleBuffer_(false),
     flushGPU_(false),
     sRGB_(false),
@@ -278,8 +291,7 @@ Graphics::Graphics(Context* context) :
 {
     SetTextureUnitMappings();
 
-    // Initialize SDL now. Graphics should be the first SDL-using subsystem to be created
-    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER | SDL_INIT_NOPARACHUTE);
+    context_->RequireSDL(SDL_INIT_VIDEO);
 
     // Register Graphics library object factories
     RegisterGraphicsLibrary(context_);
@@ -314,12 +326,11 @@ Graphics::~Graphics()
     delete impl_;
     impl_ = 0;
 
-    // Shut down SDL now. Graphics should be the last SDL-using subsystem to be destroyed
-    SDL_Quit();
+    context_->ReleaseSDL();
 }
 
 bool Graphics::SetMode(int width, int height, bool fullscreen, bool borderless, bool resizable, bool highDPI, bool vsync,
-    bool tripleBuffer, int multiSample)
+    bool tripleBuffer, int multiSample, int monitor, int refreshRate)
 {
     URHO3D_PROFILE(SetScreenMode);
 
@@ -327,9 +338,14 @@ bool Graphics::SetMode(int width, int height, bool fullscreen, bool borderless, 
 
     bool maximize = false;
 
+    // Make sure monitor index is not bigger than the currently detected monitors
+    int monitors = SDL_GetNumVideoDisplays();
+    if (monitor >= monitors || monitor < 0)
+        monitor = 0; // this monitor is not present, use first monitor
+
     // Find out the full screen mode display format (match desktop color depth)
     SDL_DisplayMode mode;
-    SDL_GetDesktopDisplayMode(0, &mode);
+    SDL_GetDesktopDisplayMode(monitor, &mode);
     D3DFORMAT fullscreenFormat = SDL_BITSPERPIXEL(mode.format) == 16 ? D3DFMT_R5G6B5 : D3DFMT_X8R8G8B8;
 
     // If zero dimensions in windowed mode, set windowed mode to maximize and set a predefined default restored window size. If zero in fullscreen, use desktop mode
@@ -385,7 +401,7 @@ bool Graphics::SetMode(int width, int height, bool fullscreen, bool borderless, 
     // Check fullscreen mode validity. Use a closest match if not found
     if (fullscreen)
     {
-        PODVector<IntVector2> resolutions = GetResolutions();
+        PODVector<IntVector3> resolutions = GetResolutions(monitor);
         if (resolutions.Size())
         {
             unsigned best = 0;
@@ -403,6 +419,7 @@ bool Graphics::SetMode(int width, int height, bool fullscreen, bool borderless, 
 
             width = resolutions[best].x_;
             height = resolutions[best].y_;
+            refreshRate = resolutions[best].z_;
         }
     }
 
@@ -413,7 +430,7 @@ bool Graphics::SetMode(int width, int height, bool fullscreen, bool borderless, 
             multiSample = 1;
     }
 
-    AdjustWindow(width, height, fullscreen, borderless);
+    AdjustWindow(width, height, fullscreen, borderless, monitor);
 
     if (maximize)
     {
@@ -442,7 +459,7 @@ bool Graphics::SetMode(int width, int height, bool fullscreen, bool borderless, 
     impl_->presentParams_.EnableAutoDepthStencil = TRUE;
     impl_->presentParams_.AutoDepthStencilFormat = D3DFMT_D24S8;
     impl_->presentParams_.Flags = D3DPRESENT_LINEAR_CONTENT;
-    impl_->presentParams_.FullScreen_RefreshRateInHz = D3DPRESENT_RATE_DEFAULT;
+    impl_->presentParams_.FullScreen_RefreshRateInHz = fullscreen ? refreshRate : D3DPRESENT_RATE_DEFAULT;
 
     if (vsync)
         impl_->presentParams_.PresentationInterval = D3DPRESENT_INTERVAL_ONE;
@@ -457,10 +474,12 @@ bool Graphics::SetMode(int width, int height, bool fullscreen, bool borderless, 
     highDPI_ = highDPI;
     vsync_ = vsync;
     tripleBuffer_ = tripleBuffer;
+    monitor_ = monitor;
+    refreshRate_ = refreshRate;
 
     if (!impl_->device_)
     {
-        unsigned adapter = D3DADAPTER_DEFAULT;
+        unsigned adapter = monitor;
         unsigned deviceType = D3DDEVTYPE_HAL;
 
         // Check for PerfHUD adapter
@@ -491,7 +510,7 @@ bool Graphics::SetMode(int width, int height, bool fullscreen, bool borderless, 
 
 #ifdef URHO3D_LOGGING
     String msg;
-    msg.AppendWithFormat("Set screen mode %dx%d %s", width_, height_, (fullscreen_ ? "fullscreen" : "windowed"));
+    msg.AppendWithFormat("Set screen mode %dx%d %s monitor %d", width_, height_, (fullscreen_ ? "fullscreen" : "windowed"), monitor_);
     if (borderless_)
         msg.Append(" borderless");
     if (resizable_)
@@ -510,6 +529,8 @@ bool Graphics::SetMode(int width, int height, bool fullscreen, bool borderless, 
     eventData[P_BORDERLESS] = borderless_;
     eventData[P_RESIZABLE] = resizable_;
     eventData[P_HIGHDPI] = highDPI_;
+    eventData[P_MONITOR] = monitor_;
+    eventData[P_REFRESHRATE] = refreshRate_;
     SendEvent(E_SCREENMODE, eventData);
 
     return true;
@@ -517,7 +538,7 @@ bool Graphics::SetMode(int width, int height, bool fullscreen, bool borderless, 
 
 bool Graphics::SetMode(int width, int height)
 {
-    return SetMode(width, height, fullscreen_, borderless_, resizable_, highDPI_, vsync_, tripleBuffer_, multiSample_);
+    return SetMode(width, height, fullscreen_, borderless_, resizable_, highDPI_, vsync_, tripleBuffer_, multiSample_, monitor_, refreshRate_);
 }
 
 void Graphics::SetSRGB(bool enable)
@@ -577,7 +598,7 @@ bool Graphics::TakeScreenShot(Image& destImage)
         // If windowed and multisampled, must still capture the whole screen
         if (!fullscreen_)
         {
-            IntVector2 desktopSize = GetDesktopResolution();
+            IntVector2 desktopSize = GetDesktopResolution(monitor_);
             surfaceWidth = (unsigned)desktopSize.x_;
             surfaceHeight = (unsigned)desktopSize.y_;
         }
@@ -875,7 +896,7 @@ bool Graphics::ResolveToTexture(TextureCube* texture)
         return false;
 
     URHO3D_PROFILE(ResolveToTexture);
-    
+
     texture->SetResolveDirty(false);
 
     RECT rect;
@@ -1446,13 +1467,18 @@ void Graphics::SetTexture(unsigned index, Texture* texture)
         if (filterMode == FILTER_DEFAULT)
             filterMode = defaultTextureFilterMode_;
 
-        D3DTEXTUREFILTERTYPE minMag, mip;
-        minMag = d3dMinMagFilter[filterMode];
-        if (minMag != impl_->minMagFilters_[index])
+        D3DTEXTUREFILTERTYPE min, mag, mip;
+        min = d3dMinFilter[filterMode];
+        if (min != impl_->minFilters_[index])
         {
-            impl_->device_->SetSamplerState(index, D3DSAMP_MAGFILTER, minMag);
-            impl_->device_->SetSamplerState(index, D3DSAMP_MINFILTER, minMag);
-            impl_->minMagFilters_[index] = minMag;
+            impl_->device_->SetSamplerState(index, D3DSAMP_MINFILTER, min);
+            impl_->minFilters_[index] = min;
+        }
+        mag = d3dMagFilter[filterMode];
+        if (mag != impl_->magFilters_[index])
+        {
+            impl_->device_->SetSamplerState(index, D3DSAMP_MAGFILTER, mag);
+            impl_->magFilters_[index] = mag;
         }
         mip = d3dMipFilter[filterMode];
         if (mip != impl_->mipFilters_[index])
@@ -2096,6 +2122,7 @@ void Graphics::OnWindowResized()
     eventData[P_FULLSCREEN] = fullscreen_;
     eventData[P_RESIZABLE] = resizable_;
     eventData[P_BORDERLESS] = borderless_;
+    eventData[P_HIGHDPI] = highDPI_;
     SendEvent(E_SCREENMODE, eventData);
 }
 
@@ -2316,7 +2343,7 @@ bool Graphics::OpenWindow(int width, int height, bool resizable, bool borderless
     return true;
 }
 
-void Graphics::AdjustWindow(int& newWidth, int& newHeight, bool& newFullscreen, bool& newBorderless)
+void Graphics::AdjustWindow(int& newWidth, int& newHeight, bool& newFullscreen, bool& newBorderless, int& monitor)
 {
     if (!externalWindow_)
     {
@@ -2325,8 +2352,18 @@ void Graphics::AdjustWindow(int& newWidth, int& newHeight, bool& newFullscreen, 
             SDL_MaximizeWindow(window_);
             SDL_GetWindowSize(window_, &newWidth, &newHeight);
         }
-        else
+        else {
+            SDL_Rect display_rect;
+            SDL_GetDisplayBounds(monitor, &display_rect);
+
+            if (newFullscreen || (newBorderless && newWidth >= display_rect.w && newHeight >= display_rect.h))
+            {
+                // Reposition the window on the specified monitor if it's supposed to cover the entire monitor
+                SDL_SetWindowPosition(window_, display_rect.x, display_rect.y);
+            }
+
             SDL_SetWindowSize(window_, newWidth, newHeight);
+        }
 
         // Hack fix: on SDL 2.0.4 a fullscreen->windowed transition results in a maximized window when the D3D device is reset, so hide before
         SDL_HideWindow(window_);
@@ -2416,7 +2453,7 @@ void Graphics::CheckFeatureSupport()
 {
     anisotropySupport_ = true;
     dxtTextureSupport_ = true;
-    
+
     // Reset features first
     lightPrepassSupport_ = false;
     deferredSupport_ = false;
@@ -2571,7 +2608,8 @@ void Graphics::ResetCachedState()
     for (unsigned i = 0; i < MAX_TEXTURE_UNITS; ++i)
     {
         textures_[i] = 0;
-        impl_->minMagFilters_[i] = D3DTEXF_POINT;
+        impl_->minFilters_[i] = D3DTEXF_POINT;
+        impl_->magFilters_[i] = D3DTEXF_POINT;
         impl_->mipFilters_[i] = D3DTEXF_NONE;
         impl_->uAddressModes_[i] = D3DTADDRESS_WRAP;
         impl_->vAddressModes_[i] = D3DTADDRESS_WRAP;

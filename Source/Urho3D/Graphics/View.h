@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -340,6 +340,8 @@ private:
     Texture* viewportTextures_[MAX_VIEWPORT_TEXTURES];
     /// Color rendertarget active for the current renderpath command.
     RenderSurface* currentRenderTarget_;
+    /// Last used custom depth render surface.
+    RenderSurface* lastCustomDepthSurface_;
     /// Texture containing the latest viewport texture.
     Texture* currentViewportTexture_;
     /// Dummy texture for D3D9 depth only rendering.

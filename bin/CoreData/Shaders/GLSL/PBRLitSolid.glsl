@@ -9,7 +9,7 @@
 #include "IBL.glsl"
 #line 30010
 
-#if defined(NORMALMAP) || defined(IBL)
+#if defined(NORMALMAP)
     varying vec4 vTexCoord;
     varying vec4 vTangent;
 #else
@@ -57,11 +57,11 @@ void VS()
         vColor = iColor;
     #endif
 
-    #if defined(NORMALMAP) || defined(DIRBILLBOARD) || defined(IBL)
-        vec3 tangent = GetWorldTangent(modelMatrix);
-        vec3 bitangent = cross(tangent, vNormal) * iTangent.w;
+    #if defined(NORMALMAP) || defined(DIRBILLBOARD)
+        vec4 tangent = GetWorldTangent(modelMatrix);
+        vec3 bitangent = cross(tangent.xyz, vNormal) * tangent.w;
         vTexCoord = vec4(GetTexCoord(iTexCoord), bitangent.xy);
-        vTangent = vec4(tangent, bitangent.z);
+        vTangent = vec4(tangent.xyz, bitangent.z);
     #else
         vTexCoord = GetTexCoord(iTexCoord);
     #endif
@@ -145,7 +145,7 @@ void PS()
     diffColor.rgb = diffColor.rgb - diffColor.rgb * metalness;
 
     // Get normal
-    #if defined(NORMALMAP) || defined(DIRBILLBOARD) || defined(IBL)
+    #if defined(NORMALMAP) || defined(DIRBILLBOARD)
         vec3 tangent = vTangent.xyz;
         vec3 bitangent = vec3(vTexCoord.zw, vTangent.w);
         mat3 tbn = mat3(tangent, bitangent, vNormal);
@@ -172,7 +172,16 @@ void PS()
         vec3 lightDir;
         vec3 finalColor;
 
-        float atten = GetAtten(normal, vWorldPos.xyz, lightDir);
+        float atten = 1;
+
+        #if defined(DIRLIGHT)
+            atten = GetAtten(normal, vWorldPos.xyz, lightDir);
+        #elif defined(SPOTLIGHT)
+            atten = GetAttenSpot(normal, vWorldPos.xyz, lightDir);
+        #else
+            atten = GetAttenPoint(normal, vWorldPos.xyz, lightDir);
+        #endif
+
         float shadow = 1.0;
         #ifdef SHADOW
             shadow = GetShadow(vShadowPos, vWorldPos.w);
@@ -189,7 +198,7 @@ void PS()
         vec3 lightVec = normalize(lightDir);
         float ndl = clamp((dot(normal, lightVec)), M_EPSILON, 1.0);
 
-        vec3 BRDF = GetBRDF(lightDir, lightVec, toCamera, normal, roughness, diffColor.rgb, specColor);
+        vec3 BRDF = GetBRDF(vWorldPos.xyz, lightDir, lightVec, toCamera, normal, roughness, diffColor.rgb, specColor);
 
         finalColor.rgb = BRDF * lightColor * (atten * shadow) / M_PI;
 
@@ -230,7 +239,7 @@ void PS()
         vec3 cubeColor = vVertexLight.rgb;
 
         #ifdef IBL
-          vec3 iblColor = ImageBasedLighting(reflection, tangent, bitangent, normal, toCamera, diffColor.rgb, specColor.rgb, roughness, cubeColor);
+          vec3 iblColor = ImageBasedLighting(reflection, normal, toCamera, diffColor.rgb, specColor.rgb, roughness, cubeColor);
           float gamma = 0.0;
           finalColor.rgb += iblColor;
         #endif

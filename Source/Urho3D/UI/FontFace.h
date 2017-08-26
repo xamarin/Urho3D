@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -43,16 +43,20 @@ struct URHO3D_API FontGlyph
     short x_;
     /// Y position in texture.
     short y_;
-    /// Width.
-    short width_;
-    /// Height.
-    short height_;
+    /// Width in texture.
+    short texWidth_;
+    /// Height in texture.
+    short texHeight_;
+    /// Width on screen.
+    float width_;
+    /// Height on screen.
+    float height_;
     /// Glyph X offset from origin.
-    short offsetX_;
+    float offsetX_;
     /// Glyph Y offset from origin.
-    short offsetY_;
+    float offsetY_;
     /// Horizontal advance.
-    short advanceX_;
+    float advanceX_;
     /// Texture page. M_MAX_UNSIGNED if not yet resident on any texture.
     unsigned page_;
     /// Used flag.
@@ -71,7 +75,7 @@ public:
     ~FontFace();
 
     /// Load font face.
-    virtual bool Load(const unsigned char* fontData, unsigned fontDataSize, int pointSize) = 0;
+    virtual bool Load(const unsigned char* fontData, unsigned fontDataSize, float pointSize) = 0;
     /// Return pointer to the glyph structure corresponding to a character. Return null if glyph not found.
     virtual const FontGlyph* GetGlyph(unsigned c);
 
@@ -79,15 +83,15 @@ public:
     virtual bool HasMutableGlyphs() const { return false; }
 
     /// Return the kerning for a character and the next character.
-    short GetKerning(unsigned c, unsigned d) const;
+    float GetKerning(unsigned c, unsigned d) const;
     /// Return true when one of the texture has a data loss.
     bool IsDataLost() const;
 
     /// Return point size.
-    int GetPointSize() const { return pointSize_; }
+    float GetPointSize() const { return pointSize_; }
 
     /// Return row height.
-    int GetRowHeight() const { return rowHeight_; }
+    float GetRowHeight() const { return rowHeight_; }
 
     /// Return textures.
     const Vector<SharedPtr<Texture2D> >& GetTextures() const { return textures_; }
@@ -104,13 +108,13 @@ protected:
     /// Glyph mapping.
     HashMap<unsigned, FontGlyph> glyphMapping_;
     /// Kerning mapping.
-    HashMap<unsigned, short> kerningMapping_;
+    HashMap<unsigned, float> kerningMapping_;
     /// Glyph texture pages.
     Vector<SharedPtr<Texture2D> > textures_;
     /// Point size.
-    int pointSize_;
+    float pointSize_;
     /// Row height.
-    int rowHeight_;
+    float rowHeight_;
 };
 
 }

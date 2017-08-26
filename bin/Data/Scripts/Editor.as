@@ -18,10 +18,13 @@
 #include "Scripts/Editor/EditorResourceBrowser.as"
 #include "Scripts/Editor/EditorSpawn.as"
 #include "Scripts/Editor/EditorSoundType.as"
+#include "Scripts/Editor/EditorTerrain.as"
 #include "Scripts/Editor/EditorLayers.as"
 #include "Scripts/Editor/EditorColorWheel.as"
 #include "Scripts/Editor/EditorEventsHandlers.as"
 #include "Scripts/Editor/EditorViewDebugIcons.as"
+#include "Scripts/Editor/EditorViewSelectableOrigins.as"
+#include "Scripts/Editor/EditorViewPaintSelection.as"
 
 String configFileName;
 
@@ -56,6 +59,17 @@ void Start()
     cache.returnFailedResources = true;
     // Use OS mouse without grabbing it
     input.mouseVisible = true;
+    // If input is scaled the double the UI size (High DPI display)
+    if (input.inputScale != Vector2::ONE)
+    {
+        // Should we use the inputScale itself to scale UI?
+        ui.scale = 2;
+        // When UI scale is increased, also set the UI atlas to nearest filtering to avoid artifacts
+        // (there is no padding) and to have a sharper look
+        Texture2D@ uiTex = cache.GetResource("Texture2D", "Textures/UI.png");
+        if (uiTex !is null)
+            uiTex.filterMode = FILTER_NEAREST;
+    }
     // Use system clipboard to allow transport of text in & out from the editor
     ui.useSystemClipboard = true;
 }
@@ -127,7 +141,9 @@ void HandleUpdate(StringHash eventType, VariantMap& eventData)
     UpdateGizmo();
     UpdateDirtyUI();
     UpdateViewDebugIcons();
-
+    UpdateOrigins();
+    UpdatePaintSelection();
+    
     // Handle Particle Editor looping.
     if (particleEffectWindow !is null and particleEffectWindow.visible)
     {

@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -28,9 +28,7 @@
 #include "../Container/Vector.h"
 
 #include <cassert>
-#if URHO3D_CXX11
 #include <initializer_list>
-#endif
 
 namespace Urho3D
 {
@@ -240,7 +238,6 @@ public:
         head_ = tail_ = ReserveNode();
         *this = map;
     }
-#if URHO3D_CXX11
     /// Aggregate initialization constructor.
     HashMap(const std::initializer_list<Pair<T, U>>& list) : HashMap()
     {
@@ -249,7 +246,6 @@ public:
             Insert(*it);
         }
     }
-#endif
     /// Destruct.
     ~HashMap()
     {
@@ -345,7 +341,6 @@ public:
         return node ? &node->pair_.second_ : 0;
     }
 
-#if URHO3D_CXX11
     /// Populate the map using variadic template. This handles the base case.
     HashMap& Populate(const T& key, const U& value)
     {
@@ -358,7 +353,6 @@ public:
         this->operator [](key) = value;
         return Populate(args...);
     };
-#endif
 
     /// Insert a pair. Return an iterator to it.
     Iterator Insert(const Pair<T, U>& pair)

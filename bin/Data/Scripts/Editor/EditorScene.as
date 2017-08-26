@@ -267,6 +267,9 @@ bool SaveScene(const String&in fileName)
         success = editorScene.Save(file);
     RemoveBackup(success, fileName);
 
+	// Save all the terrains we've modified
+	terrainEditor.Save();
+
     editorScene.updateEnabled = false;
 
     if (success)
@@ -1562,7 +1565,7 @@ bool ColorWheelSetupBehaviorForColoring()
             }
             else if (coloringPropertyName == "menuSpecularIntensity")
             {
-               // ColorWheel have only 0-1 range output of V-value(BW), and for huge-range values we devide in and multiply out 
+               // ColorWheel have only 0-1 range output of V-value(BW), and for huge-range values we divide in and multiply out 
                float scaledSpecular = light.specularIntensity * 0.1f; 
                coloringOldScalar = scaledSpecular;
                ShowColorWheelWithColor(Color(scaledSpecular,scaledSpecular,scaledSpecular));
@@ -1636,7 +1639,23 @@ bool ColorWheelSetupBehaviorForColoring()
             ShowColorWheelWithColor(coloringOldColor);
         }
     }
-          
+    else if (coloringComponent.typeName == "Text3D") 
+    {
+        Text3D@ txt = cast<Text3D>(coloringComponent);
+        if (txt !is null) 
+        {
+            if (coloringPropertyName == "c" || coloringPropertyName == "tl")
+                coloringOldColor = txt.colors[C_TOPLEFT];
+            else if (coloringPropertyName == "tr") 
+                coloringOldColor = txt.colors[C_TOPRIGHT];
+            else if (coloringPropertyName == "bl") 
+                coloringOldColor = txt.colors[C_BOTTOMLEFT];
+            else if (coloringPropertyName == "br") 
+                coloringOldColor = txt.colors[C_BOTTOMRIGHT];
+            
+            ShowColorWheelWithColor(coloringOldColor);
+        }
+    }          
     return true;
 }
 

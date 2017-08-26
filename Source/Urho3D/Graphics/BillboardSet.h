@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -56,8 +56,6 @@ struct URHO3D_API Billboard
     /// Scale factor for fixed screen size mode. Used internally.
     float screenScaleFactor_;
 };
-
-static const unsigned MAX_BILLBOARDS = 65536 / 4;
 
 /// %Billboard component.
 class URHO3D_API BillboardSet : public Drawable

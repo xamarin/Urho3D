@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -28,6 +28,7 @@
 #include "../IO/Log.h"
 #include "../IO/MemoryBuffer.h"
 #include "../Navigation/NavigationEvents.h"
+#include "../Navigation/NavigationMesh.h"
 #include "../Navigation/CrowdAgent.h"
 #include "../Scene/Node.h"
 #include "../Scene/Scene.h"
@@ -93,6 +94,7 @@ CrowdAgent::CrowdAgent(Context* context) :
     previousAgentState_(CA_STATE_WALKING),
     ignoreTransformChanges_(false)
 {
+    SubscribeToEvent(E_NAVIGATION_TILE_ADDED, URHO3D_HANDLER(CrowdAgent, HandleNavigationTileAdded));
 }
 
 CrowdAgent::~CrowdAgent()
@@ -274,7 +276,7 @@ int CrowdAgent::AddAgentToCrowd(bool force)
     {
         URHO3D_PROFILE(AddAgentToCrowd);
 
-        agentCrowdId_ = crowdManager_->AddAgent(this, node_->GetPosition());
+        agentCrowdId_ = crowdManager_->AddAgent(this, node_->GetWorldPosition());
         if (agentCrowdId_ == -1)
             return -1;
 
@@ -471,7 +473,7 @@ void CrowdAgent::SetNavigationPushiness(NavigationPushiness val)
 Vector3 CrowdAgent::GetPosition() const
 {
     const dtCrowdAgent* agent = GetDetourCrowdAgent();
-    return agent ? Vector3(agent->npos) : node_->GetPosition();
+    return agent ? Vector3(agent->npos) : node_->GetWorldPosition();
 }
 
 Vector3 CrowdAgent::GetDesiredVelocity() const
@@ -531,7 +533,7 @@ void CrowdAgent::OnCrowdUpdate(dtCrowdAgent* ag, float dt)
             if (updateNodePosition_)
             {
                 ignoreTransformChanges_ = true;
-                node_->SetPosition(newPos);
+                node_->SetWorldPosition(newPos);
                 ignoreTransformChanges_ = false;
             }
 
@@ -625,12 +627,12 @@ void CrowdAgent::OnMarkedDirty(Node* node)
         if (agent)
         {
             Vector3& agentPos = reinterpret_cast<Vector3&>(agent->npos);
-            Vector3 nodeWorldPos = node->GetWorldPosition();
-            
+            Vector3 nodePos = node->GetWorldPosition();
+
             // Only reset position / state if actually changed
-            if (nodeWorldPos != agentPos)
+            if (nodePos != agentPos)
             {
-                agentPos = nodeWorldPos;
+                agentPos = nodePos;
 
                 // If the node has been externally altered, provide the opportunity for DetourCrowd to reevaluate the crowd agent
                 if (agent->state == CA_STATE_INVALID)
@@ -643,6 +645,25 @@ void CrowdAgent::OnMarkedDirty(Node* node)
 const dtCrowdAgent* CrowdAgent::GetDetourCrowdAgent() const
 {
     return IsInCrowd() ? crowdManager_->GetDetourCrowdAgent(agentCrowdId_) : 0;
+}
+
+void CrowdAgent::HandleNavigationTileAdded(StringHash eventType, VariantMap& eventData)
+{
+    if (!crowdManager_)
+        return;
+
+    NavigationMesh* mesh = static_cast<NavigationMesh*>(eventData[NavigationTileAdded::P_MESH].GetPtr());
+    if (crowdManager_->GetNavigationMesh() != mesh)
+        return;
+
+    const IntVector2 tile = eventData[NavigationTileRemoved::P_TILE].GetIntVector2();
+    const IntVector2 agentTile = mesh->GetTileIndex(node_->GetWorldPosition());
+    const BoundingBox boundingBox = mesh->GetTileBoudningBox(agentTile);
+    if (tile == agentTile && IsInCrowd())
+    {
+        RemoveAgentFromCrowd();
+        AddAgentToCrowd();
+    }
 }
 
 }

@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -27,9 +27,7 @@
 #include <cassert>
 #include <cstring>
 #include <new>
-#if URHO3D_CXX11
 #include <initializer_list>
-#endif
 
 #ifdef _MSC_VER
 #pragma warning(push)
@@ -77,7 +75,6 @@ public:
     {
         *this = vector;
     }
-#if URHO3D_CXX11
     /// Aggregate initialization constructor.
     Vector(const std::initializer_list<T>& list) : Vector()
     {
@@ -86,7 +83,6 @@ public:
             Push(*it);
         }
     }
-#endif
     /// Destruct.
     ~Vector()
     {
@@ -340,7 +336,7 @@ public:
         Iterator i = Find(value);
         if (i != End())
         {
-            EraseSwap(i);
+            EraseSwap(i - Begin());
             return true;
         }
         else
@@ -407,6 +403,12 @@ public:
         while (it != End() && *it != value)
             ++it;
         return it;
+    }
+
+    /// Return index of value in vector, or size if not found.
+    unsigned IndexOf(const T& value) const
+    {
+        return Find(value) - Begin();
     }
 
     /// Return whether contains a specific value.
@@ -610,7 +612,6 @@ public:
     {
         *this = vector;
     }
-#if URHO3D_CXX11
     /// Aggregate initialization constructor.
     PODVector(const std::initializer_list<T>& list) : PODVector()
     {
@@ -619,7 +620,6 @@ public:
             Push(*it);
         }
     }
-#endif
     /// Destruct.
     ~PODVector()
     {
@@ -908,7 +908,7 @@ public:
         Iterator i = Find(value);
         if (i != End())
         {
-            EraseSwap(i);
+            EraseSwap(i - Begin());
             return true;
         }
         else
@@ -987,6 +987,12 @@ public:
         while (it != End() && *it != value)
             ++it;
         return it;
+    }
+
+    /// Return index of value in vector, or size if not found.
+    unsigned IndexOf(const T& value) const
+    {
+        return Find(value) - Begin();
     }
 
     /// Return whether contains a specific value.

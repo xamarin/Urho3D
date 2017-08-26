@@ -1,5 +1,5 @@
 ﻿//
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -357,7 +357,7 @@ void Node::AddTag(const String& tag)
     // Check if tag empty or already added
     if (tag.Empty() || HasTag(tag))
         return;
-    
+
     // Add tag
     impl_->tags_.Push(tag);
 
@@ -409,7 +409,7 @@ bool Node::RemoveTag(const String& tag)
         eventData[P_TAG] = tag;
         scene_->SendEvent(E_NODETAGREMOVED, eventData);
     }
-    
+
     // Sync
     MarkNetworkUpdate();
     return true;
@@ -785,11 +785,16 @@ void Node::MarkDirty()
     }
 }
 
-Node* Node::CreateChild(const String& name, CreateMode mode, unsigned id)
+Node* Node::CreateChild(const String& name, CreateMode mode, unsigned id, bool temporary)
 {
-    Node* newNode = CreateChild(id, mode);
+    Node* newNode = CreateChild(id, mode, temporary);
     newNode->SetName(name);
     return newNode;
+}
+
+Node* Node::CreateTemporaryChild(const String& name, CreateMode mode, unsigned id)
+{
+    return CreateChild(name, mode, id, true);
 }
 
 void Node::AddChild(Node* node, unsigned index)
@@ -798,15 +803,10 @@ void Node::AddChild(Node* node, unsigned index)
     if (!node || node == this || node->parent_ == this)
         return;
     // Check for possible cyclic parent assignment
-    Node* parent = parent_;
-    while (parent)
-    {
-        if (parent == node)
-            return;
-        parent = parent->parent_;
-    }
+    if (IsChildOf(node))
+        return;
 
-    // Keep a shared ptr to the node while transfering
+    // Keep a shared ptr to the node while transferring
     SharedPtr<Node> nodeShared(node);
     Node* oldParent = node->parent_;
     if (oldParent)
@@ -1174,6 +1174,14 @@ void Node::RemoveListener(Component* component)
     }
 }
 
+Vector3 Node::GetSignedWorldScale() const
+{
+    if (dirty_)
+        UpdateWorldTransform();
+
+    return worldTransform_.SignedScale(worldRotation_.RotationMatrix());
+}
+
 Vector3 Node::LocalToWorld(const Vector3& position) const
 {
     return GetWorldTransform() * position;
@@ -1360,6 +1368,18 @@ bool Node::HasComponent(StringHash type) const
 bool Node::HasTag(const String& tag) const
 {
     return impl_->tags_.Contains(tag);
+}
+
+bool Node::IsChildOf(Node* node) const
+{
+    Node* parent = parent_;
+    while (parent)
+    {
+        if (parent == node)
+            return true;
+        parent = parent->parent_;
+    }
+    return false;
 }
 
 const Variant& Node::GetVar(StringHash key) const
@@ -1773,9 +1793,10 @@ void Node::MarkReplicationDirty()
     }
 }
 
-Node* Node::CreateChild(unsigned id, CreateMode mode)
+Node* Node::CreateChild(unsigned id, CreateMode mode, bool temporary)
 {
     SharedPtr<Node> newNode(new Node(context_));
+    newNode->SetTemporary(temporary);
 
     // If zero ID specified, or the ID is already taken, let the scene assign
     if (scene_)
@@ -1900,8 +1921,18 @@ Animatable* Node::FindAttributeAnimationTarget(const String& name, String& outNa
             if (names[i].Front() != '#')
                 break;
 
-            unsigned index = ToUInt(names[i].Substring(1, names[i].Length() - 1));
-            node = node->GetChild(index);
+            String name = names[i].Substring(1, names[i].Length() - 1);
+            char s = name.Front();
+            if (s >= '0' && s <= '9')
+            {
+                unsigned index = ToUInt(name);
+                node = node->GetChild(index);
+            }
+            else
+            {
+                node = node->GetChild(name, true);
+            }
+
             if (!node)
             {
                 URHO3D_LOGERROR("Could not find node by name " + name);
@@ -2067,9 +2098,12 @@ void Node::UpdateWorldTransform() const
 
 void Node::RemoveChild(Vector<SharedPtr<Node> >::Iterator i)
 {
-    // Send change event. Do not send when already being destroyed
-    Node* child = *i;
+    // Keep a shared pointer to the child about to be removed, to make sure the erase from container completes first. Otherwise
+    // it would be possible that other child nodes get removed as part of the node's components' cleanup, causing a re-entrant
+    // erase and a crash
+    SharedPtr<Node> child(*i);
 
+    // Send change event. Do not send when this node is already being destroyed
     if (Refs() > 0 && scene_)
     {
         using namespace NodeRemoved;

@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -233,15 +233,6 @@ void StaticModel::SetModel(Model* model)
 {
     if (model == model_)
         return;
-
-    // If script erroneously calls StaticModel::SetModel on an AnimatedModel, warn and redirect
-    if (GetType() == AnimatedModel::GetTypeStatic())
-    {
-        URHO3D_LOGWARNING("StaticModel::SetModel() called on AnimatedModel. Redirecting to AnimatedModel::SetModel()");
-        AnimatedModel* animatedModel = static_cast<AnimatedModel*>(this);
-        animatedModel->SetModel(model);
-        return;
-    }
 
     if (!node_)
     {

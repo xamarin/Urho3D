@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -322,7 +322,7 @@ JSONObjectIterator JSONValue::End()
     // Convert to object type.
     SetType(JSON_OBJECT);
 
-    return objectValue_->Begin();
+    return objectValue_->End();
 }
 
 ConstJSONObjectIterator JSONValue::End() const
@@ -581,7 +581,8 @@ VariantMap JSONValue::GetVariantMap() const
 
     for (ConstJSONObjectIterator i = Begin(); i != End(); ++i)
     {
-        StringHash key(ToUInt(i->first_));
+        /// \todo Ideally this should allow any strings, but for now the convention is that the keys need to be hexadecimal StringHashes
+        StringHash key(ToUInt(i->first_, 16));
         Variant variant = i->second_.GetVariant();
         variantMap[key] = variant;
     }

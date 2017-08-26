@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -48,6 +48,10 @@ View3D::View3D(Context* context) :
     renderTexture_ = new Texture2D(context_);
     depthTexture_ = new Texture2D(context_);
     viewport_ = new Viewport(context_);
+
+    // Disable mipmaps since the texel ratio should be 1:1
+    renderTexture_->SetNumLevels(1);
+    depthTexture_->SetNumLevels(1);
 
     SubscribeToEvent(E_RENDERSURFACEUPDATE, URHO3D_HANDLER(View3D, HandleRenderSurfaceUpdate));
 }

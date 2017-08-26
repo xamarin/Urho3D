@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -202,6 +202,10 @@ public:
 
     /// Return distance of a point to the surface, or 0 if inside.
     float Distance(const Vector3& point) const { return Max((point - center_).Length() - radius_, 0.0f); }
+    /// Return point on the sphere relative to sphere position.
+    Vector3 GetLocalPoint(float theta, float phi) const;
+    /// Return point on the sphere.
+    Vector3 GetPoint(float theta, float phi) const { return center_ + GetLocalPoint(theta, phi); }
 
     /// Sphere center.
     Vector3 center_;

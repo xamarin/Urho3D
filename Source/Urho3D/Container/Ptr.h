@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -26,10 +26,7 @@
 
 #include <cassert>
 #include <cstddef>
-
-#if URHO3D_CXX11
 #include <utility>
-#endif
 
 namespace Urho3D
 {
@@ -44,13 +41,11 @@ public:
     {
     }
 
-#if URHO3D_CXX11
     /// Construct a null shared pointer.
     SharedPtr(std::nullptr_t) :
         ptr_(0)
     {
     }
-#endif
 
     /// Copy-construct from another shared pointer.
     SharedPtr(const SharedPtr<T>& rhs) :
@@ -256,14 +251,12 @@ public:
     {
     }
 
-#if URHO3D_CXX11
     /// Construct a null weak pointer.
     WeakPtr(std::nullptr_t) :
         ptr_(0),
         refCount_(0)
     {
     }
-#endif
 
     /// Copy-construct from another weak pointer.
     WeakPtr(const WeakPtr<T>& rhs) :
@@ -550,7 +543,6 @@ public:
         return *this;
     }
 
-#if URHO3D_CXX11
     /// Construct empty.
     UniquePtr(std::nullptr_t) { }
 
@@ -563,7 +555,6 @@ public:
         Reset(up.Detach());
         return *this;
     }
-#endif
 
     /// Point to the object.
     T* operator ->() const
@@ -641,8 +632,6 @@ template <class T> void Swap(UniquePtr<T>& first, UniquePtr<T>& second)
     first.Swap(second);
 }
 
-#if URHO3D_CXX11
-
 /// Construct UniquePtr.
 template <class T, class ... Args> UniquePtr<T> MakeUnique(Args && ... args)
 {
@@ -654,7 +643,5 @@ template <class T, class ... Args> SharedPtr<T> MakeShared(Args && ... args)
 {
     return SharedPtr<T>(new T(std::forward<Args>(args)...));
 }
-
-#endif
 
 }

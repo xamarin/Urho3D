@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -26,9 +26,7 @@
 #include "../Container/Sort.h"
 
 #include <cassert>
-#if URHO3D_CXX11
 #include <initializer_list>
-#endif
 
 namespace Urho3D
 {
@@ -195,7 +193,6 @@ public:
         head_ = tail_ = ReserveNode();
         *this = set;
     }
-#if URHO3D_CXX11
     /// Aggregate initialization constructor.
     HashSet(const std::initializer_list<T>& list) : HashSet()
     {
@@ -204,7 +201,6 @@ public:
             Insert(*it);
         }
     }
-#endif
     /// Destruct.
     ~HashSet()
     {

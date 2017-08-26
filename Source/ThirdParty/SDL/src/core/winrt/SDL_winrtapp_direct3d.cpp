@@ -822,12 +822,9 @@ static void WINRT_OnBackButtonPressed(BackButtonEventArgs ^ args)
     SDL_SendKeyboardKey(SDL_PRESSED, SDL_SCANCODE_AC_BACK);
     SDL_SendKeyboardKey(SDL_RELEASED, SDL_SCANCODE_AC_BACK);
 
-     const char *hint = SDL_GetHint(SDL_HINT_WINRT_HANDLE_BACK_BUTTON);
-     if (hint) {
-         if (*hint == '1') {
-             args->Handled = true;
-         }
-      }
+    if (SDL_GetHintBoolean(SDL_HINT_WINRT_HANDLE_BACK_BUTTON, SDL_FALSE)) {
+        args->Handled = true;
+    }
 }
 
 #if WINAPI_FAMILY != WINAPI_FAMILY_PHONE_APP

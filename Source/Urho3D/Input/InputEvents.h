@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -90,8 +90,14 @@ URHO3D_EVENT(E_KEYUP, KeyUp)
 URHO3D_EVENT(E_TEXTINPUT, TextInput)
 {
     URHO3D_PARAM(P_TEXT, Text);                    // String
-    URHO3D_PARAM(P_BUTTONS, Buttons);              // int
-    URHO3D_PARAM(P_QUALIFIERS, Qualifiers);        // int
+}
+
+/// Text editing event.
+URHO3D_EVENT(E_TEXTEDITING, TextEditing)
+{
+    URHO3D_PARAM(P_COMPOSITION, Composition);      // String
+    URHO3D_PARAM(P_CURSOR, Cursor);                // int
+    URHO3D_PARAM(P_SELECTION_LENGTH, SelectionLength);  // int
 }
 
 /// Joystick connected.
@@ -249,6 +255,7 @@ static const int QUAL_CTRL = 2;
 static const int QUAL_ALT = 4;
 static const int QUAL_ANY = 8;
 
+static const int KEY_UNKNOWN = SDLK_UNKNOWN;
 static const int KEY_A = SDLK_a;
 static const int KEY_B = SDLK_b;
 static const int KEY_C = SDLK_c;

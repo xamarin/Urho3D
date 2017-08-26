@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -92,9 +92,9 @@ enum LayoutMode
 /// Traversal mode for rendering.
 enum TraversalMode
 {
-    /// Traverse thru children having same priority first and recurse into their children before traversing children having higher priority.
+    /// Traverse through children having same priority first and recurse into their children before traversing children having higher priority.
     TM_BREADTH_FIRST = 0,
-    /// Traverse thru each child and its children immediately after in sequence.
+    /// Traverse through each child and its children immediately after in sequence.
     TM_DEPTH_FIRST
 };
 
@@ -178,7 +178,7 @@ public:
     /// React to a key press.
     virtual void OnKey(int key, int buttons, int qualifiers) { }
     /// React to text input event.
-    virtual void OnTextInput(const String& text, int buttons, int qualifiers) { }
+    virtual void OnTextInput(const String& text) { }
 
     /// React to resize.
     virtual void OnResize(const IntVector2& newSize, const IntVector2& delta) { }

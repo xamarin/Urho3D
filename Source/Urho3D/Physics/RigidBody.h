@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -59,8 +59,6 @@ public:
     /// Register object factory.
     static void RegisterObject(Context* context);
 
-    /// Handle attribute write access.
-    virtual void OnSetAttribute(const AttributeInfo& attr, const Variant& src);
     /// Apply attribute changes that can not be applied immediately. Called after scene load or a network update.
     virtual void ApplyAttributes();
     /// Handle enabled/disabled state change.
@@ -151,16 +149,12 @@ public:
 
     /// Return physics world.
     PhysicsWorld* GetPhysicsWorld() const { return physicsWorld_; }
-
     /// Return Bullet rigid body.
     btRigidBody* GetBody() const { return body_.Get(); }
-
     /// Return Bullet compound collision shape.
     btCompoundShape* GetCompoundShape() const { return compoundShape_.Get(); }
-
     /// Return mass.
     float GetMass() const { return mass_; }
-
     /// Return rigid body position in world space.
     Vector3 GetPosition() const;
     /// Return rigid body rotation in world space.
@@ -197,31 +191,22 @@ public:
     float GetCcdRadius() const;
     /// Return continuous collision detection motion-per-simulation-step threshold.
     float GetCcdMotionThreshold() const;
-
     /// Return whether rigid body uses gravity.
     bool GetUseGravity() const { return useGravity_; }
-
     /// Return gravity override. If zero (default), uses the physics world's gravity.
     const Vector3& GetGravityOverride() const { return gravityOverride_; }
-
     /// Return center of mass offset.
     const Vector3& GetCenterOfMass() const { return centerOfMass_; }
-
     /// Return kinematic mode flag.
     bool IsKinematic() const { return kinematic_; }
-
     /// Return whether this RigidBody is acting as a trigger.
     bool IsTrigger() const { return trigger_; }
-
     /// Return whether rigid body is active (not sleeping.)
     bool IsActive() const;
-
     /// Return collision layer.
     unsigned GetCollisionLayer() const { return collisionLayer_; }
-
     /// Return collision mask.
     unsigned GetCollisionMask() const { return collisionMask_; }
-
     /// Return collision event signaling mode.
     CollisionEventMode GetCollisionEventMode() const { return collisionEventMode_; }
 
@@ -230,12 +215,24 @@ public:
 
     /// Apply new world transform after a simulation step. Called internally.
     void ApplyWorldTransform(const Vector3& newWorldPosition, const Quaternion& newWorldRotation);
-    /// Update mass and inertia to the Bullet rigid body.
+    /// Update mass and inertia to the Bullet rigid body. Readd body to world if necessary: if was in world and the Bullet collision shape to use changed.
     void UpdateMass();
     /// Update gravity parameters to the Bullet rigid body.
     void UpdateGravity();
+    /// Set mass attribute.
+    void SetMassAttr(float mass);
+    /// Set collision layer attribute.
+    void SetCollisionLayerAttr(unsigned layer);
+    /// Set collision mask attribute.
+    void SetCollisionMaskAttr(unsigned mask);
     /// Set network angular velocity attribute.
     void SetNetAngularVelocityAttr(const PODVector<unsigned char>& value);
+    /// Set collision event signaling mode attribute.
+    void SetCollisionEventModeAttr(CollisionEventMode mode);
+    /// Set rigid body kinematic mode attribute.
+    void SetKinematicAttr(bool value);
+    /// Set rigid body trigger mode attribute.
+    void SetTriggerAttr(bool value);
     /// Return network angular velocity attribute.
     const PODVector<unsigned char>& GetNetAngularVelocityAttr() const;
     /// Add a constraint that refers to this rigid body.

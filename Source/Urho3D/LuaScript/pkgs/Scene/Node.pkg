@@ -91,7 +91,8 @@ class Node : public Animatable
     void SetOwner(Connection* owner);
     void MarkDirty();
 
-    Node* CreateChild(const String name = String::EMPTY, CreateMode mode = REPLICATED, unsigned id = 0);
+    Node* CreateChild(const String name = String::EMPTY, CreateMode mode = REPLICATED, unsigned id = 0, bool temporary = false);
+    Node* CreateTemporaryChild(const String name = String::EMPTY, CreateMode mode = REPLICATED, unsigned id = 0);
 
     void AddChild(Node* node, unsigned index = M_MAX_UNSIGNED);
     void RemoveChild(Node* node);
@@ -131,6 +132,7 @@ class Node : public Animatable
     StringHash GetNameHash() const;
     Node* GetParent() const;
     Scene* GetScene() const;
+    bool IsChildOf(Node* node) const;
     bool IsEnabled() const;
     bool IsEnabledSelf() const;
     Connection* GetOwner() const;
@@ -154,6 +156,7 @@ class Node : public Animatable
     Vector3 GetWorldUp() const;
     Vector3 GetWorldRight() const;
     Vector3 GetWorldScale() const;
+    Vector3 GetSignedWorldScale() const;
     Vector2 GetWorldScale2D() const;
 
     const Matrix3x4& GetWorldTransform() const;
@@ -195,7 +198,7 @@ class Node : public Animatable
     bool LoadXML(const XMLElement& source, SceneResolver& resolver, bool loadChildren = true, bool rewriteIDs = false, CreateMode mode = REPLICATED);
     bool LoadJSON(const JSONValue& source, SceneResolver& resolver, bool loadChildren = true, bool rewriteIDs = false, CreateMode mode = REPLICATED);
 
-    Node* CreateChild(unsigned id, CreateMode mode);
+    Node* CreateChild(unsigned id, CreateMode mode, bool temporary = false);
     void AddComponent(Component* component, unsigned id, CreateMode mode);
 
     bool HasTag(const String tag) const;
@@ -232,6 +235,7 @@ class Node : public Animatable
     tolua_readonly tolua_property__get_set Vector3 worldUp;
     tolua_readonly tolua_property__get_set Vector3 worldRight;
     tolua_property__get_set Vector3 worldScale;
+    tolua_readonly tolua_property__get_set Vector3 signedWorldScale;
     tolua_property__get_set Vector2 worldScale2D;
     tolua_readonly tolua_property__get_set Matrix3x4& worldTransform;
     tolua_readonly tolua_property__is_set bool dirty;

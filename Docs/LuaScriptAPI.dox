@@ -93,11 +93,15 @@ namespace Urho3D
 <a href="#Class_Graphics"><b>Graphics</b></a>
 <a href="#Class_HierarchyContainer"><b>HierarchyContainer</b></a>
 <a href="#Class_HttpRequest"><b>HttpRequest</b></a>
+<a href="#Class_IKConstraint"><b>IKConstraint</b></a>
+<a href="#Class_IKEffector"><b>IKEffector</b></a>
+<a href="#Class_IKSolver"><b>IKSolver</b></a>
 <a href="#Class_Image"><b>Image</b></a>
 <a href="#Class_IndexBuffer"><b>IndexBuffer</b></a>
 <a href="#Class_Input"><b>Input</b></a>
 <a href="#Class_IntRect"><b>IntRect</b></a>
 <a href="#Class_IntVector2"><b>IntVector2</b></a>
+<a href="#Class_IntVector3"><b>IntVector3</b></a>
 <a href="#Class_JSONFile"><b>JSONFile</b></a>
 <a href="#Class_JSONValue"><b>JSONValue</b></a>
 <a href="#Class_JoystickState"><b>JoystickState</b></a>
@@ -146,6 +150,7 @@ namespace Urho3D
 <a href="#Class_Quaternion"><b>Quaternion</b></a>
 <a href="#Class_Ray"><b>Ray</b></a>
 <a href="#Class_RayQueryResult"><b>RayQueryResult</b></a>
+<a href="#Class_RaycastVehicle"><b>RaycastVehicle</b></a>
 <a href="#Class_Rect"><b>Rect</b></a>
 <a href="#Class_RemoteEvent"><b>RemoteEvent</b></a>
 <a href="#Class_RenderPath"><b>RenderPath</b></a>
@@ -157,6 +162,7 @@ namespace Urho3D
 <a href="#Class_ResourceCache"><b>ResourceCache</b></a>
 <a href="#Class_ResourceRef"><b>ResourceRef</b></a>
 <a href="#Class_ResourceRefList"><b>ResourceRefList</b></a>
+<a href="#Class_ResourceWithMetadata"><b>ResourceWithMetadata</b></a>
 <a href="#Class_RibbonTrail"><b>RibbonTrail</b></a>
 <a href="#Class_RigidBody"><b>RigidBody</b></a>
 <a href="#Class_RigidBody2D"><b>RigidBody2D</b></a>
@@ -203,6 +209,7 @@ namespace Urho3D
 <a href="#Class_ToolTip"><b>ToolTip</b></a>
 <a href="#Class_TouchState"><b>TouchState</b></a>
 <a href="#Class_UI"><b>UI</b></a>
+<a href="#Class_UIComponent"><b>UIComponent</b></a>
 <a href="#Class_UIElement"><b>UIElement</b></a>
 <a href="#Class_ValueAnimation"><b>ValueAnimation</b></a>
 <a href="#Class_Variant"><b>Variant</b></a>
@@ -317,7 +324,7 @@ Properties:
 - LoopMode2D loopMode
 
 <a name="Class_Animation"></a>
-### Animation : Resource
+### Animation : ResourceWithMetadata
 
 Methods:
 
@@ -340,6 +347,7 @@ Methods:
 - unsigned GetNumTracks() const
 - AnimationTrack* GetTrack(const String name)
 - AnimationTrack* GetTrack(StringHash nameHash)
+- AnimationTrack* GetTrack(unsigned index)
 - unsigned GetNumTriggers() const
 - AnimationTriggerPoint* GetTrigger(unsigned index)
 
@@ -738,6 +746,7 @@ Methods:
 - BoundingBox Transformed(const Matrix3& transform) const
 - BoundingBox Transformed(const Matrix3x4& transform) const
 - Rect Projected(const Matrix4& projection) const
+- float DistanceToPoint(const Vector3& point) const
 - Intersection IsInside(const Vector3& point) const
 - Intersection IsInside(const BoundingBox& box) const
 - Intersection IsInsideFast(const BoundingBox& box) const
@@ -1290,6 +1299,8 @@ Methods:
 - void SetNumRows(unsigned rows)
 - void SetNumHistoryRows(unsigned rows)
 - void SetFocusOnShow(bool enable)
+- void AddAutoComplete(const String option)
+- void RemoveAutoComplete(const String option)
 - void UpdateElements()
 - XMLFile* GetDefaultStyle() const
 - BorderImage* GetBackground() const
@@ -1400,10 +1411,12 @@ Methods:
 - void SetOtherBodyAnchor(const Vector2& anchor)
 - void SetFrequencyHz(float frequencyHz)
 - void SetDampingRatio(float dampingRatio)
+- void SetLength(float length)
 - const Vector2& GetOwnerBodyAnchor() const
 - const Vector2& GetOtherBodyAnchor() const
 - float GetFrequencyHz() const
 - float GetDampingRatio() const
+- float GetLength() const
 
 Properties:
 
@@ -1411,6 +1424,7 @@ Properties:
 - Vector2& otherBodyAnchor
 - float frequencyHz
 - float dampingRatio
+- float length
 
 <a name="Class_ConstraintFriction2D"></a>
 ### ConstraintFriction2D : Constraint2D
@@ -1938,12 +1952,15 @@ Methods:
 - void AddLine(const Vector3& start, const Vector3& end, unsigned color, bool depthTest = true)
 - void AddTriangle(const Vector3& v1, const Vector3& v2, const Vector3& v3, const Color& color, bool depthTest = true)
 - void AddTriangle(const Vector3& v1, const Vector3& v2, const Vector3& v3, unsigned color, bool depthTest = true)
+- void AddPolygon(const Vector3& v1, const Vector3& v2, const Vector3& v3, const Vector3& v4, const Color& color, bool depthTest = true)
+- void AddPolygon(const Vector3& v1, const Vector3& v2, const Vector3& v3, const Vector3& v4, unsigned color, bool depthTest = true)
 - void AddNode(Node* node, float scale = 1.0f, bool depthTest = true)
-- void AddBoundingBox(const BoundingBox& box, const Color& color, bool depthTest = true)
-- void AddBoundingBox(const BoundingBox& box, const Matrix3x4& transform, const Color& color, bool depthTest = true)
+- void AddBoundingBox(const BoundingBox& box, const Color& color, bool depthTest = true, bool solid = false)
+- void AddBoundingBox(const BoundingBox& box, const Matrix3x4& transform, const Color& color, bool depthTest = true, bool solid = false)
 - void AddFrustum(const Frustum& frustum, const Color& color, bool depthTest = true)
 - void AddPolyhedron(const Polyhedron& poly, const Color& color, bool depthTest = true)
 - void AddSphere(const Sphere& sphere, const Color& color, bool depthTest = true)
+- void AddSphereSector(const Sphere& sphere, const Quaternion& rotation, float angle, bool drawLines, const Color& color, bool depthTest = true)
 - void AddSkeleton(const Skeleton& skeleton, const Color& color, bool depthTest = true)
 - void AddTriangleMesh(const void* vertexData, unsigned vertexSize, const void* indexData, unsigned indexSize, unsigned indexStart, unsigned indexCount, const Matrix3x4& transform, const Color& color, bool depthTest = true)
 - void AddCircle(const Vector3& center, const Vector3& normal, float radius, const Color& color, int steps = 64, bool depthTest = true)
@@ -2001,9 +2018,11 @@ Methods:
 
 - VectorBuffer Read(unsigned size)
 - unsigned Seek(unsigned position)
+- unsigned SeekRelative(int delta)
 - const String GetName() const
 - unsigned GetChecksum()
 - unsigned GetPosition() const
+- unsigned Tell() const
 - unsigned GetSize() const
 - bool IsEof() const
 - int ReadInt()
@@ -2019,6 +2038,7 @@ Methods:
 - double ReadDouble()
 - IntRect ReadIntRect()
 - IntVector2 ReadIntVector2()
+- IntVector3 ReadIntVector3()
 - Rect ReadRect()
 - Vector2 ReadVector2()
 - Vector3 ReadVector3()
@@ -2238,9 +2258,11 @@ Methods:
 - bool IsPackaged() const
 - VectorBuffer Read(unsigned size)
 - unsigned Seek(unsigned position)
+- unsigned SeekRelative(int delta)
 - const String GetName() const
 - unsigned GetChecksum()
 - unsigned GetPosition() const
+- unsigned Tell() const
 - unsigned GetSize() const
 - bool IsEof() const
 - int ReadInt()
@@ -2256,6 +2278,7 @@ Methods:
 - double ReadDouble()
 - IntRect ReadIntRect()
 - IntVector2 ReadIntVector2()
+- IntVector3 ReadIntVector3()
 - Rect ReadRect()
 - Vector2 ReadVector2()
 - Vector3 ReadVector3()
@@ -2295,6 +2318,7 @@ Methods:
 - bool WriteDouble(double value)
 - bool WriteIntRect(const IntRect& value)
 - bool WriteIntVector2(const IntVector2& value)
+- bool WriteIntVector3(const IntVector3& value)
 - bool WriteRect(const Rect& value)
 - bool WriteVector2(const Vector2& value)
 - bool WriteVector3(const Vector3& value)
@@ -2451,13 +2475,15 @@ Methods:
 - void SetScaledGlyphOffset(const Vector2& offset)
 - const IntVector2& GetAbsoluteGlyphOffset() const
 - const Vector2& GetScaledGlyphOffset() const
-- IntVector2 GetTotalGlyphOffset(int pointSize) const
+- IntVector2 GetTotalGlyphOffset(float pointSize) const
+- FontType GetFontType() const
 - bool IsSDFFont() const
 
 Properties:
 
 - IntVector2 absoluteGlyphOffset
 - Vector2 scaledGlyphOffset
+- FontType fontType (readonly)
 
 <a name="Class_Frustum"></a>
 ### Frustum
@@ -2539,7 +2565,7 @@ Methods:
 - void SetWindowIcon(Image* windowIcon)
 - void SetWindowPosition(const IntVector2& position)
 - void SetWindowPosition(int x, int y)
-- bool SetMode(int width, int height, bool fullscreen, bool borderless, bool resizable, bool highDPI, bool vsync, bool tripleBuffer, int multiSample)
+- bool SetMode(int width, int height, bool fullscreen, bool borderless, bool resizable, bool highDPI, bool vsync, bool tripleBuffer, int multiSample, int monitor, int refreshRate)
 - bool SetMode(int width, int height)
 - void SetSRGB(bool enable)
 - void SetDither(bool enable)
@@ -2563,10 +2589,13 @@ Methods:
 - int GetWidth() const
 - int GetHeight() const
 - int GetMultiSample() const
+- IntVector2 GetSize() const
 - bool GetFullscreen() const
 - bool GetResizable() const
 - bool GetBorderless() const
 - bool GetVSync() const
+- int GetMonitor() const
+- int GetRefreshRate() const
 - bool GetTripleBuffer() const
 - bool GetSRGB() const
 - bool GetDither() const
@@ -2585,7 +2614,8 @@ Methods:
 - bool GetReadableDepthSupport() const
 - bool GetSRGBSupport() const
 - bool GetSRGBWriteSupport() const
-- IntVector2 GetDesktopResolution() const
+- IntVector2 GetDesktopResolution(int monitor) const
+- int GetMonitorCount() const
 - const String GetShaderCacheDir() const
 - unsigned GetAlphaFormat()
 - unsigned GetLuminanceFormat()
@@ -2615,10 +2645,13 @@ Properties:
 - int width (readonly)
 - int height (readonly)
 - int multiSample (readonly)
+- IntVector2 size (readonly)
 - bool fullscreen (readonly)
 - bool resizable (readonly)
 - bool borderless (readonly)
 - bool vSync (readonly)
+- int refreshRate (readonly)
+- int monitor (readonly)
 - bool tripleBuffer (readonly)
 - bool sRGB
 - bool dither
@@ -2637,7 +2670,7 @@ Properties:
 - bool readableDepthSupport (readonly)
 - bool sRGBSupport (readonly)
 - bool sRGBWriteSupport (readonly)
-- IntVector2 desktopResolution (readonly)
+- int monitorCount (readonly)
 - String shaderCacheDir
 
 <a name="Class_HierarchyContainer"></a>
@@ -2668,6 +2701,7 @@ Methods:
 - double ReadDouble()
 - IntRect ReadIntRect()
 - IntVector2 ReadIntVector2()
+- IntVector3 ReadIntVector3()
 - Rect ReadRect()
 - Vector2 ReadVector2()
 - Vector3 ReadVector3()
@@ -2703,6 +2737,82 @@ Properties:
 - unsigned availableSize (readonly)
 - bool open (readonly)
 
+<a name="Class_IKConstraint"></a>
+### IKConstraint : Component
+
+Methods:
+
+- float GetStiffness() const
+- void SetStiffness(float stiffness)
+- float GetStretchiness() const
+- void SetStretchiness(float stretchiness)
+- const Vector2& GetLengthConstraints() const
+- void SetLengthConstraints(const Vector2& lengthConstraints)
+
+<a name="Class_IKEffector"></a>
+### IKEffector : Component
+
+Methods:
+
+- Node* GetTargetNode() const
+- void SetTargetNode(Node* targetNode)
+- const String GetTargetName() const
+- void SetTargetName(const String nodeName)
+- const Vector3& GetTargetPosition() const
+- void SetTargetPosition(const Vector3& targetPosition)
+- const Quaternion& GetTargetRotation() const
+- void SetTargetRotation(const Quaternion& targetRotation)
+- unsigned GetChainLength() const
+- void SetChainLength(unsigned chainLength)
+- float GetWeight() const
+- void SetWeight(float weight)
+- float GetRotationWeight() const
+- void SetRotationWeight(float weight)
+- float GetRotationDecay() const
+- void SetRotationDecay(float decay)
+
+Properties:
+
+- Node* targetNode
+- String targetName
+- Vector3 targetPosition
+- Quaternion targetRotation
+- unsigned chainLength
+- float weight
+- float rotationWeight
+- float rotationDecay
+- bool WEIGHT_NLERP
+- bool INHERIT_PARENT_ROTATION
+
+<a name="Class_IKSolver"></a>
+### IKSolver : Component
+
+Methods:
+
+- void RebuildChainTrees()
+- void RecalculateSegmentLengths()
+- void CalculateJointRotations()
+- void Solve()
+- void ApplyOriginalPoseToScene()
+- void ApplySceneToOriginalPose()
+- void ApplyActivePoseToScene()
+- void ApplySceneToActivePose()
+- void ApplyOriginalPoseToActivePose()
+- void DrawDebugGeometry(bool depthTest)
+
+Properties:
+
+- IKSolver::Algorithm algorithm
+- unsigned maximumIterations
+- float tolerance
+- bool JOINT_ROTATIONS
+- bool TARGET_ROTATIONS
+- bool UPDATE_ORIGINAL_POSE
+- bool UPDATE_ACTIVE_POSE
+- bool USE_ORIGINAL_POSE
+- bool CONSTRAINTS
+- bool AUTO_SOLVE
+
 <a name="Class_Image"></a>
 ### Image : Resource
 
@@ -2729,6 +2839,7 @@ Methods:
 - bool SaveTGA(const String fileName) const
 - bool SaveJPG(const String fileName, int quality) const
 - bool SaveDDS(const String fileName) const
+- bool SaveWEBP(const String fileName, float compression = 0.0f) const
 - Color GetPixel(int x, int y) const
 - Color GetPixel(int x, int y, int z) const
 - unsigned GetPixelInt(int x, int y) const
@@ -2827,10 +2938,11 @@ Methods:
 - bool GetQualifierPress(int qualifier) const
 - int GetQualifiers() const
 - IntVector2 GetMousePosition() const
-- const IntVector2& GetMouseMove() const
+- IntVector2 GetMouseMove() const
 - int GetMouseMoveX() const
 - int GetMouseMoveY() const
 - int GetMouseMoveWheel() const
+- Vector2 GetInputScale() const
 - unsigned GetNumTouches() const
 - TouchState* GetTouch(unsigned index) const
 - unsigned GetNumJoysticks() const
@@ -2852,10 +2964,11 @@ Properties:
 
 - int qualifiers (readonly)
 - IntVector2 mousePosition
-- IntVector2& mouseMove (readonly)
+- IntVector2 mouseMove (readonly)
 - int mouseMoveX (readonly)
 - int mouseMoveY (readonly)
 - int mouseMoveWheel (readonly)
+- Vector2 inputScale (readonly)
 - unsigned numTouches (readonly)
 - unsigned numJoysticks (readonly)
 - bool toggleFullscreen (readonly)
@@ -2879,12 +2992,16 @@ Methods:
 - IntRect* new()
 - IntRect(int left, int top, int right, int bottom) (GC)
 - IntRect* new(int left, int top, int right, int bottom)
+- IntRect(const IntVector2& min, const IntVector2& max) (GC)
+- IntRect* new(const IntVector2& min, const IntVector2& max)
 - void delete()
 - bool operator==(const IntRect& rhs) const
 - IntVector2 Size() const
 - int Width() const
 - int Height() const
 - Intersection IsInside(const IntVector2& point) const
+- void Clip(const IntRect& rect)
+- void Merge(const IntRect& rect)
 
 Properties:
 
@@ -2925,6 +3042,43 @@ Properties:
 - int x
 - int y
 - const IntVector2 ZERO
+
+<a name="Class_IntVector3"></a>
+### IntVector3
+
+
+Methods:
+
+- IntVector3() (GC)
+- IntVector3* new()
+- IntVector3(int x, int y, int z) (GC)
+- IntVector3* new(int x, int y, int z)
+- IntVector3(const IntVector3& rhs) (GC)
+- IntVector3* new(const IntVector3& rhs)
+- void delete()
+- bool operator==(const IntVector3& rhs) const
+- IntVector3 operator+(const IntVector3& rhs) const
+- IntVector3 operator-() const
+- IntVector3 operator-(const IntVector3& rhs) const
+- IntVector3 operator*(int rhs) const
+- IntVector3 operator/(int rhs) const
+- String ToString() const
+- unsigned ToHash() const
+- float Length() const
+
+Properties:
+
+- int x
+- int y
+- int z
+- const IntVector3 ZERO
+- const IntVector3 LEFT
+- const IntVector3 RIGHT
+- const IntVector3 UP
+- const IntVector3 DOWN
+- const IntVector3 FORWARD
+- const IntVector3 BACK
+- const IntVector3 ONE
 
 <a name="Class_JSONFile"></a>
 ### JSONFile : Resource
@@ -2967,6 +3121,8 @@ Methods:
 - void SetString(const String value)
 - void SetArray(const JSONArray& value)
 - void SetObject(const JSONObject& value)
+- void SetVariant(const Variant& value)
+- void SetVariantMap(const VariantMap& value)
 - JSONValueType GetValueType() const
 - JSONNumberType GetNumberType() const
 - String GetValueTypeName() const
@@ -2985,6 +3141,8 @@ Methods:
 - const String GetString() const
 - const JSONArray& GetArray() const
 - const JSONObject& GetObject() const
+- Variant GetVariant() const
+- VariantMap GetVariantMap() const
 - JSONValue operator&[](unsigned index, JSONValue tolua_value)
 - JSONValue operator[](unsigned index)
 - const JSONValue operator[](unsigned index) const
@@ -3044,6 +3202,8 @@ Methods:
 - void SetPerVertex(bool enable)
 - void SetColor(const Color& color)
 - void SetTemperature(float temperature)
+- void SetRadius(float redius)
+- void SetLength(float length)
 - void SetUsePhysicalValues(bool enable)
 - void SetSpecularIntensity(float intensity)
 - void SetBrightness(float brightness)
@@ -3065,6 +3225,8 @@ Methods:
 - bool GetPerVertex() const
 - const Color& GetColor() const
 - float GetTemperature() const
+- float GetRadius() const
+- float GetLength() const
 - float GetSpecularIntensity() const
 - float GetBrightness() const
 - Color GetEffectiveColor() const
@@ -3095,6 +3257,8 @@ Properties:
 - bool perVertex
 - Color& color
 - float temperature
+- float radius
+- float length
 - bool usePhysicalValues
 - float specularIntensity
 - float brightness
@@ -3566,7 +3730,7 @@ Properties:
 - UIElement* window (readonly)
 
 <a name="Class_Model"></a>
-### Model : Resource
+### Model : ResourceWithMetadata
 
 Methods:
 
@@ -3628,6 +3792,7 @@ Methods:
 - double ReadDouble()
 - IntRect ReadIntRect()
 - IntVector2 ReadIntVector2()
+- IntVector3 ReadIntVector3()
 - Rect ReadRect()
 - Vector2 ReadVector2()
 - Vector3 ReadVector3()
@@ -3665,6 +3830,7 @@ Methods:
 - bool WriteDouble(double value)
 - bool WriteIntRect(const IntRect& value)
 - bool WriteIntVector2(const IntVector2& value)
+- bool WriteIntVector3(const IntVector3& value)
 - bool WriteRect(const Rect& value)
 - bool WriteVector2(const Vector2& value)
 - bool WriteVector3(const Vector3& value)
@@ -3757,8 +3923,17 @@ Methods:
 - void SetDetailSampleMaxError(float error)
 - void SetPadding(const Vector3& padding)
 - void SetAreaCost(unsigned areaID, float cost)
+- bool Allocate(const BoundingBox& boundingBox, unsigned maxTiles)
 - bool Build()
 - bool Build(const BoundingBox& boundingBox)
+- bool Build(const IntVector2& from, const IntVector2& to)
+- VectorBuffer GetTileData(const IntVector2& tile) const
+- bool AddTile(const VectorBuffer& tileData)
+- void RemoveTile(const IntVector2& tile)
+- void RemoveAllTiles()
+- bool HasTile(const IntVector2& tile) const
+- BoundingBox GetTileBoudningBox(const IntVector2& tile) const
+- IntVector2 GetTileIndex(const Vector3& position) const
 - void SetPartitionType(NavmeshPartitionType aType)
 - void SetDrawOffMeshConnections(bool enable)
 - void SetDrawNavAreas(bool enable)
@@ -3966,7 +4141,8 @@ Methods:
 - void SetEnabledRecursive(bool enable)
 - void SetOwner(Connection* owner)
 - void MarkDirty()
-- Node* CreateChild(const String name = String::EMPTY, CreateMode mode = REPLICATED, unsigned id = 0)
+- Node* CreateChild(const String name = String::EMPTY, CreateMode mode = REPLICATED, unsigned id = 0, bool temporary = false)
+- Node* CreateTemporaryChild(const String name = String::EMPTY, CreateMode mode = REPLICATED, unsigned id = 0)
 - void AddChild(Node* node, unsigned index = M_MAX_UNSIGNED)
 - void RemoveChild(Node* node)
 - void RemoveAllChildren()
@@ -3997,6 +4173,7 @@ Methods:
 - StringHash GetNameHash() const
 - Node* GetParent() const
 - Scene* GetScene() const
+- bool IsChildOf(Node* node) const
 - bool IsEnabled() const
 - bool IsEnabledSelf() const
 - Connection* GetOwner() const
@@ -4018,6 +4195,7 @@ Methods:
 - Vector3 GetWorldUp() const
 - Vector3 GetWorldRight() const
 - Vector3 GetWorldScale() const
+- Vector3 GetSignedWorldScale() const
 - Vector2 GetWorldScale2D() const
 - const Matrix3x4& GetWorldTransform() const
 - Vector3 LocalToWorld(const Vector3& position) const
@@ -4045,7 +4223,7 @@ Methods:
 - bool Load(Deserializer& source, SceneResolver& resolver, bool loadChildren = true, bool rewriteIDs = false, CreateMode mode = REPLICATED)
 - bool LoadXML(const XMLElement& source, SceneResolver& resolver, bool loadChildren = true, bool rewriteIDs = false, CreateMode mode = REPLICATED)
 - bool LoadJSON(const JSONValue& source, SceneResolver& resolver, bool loadChildren = true, bool rewriteIDs = false, CreateMode mode = REPLICATED)
-- Node* CreateChild(unsigned id, CreateMode mode)
+- Node* CreateChild(unsigned id, CreateMode mode, bool temporary = false)
 - void AddComponent(Component* component, unsigned id, CreateMode mode)
 - bool HasTag(const String tag) const
 - const StringVector& GetTags() const
@@ -4080,6 +4258,7 @@ Properties:
 - Vector3 worldUp (readonly)
 - Vector3 worldRight (readonly)
 - Vector3 worldScale
+- Vector3 signedWorldScale (readonly)
 - Vector2 worldScale2D
 - Matrix3x4& worldTransform (readonly)
 - bool dirty (readonly)
@@ -4404,15 +4583,18 @@ Methods:
 - void SetEffect(ParticleEffect2D* effect)
 - void SetSprite(Sprite2D* sprite)
 - void SetBlendMode(BlendMode blendMode)
+- void SetEmitting(bool emitting)
 - ParticleEffect2D* GetEffect() const
 - Sprite2D* GetSprite() const
 - BlendMode GetBlendMode() const
+- bool IsEmitting() const
 
 Properties:
 
 - ParticleEffect2D* effect
 - Sprite2D* sprite
 - BlendMode blendMode
+- bool emitting
 
 <a name="Class_Pass"></a>
 ### Pass : RefCounted
@@ -4772,9 +4954,11 @@ Methods:
 - float YawAngle() const
 - float PitchAngle() const
 - float RollAngle() const
+- Vector3 Axis() const
+- float Angle() const
 - Matrix3 RotationMatrix() const
-- Quaternion Slerp(Quaternion rhs, float t) const
-- Quaternion Nlerp(Quaternion rhs, float t, bool shortestPath) const
+- Quaternion Slerp(const Quaternion& rhs, float t) const
+- Quaternion Nlerp(const Quaternion& rhs, float t, bool shortestPath) const
 - String ToString() const
 
 Properties:
@@ -4834,6 +5018,66 @@ Properties:
 - Drawable* drawable
 - Node* node
 - unsigned subObject
+
+<a name="Class_RaycastVehicle"></a>
+### RaycastVehicle : LogicComponent
+
+Methods:
+
+- RaycastVehicle(Urho3D::Context* context) (GC)
+- RaycastVehicle* new(Urho3D::Context* context)
+- void delete()
+- void RegisterObject(Context* context)
+- void ApplyAttributes()
+- void AddWheel(Node* wheelNode, Vector3 wheelDirection, Vector3 wheelAxle, float restLength, float wheelRadius, bool frontWheel)
+- void ResetSuspension()
+- void UpdateWheelTransform(int wheel, bool interpolated)
+- void SetSteeringValue(int wheel, float steeringValue)
+- void SetWheelSuspensionStiffness(int wheel, float stiffness)
+- void SetWheelDampingRelaxation(int wheel, float damping)
+- void SetWheelDampingCompression(int wheel, float compression)
+- void SetWheelFrictionSlip(int wheel, float slip)
+- void SetWheelRollInfluence(int wheel, float rollInfluence)
+- void SetEngineForce(int wheel, float force)
+- void SetBrake(int wheel, float force)
+- void SetWheelRadius(int wheel, float wheelRadius)
+- void ResetWheels()
+- void SetWheelRestLength(int wheel, float length)
+- void SetWheelSkidInfo(int wheel, float factor)
+- bool WheelIsGrounded(int wheel) const
+- void SetMaxSuspensionTravel(int wheel, float maxSuspensionTravel)
+- void SetWheelDirection(int wheel, Vector3 direction)
+- void SetWheelAxle(int wheel, Vector3 axle)
+- void SetMaxSideSlipSpeed(float speed)
+- void SetWheelSkidInfoCumulative(int wheel, float skid)
+- void SetInAirRPM(float rpm)
+- void Init()
+- Vector3 GetWheelPosition(int wheel)
+- Quaternion GetWheelRotation(int wheel)
+- Vector3 GetWheelConnectionPoint(int wheel)
+- int GetNumWheels()
+- Node* GetWheelNode(int wheel)
+- float GetSteeringValue(int wheel) const
+- float GetWheelSuspensionStiffness(int wheel) const
+- float GetWheelDampingRelaxation(int wheel) const
+- float GetWheelDampingCompression(int wheel) const
+- float GetWheelFrictionSlip(int wheel) const
+- float GetWheelRollInfluence(int wheel) const
+- float GetEngineForce(int wheel) const
+- float GetBrake(int wheel) const
+- float GetWheelRadius(int wheel) const
+- float GetWheelRestLength(int wheel) const
+- float GetWheelSkidInfo(int wheel) const
+- float GetMaxSuspensionTravel(int wheel)
+- float GetWheelSideSlipSpeed(int wheel) const
+- float GetMaxSideSlipSpeed() const
+- float GetWheelSkidInfoCumulative(int wheel) const
+- Vector3 GetWheelDirection(int wheel) const
+- bool IsFrontWheel(int wheel) const
+- Vector3 GetWheelAxle(int wheel) const
+- Vector3 GetContactPosition(int wheel) const
+- Vector3 GetContactNormal(int wheel) const
+- float GetInAirRPM() const
 
 <a name="Class_Rect"></a>
 ### Rect
@@ -5069,6 +5313,7 @@ Methods:
 - void ReloadShaders()
 - unsigned GetNumViewports() const
 - Viewport* GetViewport(unsigned index) const
+- Viewport* GetViewportForScene(Scene* scene, unsigned index) const
 - RenderPath* GetDefaultRenderPath() const
 - Technique* GetDefaultTechnique() const
 - bool GetHDRRendering() const
@@ -5251,6 +5496,17 @@ Properties:
 
 - StringHash type
 
+<a name="Class_ResourceWithMetadata"></a>
+### ResourceWithMetadata : Resource
+
+Methods:
+
+- void AddMetadata(const String name, const Variant& value)
+- void RemoveMetadata(const String name)
+- void RemoveAllMetadata()
+- const Variant& GetMetadata(const String name) const
+- bool HasMetadata() const
+
 <a name="Class_RibbonTrail"></a>
 ### RibbonTrail : Drawable
 
@@ -5430,6 +5686,7 @@ Methods:
 - void ApplyForceToCenter(const Vector2& force, bool wake)
 - void ApplyTorque(float torque, bool wake)
 - void ApplyLinearImpulse(const Vector2& impulse, const Vector2& point, bool wake)
+- void ApplyLinearImpulseToCenter(const Vector2& impulse, bool wake)
 - void ApplyAngularImpulse(float impulse, bool wake)
 - BodyType2D GetBodyType() const
 - float GetMass() const
@@ -5487,6 +5744,7 @@ Methods:
 - Node* Instantiate(const String fileName, const Vector3& position, const Quaternion& rotation, CreateMode mode = REPLICATED)
 - Node* InstantiateXML(File* source, const Vector3& position, const Quaternion& rotation, CreateMode mode = REPLICATED)
 - Node* InstantiateXML(const String fileName, const Vector3& position, const Quaternion& rotation, CreateMode mode = REPLICATED)
+- Node* InstantiateJSON(const String fileName, const Vector3& position, const Quaternion& rotation, CreateMode mode = REPLICATED)
 - bool LoadAsync(File* file, LoadMode mode = LOAD_SCENE_AND_RESOURCES)
 - bool LoadAsyncXML(File* file, LoadMode mode = LOAD_SCENE_AND_RESOURCES)
 - bool LoadAsync(const String fileName, LoadMode mode = LOAD_SCENE_AND_RESOURCES)
@@ -5665,6 +5923,7 @@ Methods:
 - bool WriteDouble(double value)
 - bool WriteIntRect(const IntRect& value)
 - bool WriteIntVector2(const IntVector2& value)
+- bool WriteIntVector3(const IntVector3& value)
 - bool WriteRect(const Rect& value)
 - bool WriteVector2(const Vector2& value)
 - bool WriteVector3(const Vector3& value)
@@ -5738,7 +5997,7 @@ Properties:
 - float repeatRate
 
 <a name="Class_Sound"></a>
-### Sound : Resource
+### Sound : ResourceWithMetadata
 
 Methods:
 
@@ -5787,6 +6046,7 @@ Properties:
 
 Methods:
 
+- void Seek(float seekTime)
 - void Play(Sound* sound)
 - void Play(Sound* sound, float frequency)
 - void Play(Sound* sound, float frequency, float gain)
@@ -5885,6 +6145,8 @@ Methods:
 - Intersection IsInside(const BoundingBox& box) const
 - Intersection IsInsideFast(const BoundingBox& box) const
 - float Distance(const Vector3& point) const
+- Vector3 GetLocalPoint(float theta, float phi) const
+- Vector3 GetPoint(float theta, float phi) const
 
 Properties:
 
@@ -6083,6 +6345,10 @@ Methods:
 - void SetAlpha(float alpha)
 - void SetUseHotSpot(bool useHotSpot)
 - void SetHotSpot(const Vector2& hotspot)
+- void SetUseDrawRect(bool useDrawRect)
+- void SetDrawRect(const Rect& rect)
+- void SetUseTextureRect(bool useTextureRect)
+- void SetTextureRect(const Rect& rect)
 - void SetCustomMaterial(Material* customMaterial)
 - Sprite2D* GetSprite() const
 - BlendMode GetBlendMode() const
@@ -6092,6 +6358,10 @@ Methods:
 - float GetAlpha() const
 - bool GetUseHotSpot() const
 - const Vector2& GetHotSpot() const
+- bool GetUseDrawRect() const
+- const Rect& GetDrawRect() const
+- bool GetUseTextureRect() const
+- const Rect& GetTextureRect() const
 - Material* GetCustomMaterial() const
 
 Properties:
@@ -6105,6 +6375,10 @@ Properties:
 - bool useHotSpot
 - Vector2 hotSpot
 - Material* customMaterial
+- Rect drawRect
+- bool useDrawRect
+- Rect textureRect
+- bool useTextureRect
 
 <a name="Class_StringHash"></a>
 ### StringHash
@@ -6208,6 +6482,7 @@ Methods:
 - float GetHeight(const Vector3& worldPosition) const
 - Vector3 GetNormal(const Vector3& worldPosition) const
 - IntVector2 WorldToHeightMap(const Vector3& worldPosition) const
+- Vector3 HeightMapToWorld(const IntVector2& pixelPosition) const
 - SharedArrayPtr<float> GetHeightData() const
 - float GetDrawDistance() const
 - float GetShadowDistance() const
@@ -6296,9 +6571,9 @@ Methods:
 - Text() (GC)
 - Text* new()
 - void delete()
-- bool SetFont(const String fontName, int size = DEFAULT_FONT_SIZE)
-- bool SetFont(Font* font, int size = DEFAULT_FONT_SIZE)
-- bool SetFontSize(int size)
+- bool SetFont(const String fontName, float size = DEFAULT_FONT_SIZE)
+- bool SetFont(Font* font, float size = DEFAULT_FONT_SIZE)
+- bool SetFontSize(float size)
 - void SetText(const String text)
 - void SetTextAlignment(HorizontalAlignment align)
 - void SetRowSpacing(float spacing)
@@ -6315,7 +6590,7 @@ Methods:
 - bool GetAutoLocalizable() const
 - void SetAutoLocalizable(bool enable)
 - Font* GetFont() const
-- int GetFontSize() const
+- float GetFontSize() const
 - const String GetText() const
 - HorizontalAlignment GetTextAlignment() const
 - float GetRowSpacing() const
@@ -6329,19 +6604,19 @@ Methods:
 - int GetEffectStrokeThickness() const
 - bool GetEffectRoundStroke() const
 - const Color& GetEffectColor() const
-- int GetRowHeight() const
+- float GetRowHeight() const
 - unsigned GetNumRows() const
 - unsigned GetNumChars() const
-- int GetRowWidth(unsigned index) const
-- IntVector2 GetCharPosition(unsigned index)
-- IntVector2 GetCharSize(unsigned index)
+- float GetRowWidth(unsigned index) const
+- Vector2 GetCharPosition(unsigned index)
+- Vector2 GetCharSize(unsigned index)
 - void SetEffectDepthBias(float bias)
 - float GetEffectDepthBias() const
 
 Properties:
 
 - Font* font
-- int fontSize
+- float fontSize
 - String text
 - HorizontalAlignment textAlignment
 - float rowSpacing
@@ -6356,7 +6631,7 @@ Properties:
 - int effectStrokeThickness
 - bool effectRoundStroke
 - Color& effectColor
-- int rowHeight (readonly)
+- float rowHeight (readonly)
 - unsigned numRows (readonly)
 - unsigned numChars (readonly)
 
@@ -6368,9 +6643,9 @@ Methods:
 - Text3D() (GC)
 - Text3D* new()
 - void delete()
-- bool SetFont(const String fontName, int size = DEFAULT_FONT_SIZE)
-- bool SetFont(Font* font, int size = DEFAULT_FONT_SIZE)
-- bool SetFontSize(int size)
+- bool SetFont(const String fontName, float size = DEFAULT_FONT_SIZE)
+- bool SetFont(Font* font, float size = DEFAULT_FONT_SIZE)
+- bool SetFontSize(float size)
 - void SetMaterial(Material* material)
 - void SetText(const String text)
 - void SetAlignment(HorizontalAlignment hAlign, VerticalAlignment vAlign)
@@ -6393,7 +6668,7 @@ Methods:
 - void SetFaceCameraMode(FaceCameraMode mode)
 - Font* GetFont() const
 - Material* GetMaterial() const
-- int GetFontSize() const
+- float GetFontSize() const
 - const String GetText() const
 - HorizontalAlignment GetTextAlignment() const
 - HorizontalAlignment GetHorizontalAlignment() const
@@ -6407,12 +6682,13 @@ Methods:
 - const Color& GetEffectColor() const
 - float GetEffectDepthBias() const
 - int GetWidth() const
-- int GetRowHeight() const
+- int GetHeight() const
+- float GetRowHeight() const
 - unsigned GetNumRows() const
 - unsigned GetNumChars() const
-- int GetRowWidth(unsigned index) const
-- IntVector2 GetCharPosition(unsigned index)
-- IntVector2 GetCharSize(unsigned index)
+- float GetRowWidth(unsigned index) const
+- Vector2 GetCharPosition(unsigned index)
+- Vector2 GetCharSize(unsigned index)
 - const Color& GetColor(Corner corner) const
 - float GetOpacity() const
 - bool IsFixedScreenSize() const
@@ -6422,7 +6698,7 @@ Properties:
 
 - Font* font
 - Material* material
-- int fontSize
+- float fontSize
 - String text
 - HorizontalAlignment textAlignment
 - HorizontalAlignment horizontalAlignment
@@ -6437,7 +6713,8 @@ Properties:
 - float effectDepthBias
 - int width
 - Color& color
-- int rowHeight (readonly)
+- int height (readonly)
+- float rowHeight (readonly)
 - unsigned numRows (readonly)
 - unsigned numChars (readonly)
 - float opacity
@@ -6445,7 +6722,7 @@ Properties:
 - FaceCameraMode faceCameraMode
 
 <a name="Class_Texture"></a>
-### Texture : Resource
+### Texture : ResourceWithMetadata
 
 Methods:
 
@@ -6470,6 +6747,7 @@ Methods:
 - int GetMultiSample() const
 - bool GetAutoResolve() const
 - bool IsResolveDirty() const
+- bool GetLevelsDirty() const
 - Texture* GetBackupTexture() const
 - int GetMipsToSkip(int quality) const
 - int GetLevelWidth(unsigned level) const
@@ -6494,6 +6772,7 @@ Properties:
 - int multiSample (readonly)
 - bool autoResolve (readonly)
 - bool resolveDirty (readonly)
+- bool levelsDirty (readonly)
 - Texture* backupTexture
 - TextureUsage usage (readonly)
 
@@ -6767,6 +7046,9 @@ Methods:
 - void SetUseScreenKeyboard(bool enable)
 - void SetUseMutableGlyphs(bool enable)
 - void SetForceAutoHint(bool enable)
+- void SetFontHintLevel(FontHintLevel level)
+- void SetFontSubpixelThreshold(float threshold)
+- void SetFontOversampling(int limit)
 - void SetScale(float scale)
 - void SetWidth(float width)
 - void SetHeight(float height)
@@ -6792,6 +7074,9 @@ Methods:
 - bool GetUseScreenKeyboard() const
 - bool GetUseMutableGlyphs() const
 - bool GetForceAutoHint() const
+- FontHintLevel GetFontHintLevel() const
+- float GetFontSubpixelThreshold() const
+- int GetFontOversampling() const
 - bool HasModalElement() const
 - bool IsDragging() const
 - float GetScale() const
@@ -6816,9 +7101,29 @@ Properties:
 - bool useScreenKeyboard
 - bool useMutableGlyphs
 - bool forceAutoHint
+- FontHintLevel fontHintLevel
+- float fontSubpixelThreshold
+- int fontOversampling
 - bool modalElement (readonly)
 - float scale
 - IntVector2& customSize
+
+<a name="Class_UIComponent"></a>
+### UIComponent : Component
+
+Methods:
+
+- UIComponent() (GC)
+- UIComponent* new()
+- UIElement* GetRoot() const
+- Material* GetMaterial() const
+- Texture2D* GetTexture() const
+
+Properties:
+
+- UIElement* root (readonly)
+- Material* material (readonly)
+- Texture2D* texture (readonly)
 
 <a name="Class_UIElement"></a>
 ### UIElement : Animatable
@@ -7108,6 +7413,8 @@ Methods:
 - void* Get(const char* type = 0) const
 - int GetInt() const
 - unsigned GetUInt() const
+- int GetInt64() const
+- int GetUInt64() const
 - StringHash GetStringHash() const
 - bool GetBool() const
 - float GetFloat() const
@@ -7126,8 +7433,10 @@ Methods:
 - const Vector<Variant>& GetVariantVector() const
 - const VariantMap& GetVariantMap() const
 - const Vector<String>& GetStringVector() const
+- const Rect& GetRect() const
 - const IntRect& GetIntRect() const
 - const IntVector2& GetIntVector2() const
+- const IntVector3& GetIntVector3() const
 - RefCounted* GetPtr(const char* type) const
 - const Matrix3& GetMatrix3() const
 - const Matrix3x4& GetMatrix3x4() const
@@ -7165,6 +7474,8 @@ Methods:
 - Vector2* new()
 - Vector2(const Vector2& vector) (GC)
 - Vector2* new(const Vector2& vector)
+- Vector2(const IntVector2& vector) (GC)
+- Vector2* new(const IntVector2& vector)
 - Vector2(float x, float y) (GC)
 - Vector2* new(float x, float y)
 - void delete()
@@ -7216,6 +7527,8 @@ Methods:
 - Vector3* new(const Vector2& vector, float z)
 - Vector3(const Vector2& vector) (GC)
 - Vector3* new(const Vector2& vector)
+- Vector3(const IntVector3& vector) (GC)
+- Vector3* new(const IntVector3& vector)
 - Vector3(float x, float y, float z) (GC)
 - Vector3* new(float x, float y, float z)
 - Vector3(float x, float y) (GC)
@@ -7235,6 +7548,7 @@ Methods:
 - float DotProduct(const Vector3& rhs) const
 - float AbsDotProduct(const Vector3& rhs) const
 - float ProjectOntoAxis(const Vector3& axis) const
+- Vector3 Orthogonalize(const Vector3& axis) const
 - Vector3 CrossProduct(const Vector3& rhs) const
 - Vector3 Abs() const
 - Vector3 Lerp(const Vector3& rhs, float t) const
@@ -7318,9 +7632,11 @@ Methods:
 - void* GetModifiableData()
 - VectorBuffer Read(unsigned size)
 - unsigned Seek(unsigned position)
+- unsigned SeekRelative(int delta)
 - const String GetName() const
 - unsigned GetChecksum()
 - unsigned GetPosition() const
+- unsigned Tell() const
 - unsigned GetSize() const
 - bool IsEof() const
 - int ReadInt()
@@ -7336,6 +7652,7 @@ Methods:
 - double ReadDouble()
 - IntRect ReadIntRect()
 - IntVector2 ReadIntVector2()
+- IntVector3 ReadIntVector3()
 - Rect ReadRect()
 - Vector2 ReadVector2()
 - Vector3 ReadVector3()
@@ -7375,6 +7692,7 @@ Methods:
 - bool WriteDouble(double value)
 - bool WriteIntRect(const IntRect& value)
 - bool WriteIntVector2(const IntVector2& value)
+- bool WriteIntVector3(const IntVector3& value)
 - bool WriteRect(const Rect& value)
 - bool WriteVector2(const Vector2& value)
 - bool WriteVector3(const Vector3& value)
@@ -7574,6 +7892,7 @@ Properties:
 Methods:
 
 - XMLElement CreateChild(const String name)
+- XMLElement GetOrCreateChild(const String name)
 - bool RemoveChild(const XMLElement& element)
 - bool RemoveChild(const String name)
 - bool RemoveChildren(const String name = String::EMPTY)
@@ -7588,8 +7907,11 @@ Methods:
 - bool SetDouble(const String name, double value)
 - bool SetUInt(const String name, unsigned value)
 - bool SetInt(const String name, int value)
+- bool SetUInt64(const String name, long value)
+- bool SetInt64(const String name, long value)
 - bool SetIntRect(const String name, const IntRect& value)
 - bool SetIntVector2(const String name, const IntVector2& value)
+- bool SetIntVector3(const String name, const IntVector3& value)
 - bool SetRect(const String name, const Rect& value)
 - bool SetQuaternion(const String name, const Quaternion& value)
 - bool SetString(const String name, const String value)
@@ -7626,8 +7948,11 @@ Methods:
 - double GetDouble(const String name) const
 - unsigned GetUInt(const String name) const
 - int GetInt(const String name) const
+- long GetUInt64(const String name) const
+- long GetInt64(const String name) const
 - IntRect GetIntRect(const String name) const
 - IntVector2 GetIntVector2(const String name) const
+- IntVector3 GetIntVector3(const String name) const
 - Rect GetRect(const String name) const
 - Quaternion GetQuaternion(const String name) const
 - Variant GetVariant() const
@@ -7664,6 +7989,7 @@ Methods:
 - void delete()
 - bool FromString(const String source)
 - XMLElement CreateRoot(const String name = String::EMPTY)
+- XMLElement GetOrCreateRoot(const String name = String::EMPTY)
 - XMLElement GetRoot(const String name = String::EMPTY)
 - String ToString(const String indentation = "\t") const
 - void Patch(XMLFile* patchFile)
@@ -7722,6 +8048,12 @@ Properties:
 - Texture* zoneTexture
 
 \section LuaScriptAPI_Enums Enumerations
+
+### Algorithm
+
+- int ONE_BONE
+- int TWO_BONE
+- int FABRIK
 
 ### AnimationBlendMode
 
@@ -7893,6 +8225,21 @@ Properties:
 - int FC_LOOKAT_MIXED
 - int FC_DIRECTION
 
+### Feature
+
+- int WEIGHT_NLERP
+- int INHERIT_PARENT_ROTATION
+
+### Feature
+
+- int JOINT_ROTATIONS
+- int TARGET_ROTATIONS
+- int UPDATE_ORIGINAL_POSE
+- int UPDATE_ACTIVE_POSE
+- int USE_ORIGINAL_POSE
+- int CONSTRAINTS
+- int AUTO_SOLVE
+
 ### FileMode
 
 - int FILE_READ
@@ -7911,6 +8258,19 @@ Properties:
 - int FM_RESETFOCUS
 - int FM_FOCUSABLE
 - int FM_FOCUSABLE_DEFOCUSABLE
+
+### FontHintLevel
+
+- int FONT_HINT_LEVEL_NONE
+- int FONT_HINT_LEVEL_LIGHT
+- int FONT_HINT_LEVEL_NORMAL
+
+### FontType
+
+- int FONT_NONE
+- int FONT_FREETYPE
+- int FONT_BITMAP
+- int MAX_FONT_TYPES
 
 ### FrustumPlane
 
@@ -8182,6 +8542,7 @@ Properties:
 - int FILTER_BILINEAR
 - int FILTER_TRILINEAR
 - int FILTER_ANISOTROPIC
+- int FILTER_NEAREST_ANISOTROPIC
 - int FILTER_DEFAULT
 - int MAX_FILTERMODES
 
@@ -8260,6 +8621,9 @@ Properties:
 - int VAR_MATRIX4
 - int VAR_DOUBLE
 - int VAR_STRINGVECTOR
+- int VAR_RECT
+- int VAR_INTVECTOR3
+- int VAR_INT64
 - int MAX_VAR_TYPES
 
 ### VertexElementSemantic
@@ -8366,24 +8730,28 @@ Properties:
 - Variant GetGlobalVar(const String key)
 - VariantMap& GetGlobalVars()
 - Graphics* GetGraphics()
+- String GetHostName()
 - Input* GetInput()
 - String GetInternalPath(const String pathName)
 - Localization* GetLocalization()
 - Log* GetLog()
+- String GetLoginName()
 - String GetMiniDumpDir()
 - String GetNativePath(const String pathName)
 - Network* GetNetwork()
 - unsigned GetNumLogicalCPUs()
 - unsigned GetNumPhysicalCPUs()
+- String GetOSVersion()
 - String GetParentPath(const String pathName)
 - String GetPath(const String fullPath)
 - String GetPlatform()
 - unsigned GetRandomSeed()
 - Renderer* GetRenderer()
 - Time* GetTime()
+- long GetTotalMemory()
 - UI* GetUI()
-- bool HasSubscribedToEvent(Object* sender, const String eventName)
 - bool HasSubscribedToEvent(const String eventName)
+- bool HasSubscribedToEvent(Object* sender, const String eventName)
 - float InverseLerp(float lhs, float rhs, float x)
 - bool IsAbsolutePath(const String pathName)
 - bool IsAlpha(unsigned ch)
@@ -8391,6 +8759,8 @@ Properties:
 - bool IsNaN(float value)
 - bool IsPowerOfTwo(unsigned value)
 - float Lerp(float lhs, float rhs, float t)
+- float Ln(float x)
+- unsigned LogBaseTwo(unsigned value)
 - float Max(float lhs, float rhs)
 - int MaxInt(int lhs, int rhs)
 - float Min(float lhs, float rhs)
@@ -8402,8 +8772,8 @@ Properties:
 - void PrintLine(const String str, bool error = false)
 - int Rand()
 - float RandStandardNormal()
-- float Random()
 - float Random(float min, float max)
+- float Random()
 - float Random(float range)
 - int RandomInt(int range)
 - int RandomInt(int min, int max)
@@ -8423,18 +8793,20 @@ Properties:
 - float Sin(float angle)
 - float SmoothStep(float lhs, float rhs, float t)
 - float Sqrt(float x)
-- float StableRandom(const Vector2& seed)
 - float StableRandom(const Vector3& seed)
+- float StableRandom(const Vector2& seed)
 - float StableRandom(float seed)
-- void SubscribeToEvent(const String eventName, void* functionOrFunctionName)
 - void SubscribeToEvent(void* sender, const String eventName, void* functionOrFunctionName)
+- void SubscribeToEvent(const String eventName, void* functionOrFunctionName)
 - float Tan(float angle)
 - bool ToBool(const String source)
 - Color ToColor(const String source)
 - float ToFloat(const String source)
 - int ToInt(const String source, int base = 10)
+- int ToInt64(const String source, int base = 10)
 - IntRect ToIntRect(const String source)
 - IntVector2 ToIntVector2(const String source)
+- IntVector3 ToIntVector3(const String source)
 - unsigned ToLower(unsigned ch)
 - Matrix3 ToMatrix3(const String source)
 - Matrix3x4 ToMatrix3x4(const String source)
@@ -8444,6 +8816,7 @@ Properties:
 - String ToString(void* value)
 - String ToStringHex(unsigned value)
 - unsigned ToUInt(const String source, int base = 10)
+- int ToUInt64(const String source, int base = 10)
 - unsigned ToUpper(unsigned ch)
 - Vector2 ToVector2(const String source)
 - Vector3 ToVector3(const String source)
@@ -8453,28 +8826,33 @@ Properties:
 - void UnsubscribeFromEvent(Object* sender, const String eventName)
 - void UnsubscribeFromEvent(const String eventName)
 - void UnsubscribeFromEvents(Object* sender)
-- Vector3 VectorCeil(const Vector3& vec)
-- Vector4 VectorCeil(const Vector4& vec)
 - Vector2 VectorCeil(const Vector2& vec)
+- Vector4 VectorCeil(const Vector4& vec)
+- Vector3 VectorCeil(const Vector3& vec)
 - IntVector2 VectorCeilToInt(const Vector2& vec)
-- Vector4 VectorFloor(const Vector4& vec)
-- Vector2 VectorFloor(const Vector2& vec)
+- IntVector3 VectorCeilToInt(const Vector3& vec)
 - Vector3 VectorFloor(const Vector3& vec)
+- Vector2 VectorFloor(const Vector2& vec)
+- Vector4 VectorFloor(const Vector4& vec)
 - IntVector2 VectorFloorToInt(const Vector2& vec)
-- Vector4 VectorLerp(const Vector4& lhs, const Vector4& rhs, const Vector4& t)
+- IntVector3 VectorFloorToInt(const Vector3& vec)
 - Vector2 VectorLerp(const Vector2& lhs, const Vector2& rhs, const Vector2& t)
+- Vector4 VectorLerp(const Vector4& lhs, const Vector4& rhs, const Vector4& t)
 - Vector3 VectorLerp(const Vector3& lhs, const Vector3& rhs, const Vector3& t)
-- Vector4 VectorMax(const Vector4& lhs, const Vector4& rhs)
-- Vector2 VectorMax(const Vector2& lhs, const Vector2& rhs)
 - Vector3 VectorMax(const Vector3& lhs, const Vector3& rhs)
+- Vector4 VectorMax(const Vector4& lhs, const Vector4& rhs)
 - IntVector2 VectorMax(const IntVector2& lhs, const IntVector2& rhs)
+- IntVector3 VectorMax(const IntVector3& lhs, const IntVector3& rhs)
+- Vector2 VectorMax(const Vector2& lhs, const Vector2& rhs)
 - Vector3 VectorMin(const Vector3& lhs, const Vector3& rhs)
+- IntVector3 VectorMin(const IntVector3& lhs, const IntVector3& rhs)
+- Vector2 VectorMin(const Vector2& lhs, const Vector2& rhs)
 - Vector4 VectorMin(const Vector4& lhs, const Vector4& rhs)
 - IntVector2 VectorMin(const IntVector2& lhs, const IntVector2& rhs)
-- Vector2 VectorMin(const Vector2& lhs, const Vector2& rhs)
 - Vector2 VectorRound(const Vector2& vec)
 - Vector4 VectorRound(const Vector4& vec)
 - Vector3 VectorRound(const Vector3& vec)
+- IntVector3 VectorRoundToInt(const Vector3& vec)
 - IntVector2 VectorRoundToInt(const Vector2& vec)
 
 
@@ -8659,6 +9037,7 @@ Properties:
 - int KEY_T
 - int KEY_TAB
 - int KEY_U
+- int KEY_UNKNOWN
 - int KEY_UP
 - int KEY_V
 - int KEY_W

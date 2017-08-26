@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "../Container/ArrayPtr.h"
 #include "../Scene/Component.h"
 
 namespace Urho3D
@@ -46,8 +47,6 @@ public:
     /// Register object factory.
     static void RegisterObject(Context* context);
 
-    /// Handle attribute write access.
-    virtual void OnSetAttribute(const AttributeInfo& attr, const Variant& src);
     /// Apply attribute changes that can not be applied immediately. Called after scene load or a network update.
     virtual void ApplyAttributes();
     /// Handle enabled/disabled state change.
@@ -104,22 +103,16 @@ public:
 
     /// Return patch quads per side.
     int GetPatchSize() const { return patchSize_; }
-
     /// Return vertex and height spacing.
     const Vector3& GetSpacing() const { return spacing_; }
-
     /// Return heightmap size in vertices.
     const IntVector2& GetNumVertices() const { return numVertices_; }
-
     /// Return heightmap size in patches.
     const IntVector2& GetNumPatches() const { return numPatches_; }
-
     /// Return maximum number of LOD levels for terrain patches. This can be between 1-4.
     unsigned GetMaxLodLevels() const { return maxLodLevels_; }
-    
     /// Return LOD level used for occlusion.
     unsigned GetOcclusionLodLevel() const { return occlusionLodLevel_; }
-    
     /// Return whether smoothing is in use.
     bool GetSmoothing() const { return smoothing_; }
 
@@ -139,55 +132,49 @@ public:
     Vector3 GetNormal(const Vector3& worldPosition) const;
     /// Convert world position to heightmap pixel position. Note that the internal height data representation is reversed vertically, but in the heightmap image north is at the top.
     IntVector2 WorldToHeightMap(const Vector3& worldPosition) const;
+    /// Convert heightmap pixel position to world position.
+    Vector3 HeightMapToWorld(const IntVector2& pixelPosition) const;
 
     /// Return north neighbor terrain.
     Terrain* GetNorthNeighbor() const { return north_; }
-    
     /// Return south neighbor terrain.
     Terrain* GetSouthNeighbor() const { return south_; }
-    
     /// Return west neighbor terrain.
     Terrain* GetWestNeighbor() const { return west_; }
-    
     /// Return east neighbor terrain.
     Terrain* GetEastNeighbor() const { return east_; }
-
+    /// Return north neighbor terrain.
+    unsigned GetNorthNeighborNodeID() const { return northID_; }
+    /// Return south neighbor terrain.
+    unsigned GetSouthNeighborNodeID() const { return southID_; }
+    /// Return west neighbor terrain.
+    unsigned GetWestNeighborNodeID() const { return westID_; }
+    /// Return east neighbor terrain.
+    unsigned GetEastNeighborNodeID() const { return eastID_; }
     /// Return raw height data.
     SharedArrayPtr<float> GetHeightData() const { return heightData_; }
-
     /// Return draw distance.
     float GetDrawDistance() const { return drawDistance_; }
-
     /// Return shadow draw distance.
     float GetShadowDistance() const { return shadowDistance_; }
-
     /// Return LOD bias.
     float GetLodBias() const { return lodBias_; }
-
     /// Return view mask.
     unsigned GetViewMask() const { return viewMask_; }
-
     /// Return light mask.
     unsigned GetLightMask() const { return lightMask_; }
-
     /// Return shadow mask.
     unsigned GetShadowMask() const { return shadowMask_; }
-
     /// Return zone mask.
     unsigned GetZoneMask() const { return zoneMask_; }
-
     /// Return maximum number of per-pixel lights.
     unsigned GetMaxLights() const { return maxLights_; }
-
     /// Return visible flag.
     bool IsVisible() const { return visible_; }
-
     /// Return shadowcaster flag.
     bool GetCastShadows() const { return castShadows_; }
-
     /// Return occluder flag.
     bool IsOccluder() const { return occluder_; }
-
     /// Return occludee flag.
     bool IsOccludee() const { return occludee_; }
 
@@ -199,10 +186,22 @@ public:
     void SetHeightMapAttr(const ResourceRef& value);
     /// Set material attribute.
     void SetMaterialAttr(const ResourceRef& value);
+    /// Set north neighbor node ID attribute.
+    void SetNorthNeighborNodeIDAttr(unsigned nodeID);
+    /// Set south neighbor node ID attribute.
+    void SetSouthNeighborNodeIDAttr(unsigned nodeID);
+    /// Set west neighbor node ID attribute.
+    void SetWestNeighborNodeIDAttr(unsigned nodeID);
+    /// Set east neighbor node ID attribute.
+    void SetEastNeighborNodeIDAttr(unsigned nodeID);
+    /// Set vertex spacing attribute.
+    void SetSpacingAttr(const Vector3& value);
     /// Set patch size attribute.
     void SetPatchSizeAttr(int value);
     /// Set max LOD levels attribute.
     void SetMaxLodLevelsAttr(unsigned value);
+    /// Set smoothing attribute.
+    void SetSmoothingAttr(bool enable);
     /// Set occlusion LOD level attribute.
     void SetOcclusionLodLevelAttr(unsigned value);
     /// Return heightmap attribute.

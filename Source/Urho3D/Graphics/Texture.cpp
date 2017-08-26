@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -50,12 +50,13 @@ static const char* filterModeNames[] =
     "bilinear",
     "trilinear",
     "anisotropic",
+    "nearestanisotropic",
     "default",
     0
 };
 
 Texture::Texture(Context* context) :
-    Resource(context),
+    ResourceWithMetadata(context),
     GPUObject(GetSubsystem<Graphics>()),
     shaderResourceView_(0),
     sampler_(0),
@@ -74,7 +75,8 @@ Texture::Texture(Context* context) :
     sRGB_(false),
     parametersDirty_(true),
     autoResolve_(false),
-    resolveDirty_(false)
+    resolveDirty_(false),
+    levelsDirty_(false)
 {
     for (int i = 0; i < MAX_COORDS; ++i)
         addressMode_[i] = ADDRESS_WRAP;
@@ -202,8 +204,8 @@ void Texture::SetParameters(XMLFile* file)
 
 void Texture::SetParameters(const XMLElement& element)
 {
-    XMLElement paramElem = element.GetChild();
-    while (paramElem)
+    LoadMetadataFromXML(element);
+    for (XMLElement paramElem = element.GetChild(); paramElem; paramElem = paramElem.GetNext())
     {
         String name = paramElem.GetName();
 
@@ -246,14 +248,18 @@ void Texture::SetParameters(const XMLElement& element)
 
         if (name == "srgb")
             SetSRGB(paramElem.GetBool("enable"));
-
-        paramElem = paramElem.GetNext();
     }
 }
 
 void Texture::SetParametersDirty()
 {
     parametersDirty_ = true;
+}
+
+void Texture::SetLevelsDirty()
+{
+    if (usage_ == TEXTURE_RENDERTARGET && levels_ > 1)
+        levelsDirty_ = true;
 }
 
 unsigned Texture::CheckMaxLevels(int width, int height, unsigned requestedLevels)

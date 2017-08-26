@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -98,7 +98,7 @@ void RigidBody::RegisterObject(Context* context)
     URHO3D_ACCESSOR_ATTRIBUTE("Is Enabled", IsEnabled, SetEnabled, bool, true, AM_DEFAULT);
     URHO3D_MIXED_ACCESSOR_ATTRIBUTE("Physics Rotation", GetRotation, SetRotation, Quaternion, Quaternion::IDENTITY, AM_FILE | AM_NOEDIT);
     URHO3D_MIXED_ACCESSOR_ATTRIBUTE("Physics Position", GetPosition, SetPosition, Vector3, Vector3::ZERO, AM_FILE | AM_NOEDIT);
-    URHO3D_ATTRIBUTE("Mass", float, mass_, DEFAULT_MASS, AM_DEFAULT);
+    URHO3D_ACCESSOR_ATTRIBUTE("Mass", GetMass, SetMassAttr, float, DEFAULT_MASS, AM_DEFAULT);
     URHO3D_ACCESSOR_ATTRIBUTE("Friction", GetFriction, SetFriction, float, DEFAULT_FRICTION, AM_DEFAULT);
     URHO3D_MIXED_ACCESSOR_ATTRIBUTE("Anisotropic Friction", GetAnisotropicFriction, SetAnisotropicFriction, Vector3, Vector3::ONE,
         AM_DEFAULT);
@@ -113,28 +113,19 @@ void RigidBody::RegisterObject(Context* context)
     URHO3D_ACCESSOR_ATTRIBUTE("Angular Damping", GetAngularDamping, SetAngularDamping, float, 0.0f, AM_DEFAULT);
     URHO3D_ACCESSOR_ATTRIBUTE("Linear Rest Threshold", GetLinearRestThreshold, SetLinearRestThreshold, float, 0.8f, AM_DEFAULT);
     URHO3D_ACCESSOR_ATTRIBUTE("Angular Rest Threshold", GetAngularRestThreshold, SetAngularRestThreshold, float, 1.0f, AM_DEFAULT);
-    URHO3D_ATTRIBUTE("Collision Layer", int, collisionLayer_, DEFAULT_COLLISION_LAYER, AM_DEFAULT);
-    URHO3D_ATTRIBUTE("Collision Mask", int, collisionMask_, DEFAULT_COLLISION_MASK, AM_DEFAULT);
+    URHO3D_ACCESSOR_ATTRIBUTE("Collision Layer", GetCollisionLayer, SetCollisionLayerAttr, unsigned, DEFAULT_COLLISION_LAYER, AM_DEFAULT);
+    URHO3D_ACCESSOR_ATTRIBUTE("Collision Mask", GetCollisionMask, SetCollisionMaskAttr, unsigned, DEFAULT_COLLISION_MASK, AM_DEFAULT);
     URHO3D_ACCESSOR_ATTRIBUTE("Contact Threshold", GetContactProcessingThreshold, SetContactProcessingThreshold, float, BT_LARGE_FLOAT,
         AM_DEFAULT);
     URHO3D_ACCESSOR_ATTRIBUTE("CCD Radius", GetCcdRadius, SetCcdRadius, float, 0.0f, AM_DEFAULT);
     URHO3D_ACCESSOR_ATTRIBUTE("CCD Motion Threshold", GetCcdMotionThreshold, SetCcdMotionThreshold, float, 0.0f, AM_DEFAULT);
     URHO3D_ACCESSOR_ATTRIBUTE("Network Angular Velocity", GetNetAngularVelocityAttr, SetNetAngularVelocityAttr, PODVector<unsigned char>,
         Variant::emptyBuffer, AM_NET | AM_LATESTDATA | AM_NOEDIT);
-    URHO3D_ENUM_ATTRIBUTE("Collision Event Mode", collisionEventMode_, collisionEventModeNames, COLLISION_ACTIVE, AM_DEFAULT);
+    URHO3D_ENUM_ACCESSOR_ATTRIBUTE("Collision Event Mode", GetCollisionEventMode, SetCollisionEventModeAttr, CollisionEventMode, collisionEventModeNames, COLLISION_ACTIVE, AM_DEFAULT);
     URHO3D_ACCESSOR_ATTRIBUTE("Use Gravity", GetUseGravity, SetUseGravity, bool, true, AM_DEFAULT);
-    URHO3D_ATTRIBUTE("Is Kinematic", bool, kinematic_, false, AM_DEFAULT);
-    URHO3D_ATTRIBUTE("Is Trigger", bool, trigger_, false, AM_DEFAULT);
+    URHO3D_ACCESSOR_ATTRIBUTE("Is Kinematic", IsKinematic, SetKinematicAttr, bool, false, AM_DEFAULT);
+    URHO3D_ACCESSOR_ATTRIBUTE("Is Trigger", IsTrigger, SetTriggerAttr, bool, false, AM_DEFAULT);
     URHO3D_ACCESSOR_ATTRIBUTE("Gravity Override", GetGravityOverride, SetGravityOverride, Vector3, Vector3::ZERO, AM_DEFAULT);
-}
-
-void RigidBody::OnSetAttribute(const AttributeInfo& attr, const Variant& src)
-{
-    Serializable::OnSetAttribute(attr, src);
-
-    // Change of any non-accessor attribute requires the rigid body to be re-added to the physics world
-    if (!attr.accessor_)
-        readdBody_ = true;
 }
 
 void RigidBody::ApplyAttributes()
@@ -270,7 +261,7 @@ void RigidBody::SetRotation(const Quaternion& rotation)
                 interpTrans.setOrigin(worldTrans.getOrigin());
             body_->setInterpolationWorldTransform(interpTrans);
         }
-        
+
         body_->updateInertiaTensor();
 
         Activate();
@@ -786,6 +777,8 @@ void RigidBody::UpdateMass()
             !ToQuaternion(childTransform.getRotation()).Equals(Quaternion::IDENTITY))
             useCompound = true;
     }
+
+    btCollisionShape* oldCollisionShape = body_->getCollisionShape();
     body_->setCollisionShape(useCompound ? shiftedCompoundShape_.Get() : shiftedCompoundShape_->getChildShape(0));
 
     // If we have one shape and this is a triangle mesh, we use a custom material callback in order to adjust internal edges
@@ -812,6 +805,14 @@ void RigidBody::UpdateMass()
     {
         for (PODVector<Constraint*>::Iterator i = constraints_.Begin(); i != constraints_.End(); ++i)
             (*i)->ApplyFrames();
+    }
+
+    // Readd body to world to reset Bullet collision cache if collision shape was changed (issue #2064)
+    if (inWorld_ && body_->getCollisionShape() != oldCollisionShape && physicsWorld_)
+    {
+        btDiscreteDynamicsWorld* world = physicsWorld_->GetWorld();
+        world->removeRigidBody(body_.Get());
+        world->addRigidBody(body_.Get(), (short)collisionLayer_, (short)collisionMask_);
     }
 }
 
@@ -841,11 +842,47 @@ void RigidBody::UpdateGravity()
     }
 }
 
+void RigidBody::SetMassAttr(float mass)
+{
+    mass_ = mass;
+    readdBody_ = true;
+}
+
+void RigidBody::SetCollisionLayerAttr(unsigned layer)
+{
+    collisionLayer_ = layer;
+    readdBody_ = true;
+}
+
+void RigidBody::SetCollisionMaskAttr(unsigned mask)
+{
+    collisionMask_ = mask;
+    readdBody_ = true;
+}
+
 void RigidBody::SetNetAngularVelocityAttr(const PODVector<unsigned char>& value)
 {
     float maxVelocity = physicsWorld_ ? physicsWorld_->GetMaxNetworkAngularVelocity() : DEFAULT_MAX_NETWORK_ANGULAR_VELOCITY;
     MemoryBuffer buf(value);
     SetAngularVelocity(buf.ReadPackedVector3(maxVelocity));
+}
+
+void RigidBody::SetCollisionEventModeAttr(CollisionEventMode mode)
+{
+    collisionEventMode_ = mode;
+    readdBody_ = true;
+}
+
+void RigidBody::SetKinematicAttr(bool value)
+{
+    kinematic_ = value;
+    readdBody_ = true;
+}
+
+void RigidBody::SetTriggerAttr(bool value)
+{
+    trigger_ = value;
+    readdBody_ = true;
 }
 
 const PODVector<unsigned char>& RigidBody::GetNetAngularVelocityAttr() const

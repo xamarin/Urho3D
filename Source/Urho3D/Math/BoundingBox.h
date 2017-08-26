@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -273,6 +273,8 @@ public:
     BoundingBox Transformed(const Matrix3x4& transform) const;
     /// Return projected by a 4x4 projection matrix.
     Rect Projected(const Matrix4& projection) const;
+    /// Return distance to point.
+    float DistanceToPoint(const Vector3& point) const;
 
     /// Test if a point is inside.
     Intersection IsInside(const Vector3& point) const

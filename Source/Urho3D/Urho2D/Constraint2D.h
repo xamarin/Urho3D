@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2008-2016 the Urho3D project.
+// Copyright (c) 2008-2017 the Urho3D project.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -45,6 +45,8 @@ public:
     /// Register object factory.
     static void RegisterObject(Context* context);
 
+    /// Apply attribute changes that can not be applied immediately. Called after scene load or a network update.
+    virtual void ApplyAttributes();
     /// Handle enabled/disabled state change.
     virtual void OnSetEnabled();
     /// Create joint.
@@ -54,23 +56,23 @@ public:
 
     /// Set other rigid body.
     void SetOtherBody(RigidBody2D* body);
+    /// Set other rigid body node ID.
+    void SetOtherBodyNodeIDAttr(unsigned nodeID);
     /// Set collide connected.
     void SetCollideConnected(bool collideConnected);
-    /// Set attached constriant (for gear).
+    /// Set attached constraint (for gear).
     void SetAttachedConstraint(Constraint2D* constraint);
 
     /// Return owner body.
     RigidBody2D* GetOwnerBody() const { return ownerBody_; }
-
     /// Return other body.
     RigidBody2D* GetOtherBody() const { return otherBody_; }
-
+    /// Return other body node ID.
+    unsigned GetOtherBodyNodeID() const { return otherBodyNodeID_; }
     /// Return collide connected.
     bool GetCollideConnected() const { return collideConnected_; }
-
     /// Return attached constraint (for gear).
     Constraint2D* GetAttachedConstraint() const { return attachedConstraint_; }
-
     /// Return Box2D joint.
     b2Joint* GetJoint() const { return joint_; }
 
@@ -94,8 +96,12 @@ protected:
     WeakPtr<RigidBody2D> ownerBody_;
     /// Other body.
     WeakPtr<RigidBody2D> otherBody_;
-    /// Collide connected.
+    /// Other body node ID for serialization.
+    unsigned otherBodyNodeID_;
+    /// Collide connected flag.
     bool collideConnected_;
+    /// Other body node ID dirty flag.
+    bool otherBodyNodeIDDirty_;
     /// Attached constraint.
     WeakPtr<Constraint2D> attachedConstraint_;
 };
