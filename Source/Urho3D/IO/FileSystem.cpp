@@ -707,8 +707,7 @@ String FileSystem::GetProgramDir() const
 #elif defined(IOS) || defined(TVOS)
     return AddTrailingSlash(SDL_IOS_GetResourceDir());
 #elif defined(UWP)
-    programDir_ = AddTrailingSlash(SDL_UWP_GetResourceDir());
-    return programDir_;
+    return AddTrailingSlash(SDL_UWP_GetResourceDir());
 #elif defined(_WIN32)
     wchar_t exeName[MAX_PATH];
     exeName[0] = 0;
