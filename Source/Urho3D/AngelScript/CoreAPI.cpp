@@ -829,6 +829,10 @@ static void RegisterProcessUtils(asIScriptEngine* engine)
     engine->RegisterGlobalFunction("uint GetNumLogicalCPUs()", asFUNCTION(GetNumLogicalCPUs), asCALL_CDECL);
     engine->RegisterGlobalFunction("void SetMiniDumpDir(const String&in)", asFUNCTION(SetMiniDumpDir), asCALL_CDECL);
     engine->RegisterGlobalFunction("String GetMiniDumpDir()", asFUNCTION(GetMiniDumpDir), asCALL_CDECL);
+    engine->RegisterGlobalFunction("uint64 GetTotalMemory()", asFUNCTION(GetTotalMemory), asCALL_CDECL);
+    engine->RegisterGlobalFunction("String GetLoginName()", asFUNCTION(GetLoginName), asCALL_CDECL);
+    engine->RegisterGlobalFunction("String GetHostName()", asFUNCTION(GetHostName), asCALL_CDECL);
+    engine->RegisterGlobalFunction("String GetOSVersion()", asFUNCTION(GetOSVersion), asCALL_CDECL);
 }
 
 static void ConstructAttributeInfo(AttributeInfo* ptr)
@@ -862,6 +866,19 @@ static CScriptArray* AttributeInfoGetVariantStructureElementNames(AttributeInfo*
     while (variantStructureElementNamesPtrs && *variantStructureElementNamesPtrs)
         variantStructureElementNames.Push(*variantStructureElementNamesPtrs++);
     return VectorToArray<String>(variantStructureElementNames, "Array<String>");
+}
+
+static Object* CreateObject(const String& objectType)
+{
+    if (Context* context = GetScriptContext())
+    {
+        if (SharedPtr<Object> object = context->CreateObject(objectType))
+        {
+            object->AddRef();
+            return object;
+        }
+    }
+    return 0;
 }
 
 static void SendEvent(const String& eventType, VariantMap& eventData)
@@ -1005,6 +1022,7 @@ void RegisterObject(asIScriptEngine* engine)
 
     RegisterObject<Object>(engine, "Object");
 
+    engine->RegisterGlobalFunction("Object@ CreateObject(const String&in)", asFUNCTION(CreateObject), asCALL_CDECL);
     engine->RegisterGlobalFunction("void SendEvent(const String&in, VariantMap& eventData = VariantMap())", asFUNCTION(SendEvent), asCALL_CDECL);
     engine->RegisterGlobalFunction("void SubscribeToEvent(const String&in, const String&in)", asFUNCTION(SubscribeToEvent), asCALL_CDECL);
     engine->RegisterGlobalFunction("void SubscribeToEvent(Object@+, const String&in, const String&in)", asFUNCTION(SubscribeToSenderEvent), asCALL_CDECL);

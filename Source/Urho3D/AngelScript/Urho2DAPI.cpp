@@ -198,6 +198,8 @@ static void RegisterParticleEmitter2D(asIScriptEngine* engine)
     engine->RegisterObjectMethod("ParticleEmitter2D", "Sprite2D@+ get_sprite() const", asMETHOD(ParticleEmitter2D, GetSprite), asCALL_THISCALL);
     engine->RegisterObjectMethod("ParticleEmitter2D", "void set_blendMode(BlendMode)", asMETHOD(ParticleEmitter2D, SetBlendMode), asCALL_THISCALL);
     engine->RegisterObjectMethod("ParticleEmitter2D", "BlendMode get_blendMode() const", asMETHOD(ParticleEmitter2D, GetBlendMode), asCALL_THISCALL);
+    engine->RegisterObjectMethod("ParticleEmitter2D", "void set_emitting(bool)", asMETHOD(ParticleEmitter2D, SetEmitting), asCALL_THISCALL);
+    engine->RegisterObjectMethod("ParticleEmitter2D", "bool get_emitting() const", asMETHOD(ParticleEmitter2D, IsEmitting), asCALL_THISCALL);
 }
 
 static void FakeAddRef(void* ptr)
@@ -297,6 +299,12 @@ static void RegisterTileMapLayer2D(asIScriptEngine* engine)
     engine->RegisterObjectMethod("TileMapLayer2D", "Node@+ get_imageNode() const", asMETHOD(TileMapLayer2D, GetImageNode), asCALL_THISCALL);
 }
 
+static CScriptArray* TileMap2DGetTileCollisionShapes(int gid, TileMap2D* tileMap)
+{
+    Vector<SharedPtr<TileMapObject2D> > result = tileMap->GetTileCollisionShapes(gid);
+    return VectorToArray<SharedPtr<TileMapObject2D> >(result, "Array<TileMapObject2D@>@");
+}
+
 static void RegisterTileMap2D(asIScriptEngine* engine)
 {
     engine->RegisterObjectMethod("TileMap2D", "void set_tmxFile(TmxFile2D@+)", asMETHOD(TileMap2D, SetTmxFile), asCALL_THISCALL);
@@ -306,6 +314,7 @@ static void RegisterTileMap2D(asIScriptEngine* engine)
     engine->RegisterObjectMethod("TileMap2D", "TileMapLayer2D@+ GetLayer(uint) const", asMETHOD(TileMap2D, GetLayer), asCALL_THISCALL);
     engine->RegisterObjectMethod("TileMap2D", "Vector2 TileIndexToPosition(int, int) const", asMETHOD(TileMap2D, TileIndexToPosition), asCALL_THISCALL);
     engine->RegisterObjectMethod("TileMap2D", "bool PositionToTileIndex(int&out x, int &out y, const Vector2&in) const", asMETHOD(TileMap2D, PositionToTileIndex), asCALL_THISCALL);
+    engine->RegisterObjectMethod("TileMap2D", "Array<TileMapObject2D@>@ GetTileCollisionShapes(int) const", asFUNCTION(TileMap2DGetTileCollisionShapes), asCALL_CDECL_OBJLAST);
 }
 
 static void RegisterRigidBody2D(asIScriptEngine* engine)

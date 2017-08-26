@@ -72,7 +72,7 @@ extern "C"
 const char* SDL_Android_GetFilesDir();
 char** SDL_Android_GetFileList(const char* path, int* count);
 void SDL_Android_FreeFileList(char*** array, int* count);
-#elif IOS
+#elif defined(IOS) || defined(TVOS)
 const char* SDL_IOS_GetResourceDir();
 const char* SDL_IOS_GetDocumentsDir();
 #elif UWP
@@ -88,8 +88,9 @@ namespace Urho3D
 
 int DoSystemCommand(const String& commandLine, bool redirectToLog, Context* context)
 {
-#ifndef UWP
-
+#if defined(TVOS) || defined(IOS) || defined(UWP)
+    return -1;
+#else
 #if !defined(__EMSCRIPTEN__) && !defined(MINI_URHO)
     if (!redirectToLog)
 #endif
@@ -140,13 +141,14 @@ int DoSystemCommand(const String& commandLine, bool redirectToLog, Context* cont
 
     return exitCode;
 #endif
-#else
-	return -1;
-#endif // !UWP
+#endif
 }
 
 int DoSystemRun(const String& fileName, const Vector<String>& arguments)
 {
+#ifdef TVOS
+    return -1;
+#else
     String fixedFileName = GetNativePath(fileName);
 #if defined(UWP)
     return -1;
@@ -197,6 +199,7 @@ int DoSystemRun(const String& fileName, const Vector<String>& arguments)
     }
     else
         return -1;
+#endif
 #endif
 }
 
@@ -701,7 +704,7 @@ String FileSystem::GetProgramDir() const
     // This is an internal directory specifier pointing to the assets in the .apk
     // Files from this directory will be opened using special handling
     return APK;
-#elif defined(IOS)
+#elif defined(IOS) || defined(TVOS)
     return AddTrailingSlash(SDL_IOS_GetResourceDir());
 #elif defined(UWP)
     programDir_ = AddTrailingSlash(SDL_UWP_GetResourceDir());
@@ -733,7 +736,7 @@ String FileSystem::GetUserDocumentsDir() const
 {
 #if defined(__ANDROID__)
     return AddTrailingSlash(SDL_Android_GetFilesDir());
-#elif defined(IOS)
+#elif defined(IOS) || defined(TVOS)
     return AddTrailingSlash(SDL_IOS_GetDocumentsDir());
 #elif defined(UWP)
     return AddTrailingSlash(SDL_UWP_GetResourceDir());

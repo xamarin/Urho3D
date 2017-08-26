@@ -312,6 +312,7 @@ public:
 Animation();
 Animation(const String&in);
 // Methods:
+void AddMetadata(const String&, const Variant&);
 void AddTrigger(const AnimationTriggerPoint&);
 void AddTrigger(float, bool, const Variant&);
 Animation Clone(const String& = String ( )) const;
@@ -322,8 +323,10 @@ bool HasSubscribedToEvent(const String&);
 bool Load(File);
 bool Load(VectorBuffer&);
 bool Load(const String&);
+void RemoveAllMetadata();
 bool RemoveAllTracks();
 void RemoveAllTriggers();
+void RemoveMetadata(const String&);
 bool RemoveTrack(const String&);
 void RemoveTrigger(uint);
 bool Save(File) const;
@@ -335,9 +338,12 @@ void SendEvent(const String&, VariantMap& = VariantMap ( ));
 String animationName;
 /* readonly */
 String category;
+/* readonly */
+bool hasMetadata;
 float length;
 /* readonly */
 uint memoryUse;
+Array<Variant> metadata;
 String name;
 /* readonly */
 uint numTracks;
@@ -1069,6 +1075,7 @@ void Define(const Vector3&);
 void Define(const Vector3&, const Vector3&);
 void Define(float, float);
 bool Defined() const;
+float DistanceToPoint(const Vector3&) const;
 Intersection IsInside(const BoundingBox&) const;
 Intersection IsInside(const Sphere&) const;
 Intersection IsInside(const Vector3&) const;
@@ -4185,6 +4192,7 @@ void AddPolyhedron(const Polyhedron&, const Color&, bool = true);
 void AddQuad(const Vector3&, float, float, const Color&, bool = true);
 void AddSkeleton(Skeleton, const Color&, bool = true);
 void AddSphere(const Sphere&, const Color&, bool = true);
+void AddSphereSector(const Sphere&, const Quaternion&, float, bool, const Color&, bool = true);
 void AddTriangle(const Vector3&, const Vector3&, const Vector3&, const Color&, bool = true);
 void ApplyAttributes();
 void DrawDebugGeometry(DebugRenderer, bool);
@@ -4391,6 +4399,8 @@ Vector3 ReadVector3();
 Vector4 ReadVector4();
 VectorBuffer ReadVectorBuffer(uint);
 uint Seek(uint);
+uint SeekRelative(int);
+uint Tell() const;
 
 // Properties:
 /* readonly */
@@ -4863,9 +4873,12 @@ class DynamicNavigationMesh
 {
 public:
 // Methods:
+bool AddTile(const VectorBuffer&) const;
+bool Allocate(const BoundingBox&, uint);
 void ApplyAttributes();
 bool Build();
 bool Build(const BoundingBox&);
+bool Build(const IntVector2&, const IntVector2&);
 void DrawDebugGeometry(DebugRenderer, bool);
 void DrawDebugGeometry(bool);
 Vector3 FindNearestPoint(const Vector3&, const Vector3& = Vector3 ( 1.0 , 1.0 , 1.0 ));
@@ -4881,8 +4894,12 @@ float GetDistanceToWall(const Vector3&, float, const Vector3& = Vector3 ( 1.0 , 
 bool GetInterceptNetworkUpdate(const String&) const;
 Vector3 GetRandomPoint();
 Vector3 GetRandomPointInCircle(const Vector3&, float, const Vector3& = Vector3 ( 1.0 , 1.0 , 1.0 ));
+BoundingBox GetTileBoudningBox(const IntVector2&) const;
+VectorBuffer GetTileData(const IntVector2&) const;
+IntVector2 GetTileIndex(const Vector3&) const;
 bool HasSubscribedToEvent(Object, const String&);
 bool HasSubscribedToEvent(const String&);
+bool HasTile(const IntVector2&) const;
 bool Load(File, bool = false);
 bool Load(VectorBuffer&, bool = false);
 bool LoadJSON(const JSONValue&, bool = false);
@@ -4891,9 +4908,11 @@ void MarkNetworkUpdate() const;
 Vector3 MoveAlongSurface(const Vector3&, const Vector3&, const Vector3& = Vector3 ( 1.0 , 1.0 , 1.0 ), int = 3);
 Vector3 Raycast(const Vector3&, const Vector3&, const Vector3& = Vector3 ( 1.0 , 1.0 , 1.0 ));
 void Remove();
+void RemoveAllTiles();
 void RemoveAttributeAnimation(const String&);
 void RemoveInstanceDefault();
 void RemoveObjectAnimation();
+void RemoveTile(const IntVector2&);
 void ResetToDefault();
 bool Save(File) const;
 bool Save(VectorBuffer&) const;
@@ -5052,7 +5071,9 @@ Vector3 ReadVector3();
 Vector4 ReadVector4();
 VectorBuffer ReadVectorBuffer(uint);
 uint Seek(uint);
+uint SeekRelative(int);
 void SendEvent(const String&, VariantMap& = VariantMap ( ));
+uint Tell() const;
 uint Write(Array<uint8>);
 bool WriteBool(bool);
 bool WriteBoundingBox(const BoundingBox&);
@@ -5230,7 +5251,7 @@ public:
 Font();
 Font(const String&in);
 // Methods:
-IntVector2 GetTotalGlyphOffset(int) const;
+IntVector2 GetTotalGlyphOffset(float) const;
 bool HasSubscribedToEvent(Object, const String&);
 bool HasSubscribedToEvent(const String&);
 bool Load(File);
@@ -5469,6 +5490,8 @@ Vector3 ReadVector3();
 Vector4 ReadVector4();
 VectorBuffer ReadVectorBuffer(uint);
 uint Seek(uint);
+uint SeekRelative(int);
+uint Tell() const;
 
 // Properties:
 /* readonly */
@@ -5495,74 +5518,6 @@ HttpRequestState state;
 String url;
 /* readonly */
 String verb;
-/* readonly */
-int weakRefs;
-};
-
-class IKConstraint
-{
-public:
-// Methods:
-void ApplyAttributes();
-void DrawDebugGeometry(DebugRenderer, bool);
-Variant GetAttribute(const String&) const;
-ValueAnimation GetAttributeAnimation(const String&) const;
-float GetAttributeAnimationSpeed(const String&) const;
-float GetAttributeAnimationTime(const String&) const;
-WrapMode GetAttributeAnimationWrapMode(const String&) const;
-Variant GetAttributeDefault(const String&) const;
-bool GetInterceptNetworkUpdate(const String&) const;
-bool HasSubscribedToEvent(Object, const String&);
-bool HasSubscribedToEvent(const String&);
-bool Load(File, bool = false);
-bool Load(VectorBuffer&, bool = false);
-bool LoadJSON(const JSONValue&, bool = false);
-bool LoadXML(const XMLElement&, bool = false);
-void MarkNetworkUpdate() const;
-void Remove();
-void RemoveAttributeAnimation(const String&);
-void RemoveInstanceDefault();
-void RemoveObjectAnimation();
-void ResetToDefault();
-bool Save(File) const;
-bool Save(VectorBuffer&) const;
-bool SaveJSON(JSONValue&) const;
-bool SaveXML(XMLElement&) const;
-void SendEvent(const String&, VariantMap& = VariantMap ( ));
-void SetAnimationTime(float);
-bool SetAttribute(const String&, const Variant&);
-void SetAttributeAnimation(const String&, ValueAnimation, WrapMode = WM_LOOP, float = 1.0f);
-void SetAttributeAnimationSpeed(const String&, float);
-void SetAttributeAnimationTime(const String&, float);
-void SetAttributeAnimationWrapMode(const String&, WrapMode);
-void SetInterceptNetworkUpdate(const String&, bool);
-
-// Properties:
-bool animationEnabled;
-/* readonly */
-Array<Variant> attributeDefaults;
-/* readonly */
-Array<AttributeInfo> attributeInfos;
-Array<Variant> attributes;
-/* readonly */
-String category;
-bool enabled;
-/* readonly */
-bool enabledEffective;
-/* readonly */
-uint id;
-/* readonly */
-Node node;
-/* readonly */
-uint numAttributes;
-ObjectAnimation objectAnimation;
-/* readonly */
-int refs;
-bool temporary;
-/* readonly */
-StringHash type;
-/* readonly */
-String typeName;
 /* readonly */
 int weakRefs;
 };
@@ -5621,7 +5576,6 @@ bool enabled;
 bool enabledEffective;
 /* readonly */
 uint id;
-bool inheritParentRotation;
 /* readonly */
 Node node;
 /* readonly */
@@ -5643,14 +5597,19 @@ String typeName;
 /* readonly */
 int weakRefs;
 float weight;
-bool weightedNlerp;
 };
 
 class IKSolver
 {
 public:
 // Methods:
+void ApplyActivePoseToScene();
 void ApplyAttributes();
+void ApplyOriginalPoseToActivePose();
+void ApplyOriginalPoseToScene();
+void ApplySceneToActivePose();
+void ApplySceneToInitialPose();
+void CalculateJointRotations();
 void DrawDebugGeometry(DebugRenderer, bool);
 void DrawDebugGeometry(bool);
 Variant GetAttribute(const String&) const;
@@ -5667,12 +5626,13 @@ bool Load(VectorBuffer&, bool = false);
 bool LoadJSON(const JSONValue&, bool = false);
 bool LoadXML(const XMLElement&, bool = false);
 void MarkNetworkUpdate() const;
+void RebuildChainTrees();
+void RecalculateSegmentLengths();
 void Remove();
 void RemoveAttributeAnimation(const String&);
 void RemoveInstanceDefault();
 void RemoveObjectAnimation();
 void ResetToDefault();
-void ResetToInitialPose();
 bool Save(File) const;
 bool Save(VectorBuffer&) const;
 bool SaveJSON(JSONValue&) const;
@@ -5686,9 +5646,15 @@ void SetAttributeAnimationTime(const String&, float);
 void SetAttributeAnimationWrapMode(const String&, WrapMode);
 void SetInterceptNetworkUpdate(const String&, bool);
 void Solve();
-void UpdateInitialPose();
 
 // Properties:
+bool AUTO_SOLVE;
+bool CONSTRAINTS;
+bool JOINT_ROTATIONS;
+bool TARGET_ROTATIONS;
+bool UPDATE_ACTIVE_POSE;
+bool UPDATE_ORIGINAL_POSE;
+bool USE_ORIGINAL_POSE;
 IKAlgorithm algorithm;
 bool animationEnabled;
 /* readonly */
@@ -5696,11 +5662,8 @@ Array<Variant> attributeDefaults;
 /* readonly */
 Array<AttributeInfo> attributeInfos;
 Array<Variant> attributes;
-bool autoSolve;
-bool boneRotations;
 /* readonly */
 String category;
-bool continuousSolving;
 bool enabled;
 /* readonly */
 bool enabledEffective;
@@ -5714,14 +5677,12 @@ uint numAttributes;
 ObjectAnimation objectAnimation;
 /* readonly */
 int refs;
-bool targetRotation;
 bool temporary;
 float tolerance;
 /* readonly */
 StringHash type;
 /* readonly */
 String typeName;
-bool updatePose;
 /* readonly */
 int weakRefs;
 };
@@ -5759,6 +5720,7 @@ bool SaveDDS(const String&) const;
 bool SaveJPG(const String&, int) const;
 bool SavePNG(const String&) const;
 bool SaveTGA(const String&) const;
+bool SaveWEBP(const String&, float = 0.0f) const;
 void SendEvent(const String&, VariantMap& = VariantMap ( ));
 void SetPixel(int, int, const Color&);
 void SetPixel(int, int, int, const Color&);
@@ -5945,9 +5907,12 @@ public:
 IntRect();
 IntRect(const IntRect&in);
 IntRect(int, int, int, int);
+IntRect(const IntVector2&in, const IntVector2&in);
 IntRect(int[]&inout);
 // Methods:
+int Clip(const IntRect&);
 Intersection IsInside(const IntVector2&) const;
+int Merge(const IntRect&);
 
 // Properties:
 int bottom;
@@ -6082,12 +6047,16 @@ double GetDouble() const;
 float GetFloat() const;
 int GetInt() const;
 uint GetUInt() const;
+Variant GetVariant() const;
+VariantMap GetVariantMap() const;
 void Insert(uint, const JSONValue&);
 const JSONValue& Get(const String&) const;
 void Pop();
 void Push(const JSONValue&);
 void Resize(uint);
 void Set(const String&, const JSONValue&);
+void SetVariant(const Variant&);
+void SetVariantMap(const VariantMap&);
 const String& GetString() const;
 
 // Properties:
@@ -6104,6 +6073,8 @@ bool isObject;
 /* readonly */
 bool isString;
 /* readonly */
+Array<String> keys;
+/* readonly */
 JSONNumberType numberType;
 /* readonly */
 String numberTypeName;
@@ -6113,6 +6084,8 @@ uint size;
 JSONValueType valueType;
 /* readonly */
 String valueTypeName;
+/* readonly */
+Array<JSONValue> values;
 };
 
 class JoystickState
@@ -7282,6 +7255,7 @@ public:
 Model();
 Model(const String&in);
 // Methods:
+void AddMetadata(const String&, const Variant&);
 Model Clone(const String& = String ( )) const;
 Geometry GetGeometry(uint, uint) const;
 bool HasSubscribedToEvent(Object, const String&);
@@ -7289,6 +7263,8 @@ bool HasSubscribedToEvent(const String&);
 bool Load(File);
 bool Load(VectorBuffer&);
 bool Load(const String&);
+void RemoveAllMetadata();
+void RemoveMetadata(const String&);
 bool Save(File) const;
 bool Save(VectorBuffer&) const;
 bool Save(const String&) const;
@@ -7303,7 +7279,10 @@ BoundingBox boundingBox;
 String category;
 Array<Vector3> geometryCenters;
 /* readonly */
+bool hasMetadata;
+/* readonly */
 uint memoryUse;
+Array<Variant> metadata;
 String name;
 uint numGeometries;
 Array<uint> numGeometryLodLevels;
@@ -7368,7 +7347,9 @@ Vector3 ReadVector3();
 Vector4 ReadVector4();
 VectorBuffer ReadVectorBuffer(uint);
 uint Seek(uint);
+uint SeekRelative(int);
 void SendEvent(const String&, VariantMap& = VariantMap ( ));
+uint Tell() const;
 uint Write(Array<uint8>);
 bool WriteBool(bool);
 bool WriteBoundingBox(const BoundingBox&);
@@ -7576,9 +7557,12 @@ class NavigationMesh
 {
 public:
 // Methods:
+bool AddTile(const VectorBuffer&) const;
+bool Allocate(const BoundingBox&, uint);
 void ApplyAttributes();
 bool Build();
 bool Build(const BoundingBox&);
+bool Build(const IntVector2&, const IntVector2&);
 void DrawDebugGeometry(DebugRenderer, bool);
 void DrawDebugGeometry(bool);
 Vector3 FindNearestPoint(const Vector3&, const Vector3& = Vector3 ( 1.0 , 1.0 , 1.0 ));
@@ -7594,8 +7578,12 @@ float GetDistanceToWall(const Vector3&, float, const Vector3& = Vector3 ( 1.0 , 
 bool GetInterceptNetworkUpdate(const String&) const;
 Vector3 GetRandomPoint();
 Vector3 GetRandomPointInCircle(const Vector3&, float, const Vector3& = Vector3 ( 1.0 , 1.0 , 1.0 ));
+BoundingBox GetTileBoudningBox(const IntVector2&) const;
+VectorBuffer GetTileData(const IntVector2&) const;
+IntVector2 GetTileIndex(const Vector3&) const;
 bool HasSubscribedToEvent(Object, const String&);
 bool HasSubscribedToEvent(const String&);
+bool HasTile(const IntVector2&) const;
 bool Load(File, bool = false);
 bool Load(VectorBuffer&, bool = false);
 bool LoadJSON(const JSONValue&, bool = false);
@@ -7604,9 +7592,11 @@ void MarkNetworkUpdate() const;
 Vector3 MoveAlongSurface(const Vector3&, const Vector3&, const Vector3& = Vector3 ( 1.0 , 1.0 , 1.0 ), int = 3);
 Vector3 Raycast(const Vector3&, const Vector3&, const Vector3& = Vector3 ( 1.0 , 1.0 , 1.0 ));
 void Remove();
+void RemoveAllTiles();
 void RemoveAttributeAnimation(const String&);
 void RemoveInstanceDefault();
 void RemoveObjectAnimation();
+void RemoveTile(const IntVector2&);
 void ResetToDefault();
 bool Save(File) const;
 bool Save(VectorBuffer&) const;
@@ -7915,6 +7905,8 @@ Vector2 WorldToLocal2D(const Vector2&) const;
 void Yaw(float, TransformSpace = TS_LOCAL);
 
 // Properties:
+/* readonly */
+Array<Node> allChildrenByName;
 bool animationEnabled;
 /* readonly */
 Array<Variant> attributeDefaults;
@@ -7925,6 +7917,8 @@ Array<Variant> attributes;
 String category;
 /* readonly */
 Array<Node> children;
+/* readonly */
+Array<Node> childrenByName;
 /* readonly */
 Array<Component> components;
 Vector3 direction;
@@ -7958,6 +7952,8 @@ Vector2 scale2D;
 Scene scene;
 /* readonly */
 ScriptObject scriptObject;
+/* readonly */
+Vector3 signedWorldScale;
 /* readonly */
 Array<String> tags;
 bool temporary;
@@ -8600,6 +8596,7 @@ bool castShadows;
 String category;
 float drawDistance;
 ParticleEffect2D effect;
+bool emitting;
 bool enabled;
 /* readonly */
 bool enabledEffective;
@@ -9004,6 +9001,10 @@ String ToString() const;
 
 // Properties:
 /* readonly */
+float angle;
+/* readonly */
+Vector3 axis;
+/* readonly */
 Vector3 eulerAngles;
 /* readonly */
 float pitch;
@@ -9057,6 +9058,122 @@ Vector3 normal;
 Vector3 position;
 uint subObject;
 Vector2 textureUV;
+};
+
+class RaycastVehicle
+{
+public:
+// Methods:
+void AddWheel(Node, Vector3, Vector3, float, float, bool);
+void ApplyAttributes();
+void DrawDebugGeometry(DebugRenderer, bool);
+Variant GetAttribute(const String&) const;
+ValueAnimation GetAttributeAnimation(const String&) const;
+float GetAttributeAnimationSpeed(const String&) const;
+float GetAttributeAnimationTime(const String&) const;
+WrapMode GetAttributeAnimationWrapMode(const String&) const;
+Variant GetAttributeDefault(const String&) const;
+float GetBrake(int);
+Vector3 GetContactNormal(int);
+Vector3 GetContactPosition(int);
+float GetEngineForce(int);
+bool GetInterceptNetworkUpdate(const String&) const;
+float GetMaxSuspensionTravel(int);
+float GetSteeringValue(int);
+Vector3 GetWheelAxle(int);
+Vector3 GetWheelConnectionPoint(int);
+float GetWheelDampingCompression(int);
+float GetWheelDampingRelaxation(int);
+Vector3 GetWheelDirection(int);
+float GetWheelFrictionSlip(int);
+Node GetWheelNode(int);
+Vector3 GetWheelPosition(int);
+float GetWheelRadius(int);
+float GetWheelRestLength(int);
+float GetWheelRollInfluence(int);
+Vector3 GetWheelRotation(int);
+float GetWheelSideSlipSpeed(int);
+float GetWheelSkidInfo(int);
+float GetWheelSkidInfoCumulative(int);
+float GetWheelSuspensionStiffness(int);
+bool HasSubscribedToEvent(Object, const String&);
+bool HasSubscribedToEvent(const String&);
+void Init();
+bool IsFrontWheel(int);
+bool Load(File, bool = false);
+bool Load(VectorBuffer&, bool = false);
+bool LoadJSON(const JSONValue&, bool = false);
+bool LoadXML(const XMLElement&, bool = false);
+void MarkNetworkUpdate() const;
+void Remove();
+void RemoveAttributeAnimation(const String&);
+void RemoveInstanceDefault();
+void RemoveObjectAnimation();
+void ResetSuspension();
+void ResetToDefault();
+void ResetWheels();
+bool Save(File) const;
+bool Save(VectorBuffer&) const;
+bool SaveJSON(JSONValue&) const;
+bool SaveXML(XMLElement&) const;
+void SendEvent(const String&, VariantMap& = VariantMap ( ));
+void SetAnimationTime(float);
+bool SetAttribute(const String&, const Variant&);
+void SetAttributeAnimation(const String&, ValueAnimation, WrapMode = WM_LOOP, float = 1.0f);
+void SetAttributeAnimationSpeed(const String&, float);
+void SetAttributeAnimationTime(const String&, float);
+void SetAttributeAnimationWrapMode(const String&, WrapMode);
+void SetBrake(int, float);
+void SetEngineForce(int, float);
+void SetInterceptNetworkUpdate(const String&, bool);
+void SetMaxSuspensionTravel(int, float);
+void SetSteeringValue(int, float);
+void SetWheelAxle(int, Vector3);
+void SetWheelDampingCompression(int, float);
+void SetWheelDampingRelaxation(int, float);
+void SetWheelDirection(int, Vector3);
+void SetWheelFrictionSlip(int, float);
+void SetWheelRadius(int, float);
+void SetWheelRestLength(int, float);
+void SetWheelRollInfluence(int, float);
+void SetWheelSkidInfo(int, float);
+void SetWheelSkidInfoCumulative(int, float);
+void SetWheelSuspensionStiffness(int, float);
+void UpdateWheelTransform(int, bool);
+bool WheelIsGrounded(int);
+
+// Properties:
+bool animationEnabled;
+/* readonly */
+Array<Variant> attributeDefaults;
+/* readonly */
+Array<AttributeInfo> attributeInfos;
+Array<Variant> attributes;
+/* readonly */
+String category;
+bool enabled;
+/* readonly */
+bool enabledEffective;
+/* readonly */
+uint id;
+float inAirRPM;
+float maxSideSlipSpeed;
+/* readonly */
+Node node;
+/* readonly */
+uint numAttributes;
+/* readonly */
+int numWheels;
+ObjectAnimation objectAnimation;
+/* readonly */
+int refs;
+bool temporary;
+/* readonly */
+StringHash type;
+/* readonly */
+String typeName;
+/* readonly */
+int weakRefs;
 };
 
 class Rect
@@ -9229,6 +9346,7 @@ class Renderer
 public:
 // Methods:
 void DrawDebugGeometry(bool) const;
+Viewport GetViewportForScene(Scene, uint);
 bool HasSubscribedToEvent(Object, const String&);
 bool HasSubscribedToEvent(const String&);
 void ReloadShaders() const;
@@ -9876,6 +9994,8 @@ Vector2 WorldToLocal2D(const Vector2&) const;
 void Yaw(float, TransformSpace = TS_LOCAL);
 
 // Properties:
+/* readonly */
+Array<Node> allChildrenByName;
 bool animationEnabled;
 /* readonly */
 LoadMode asyncLoadMode;
@@ -9895,6 +10015,8 @@ String category;
 uint checksum;
 /* readonly */
 Array<Node> children;
+/* readonly */
+Array<Node> childrenByName;
 /* readonly */
 Array<Component> components;
 /* readonly */
@@ -9935,6 +10057,8 @@ Vector3 scale;
 Vector2 scale2D;
 /* readonly */
 ScriptObject scriptObject;
+/* readonly */
+Vector3 signedWorldScale;
 float smoothingConstant;
 float snapThreshold;
 /* readonly */
@@ -11059,11 +11183,14 @@ public:
 Sound();
 Sound(const String&in);
 // Methods:
+void AddMetadata(const String&, const Variant&);
 bool HasSubscribedToEvent(Object, const String&);
 bool HasSubscribedToEvent(const String&);
 bool Load(File);
 bool Load(VectorBuffer&);
 bool Load(const String&);
+void RemoveAllMetadata();
+void RemoveMetadata(const String&);
 bool Save(File) const;
 bool Save(VectorBuffer&) const;
 bool Save(const String&) const;
@@ -11077,10 +11204,13 @@ bool compressed;
 /* readonly */
 float frequency;
 /* readonly */
+bool hasMetadata;
+/* readonly */
 float length;
 bool looped;
 /* readonly */
 uint memoryUse;
+Array<Variant> metadata;
 String name;
 /* readonly */
 int refs;
@@ -11202,6 +11332,7 @@ bool Save(File) const;
 bool Save(VectorBuffer&) const;
 bool SaveJSON(JSONValue&) const;
 bool SaveXML(XMLElement&) const;
+void Seek(float);
 void SendEvent(const String&, VariantMap& = VariantMap ( ));
 void SetAnimationTime(float);
 bool SetAttribute(const String&, const Variant&);
@@ -11288,6 +11419,7 @@ bool Save(File) const;
 bool Save(VectorBuffer&) const;
 bool SaveJSON(JSONValue&) const;
 bool SaveXML(XMLElement&) const;
+void Seek(float);
 void SendEvent(const String&, VariantMap& = VariantMap ( ));
 void SetAngleAttenuation(float, float);
 void SetAnimationTime(float);
@@ -11366,6 +11498,8 @@ void Define(const Sphere&);
 void Define(const Vector3&, float);
 bool Defined() const;
 float Distance(const Vector3&) const;
+Vector3 GetLocalPoint(float, float) const;
+Vector3 GetPoint(float, float) const;
 Intersection IsInside(const BoundingBox&) const;
 Intersection IsInside(const Sphere&) const;
 Intersection IsInside(const Vector3&) const;
@@ -12246,6 +12380,7 @@ Vector3 GetNormal(const Vector3&) const;
 TerrainPatch GetPatch(int, int) const;
 bool HasSubscribedToEvent(Object, const String&);
 bool HasSubscribedToEvent(const String&);
+Vector3 HeightMapToWorld(const IntVector2&) const;
 bool Load(File, bool = false);
 bool Load(VectorBuffer&, bool = false);
 bool LoadJSON(const JSONValue&, bool = false);
@@ -12493,8 +12628,8 @@ void SetEnabledRecursive(bool);
 void SetFixedHeight(int);
 void SetFixedSize(int, int);
 void SetFixedWidth(int);
-bool SetFont(Font, int);
-bool SetFont(const String&, int);
+bool SetFont(Font, float);
+bool SetFont(const String&, float);
 void SetInterceptNetworkUpdate(const String&, bool);
 void SetLayout(LayoutMode, int = 0, const IntRect& = IntRect ( 0 , 0 , 0 , 0 ));
 void SetMaxAnchor(float, float);
@@ -12525,9 +12660,9 @@ bool bringToFront;
 /* readonly */
 String category;
 /* readonly */
-Array<IntVector2> charPositions;
+Array<Vector2> charPositions;
 /* readonly */
-Array<IntVector2> charSizes;
+Array<Vector2> charSizes;
 /* readonly */
 IntVector2 childOffset;
 /* readonly */
@@ -12569,7 +12704,7 @@ bool focus;
 FocusMode focusMode;
 /* readonly */
 Font font;
-int fontSize;
+float fontSize;
 int height;
 HorizontalAlignment horizontalAlignment;
 Color hoverColor;
@@ -12616,10 +12751,10 @@ int refs;
 /* readonly */
 UIElement root;
 /* readonly */
-int rowHeight;
+float rowHeight;
 float rowSpacing;
 /* readonly */
-Array<int> rowWidths;
+Array<float> rowWidths;
 /* readonly */
 IntVector2 screenPosition;
 bool selected;
@@ -12693,8 +12828,8 @@ void SetAttributeAnimation(const String&, ValueAnimation, WrapMode = WM_LOOP, fl
 void SetAttributeAnimationSpeed(const String&, float);
 void SetAttributeAnimationTime(const String&, float);
 void SetAttributeAnimationWrapMode(const String&, WrapMode);
-bool SetFont(Font, int);
-bool SetFont(const String&, int);
+bool SetFont(Font, float);
+bool SetFont(const String&, float);
 void SetInterceptNetworkUpdate(const String&, bool);
 
 // Properties:
@@ -12710,9 +12845,9 @@ bool castShadows;
 /* readonly */
 String category;
 /* readonly */
-Array<IntVector2> charPositions;
+Array<Vector2> charPositions;
 /* readonly */
-Array<IntVector2> charSizes;
+Array<Vector2> charSizes;
 /* writeonly */
 Color color;
 Array<Color> colors;
@@ -12729,7 +12864,7 @@ FaceCameraMode faceCameraMode;
 bool fixedScreenSize;
 /* readonly */
 Font font;
-int fontSize;
+float fontSize;
 /* readonly */
 int height;
 HorizontalAlignment horizontalAlignment;
@@ -12756,10 +12891,10 @@ float opacity;
 /* readonly */
 int refs;
 /* readonly */
-int rowHeight;
+float rowHeight;
 float rowSpacing;
 /* readonly */
-Array<int> rowWidths;
+Array<float> rowWidths;
 float shadowDistance;
 uint shadowMask;
 bool temporary;
@@ -12787,12 +12922,15 @@ public:
 Texture();
 Texture(const String&in);
 // Methods:
+void AddMetadata(const String&, const Variant&);
 void ClearDataLost();
 bool HasSubscribedToEvent(Object, const String&);
 bool HasSubscribedToEvent(const String&);
 bool Load(File);
 bool Load(VectorBuffer&);
 bool Load(const String&);
+void RemoveAllMetadata();
+void RemoveMetadata(const String&);
 bool Save(File) const;
 bool Save(VectorBuffer&) const;
 bool Save(const String&) const;
@@ -12818,6 +12956,8 @@ TextureFilterMode filterMode;
 /* readonly */
 uint format;
 /* readonly */
+bool hasMetadata;
+/* readonly */
 int height;
 /* readonly */
 Array<int> levelHeight;
@@ -12829,6 +12969,7 @@ uint levels;
 bool levelsDirty;
 /* readonly */
 uint memoryUse;
+Array<Variant> metadata;
 Array<int> mipsToSkip;
 /* readonly */
 int multiSample;
@@ -12858,6 +12999,7 @@ public:
 Texture2D();
 Texture2D(const String&in);
 // Methods:
+void AddMetadata(const String&, const Variant&);
 void ClearDataLost();
 Image GetImage() const;
 bool HasSubscribedToEvent(Object, const String&);
@@ -12865,6 +13007,8 @@ bool HasSubscribedToEvent(const String&);
 bool Load(File);
 bool Load(VectorBuffer&);
 bool Load(const String&);
+void RemoveAllMetadata();
+void RemoveMetadata(const String&);
 bool Save(File) const;
 bool Save(VectorBuffer&) const;
 bool Save(const String&) const;
@@ -12892,6 +13036,8 @@ TextureFilterMode filterMode;
 /* readonly */
 uint format;
 /* readonly */
+bool hasMetadata;
+/* readonly */
 int height;
 /* readonly */
 Array<int> levelHeight;
@@ -12903,6 +13049,7 @@ uint levels;
 bool levelsDirty;
 /* readonly */
 uint memoryUse;
+Array<Variant> metadata;
 Array<int> mipsToSkip;
 /* readonly */
 int multiSample;
@@ -12934,12 +13081,15 @@ public:
 Texture2DArray();
 Texture2DArray(const String&in);
 // Methods:
+void AddMetadata(const String&, const Variant&);
 void ClearDataLost();
 bool HasSubscribedToEvent(Object, const String&);
 bool HasSubscribedToEvent(const String&);
 bool Load(File);
 bool Load(VectorBuffer&);
 bool Load(const String&);
+void RemoveAllMetadata();
+void RemoveMetadata(const String&);
 bool Save(File) const;
 bool Save(VectorBuffer&) const;
 bool Save(const String&) const;
@@ -12967,6 +13117,8 @@ TextureFilterMode filterMode;
 /* readonly */
 uint format;
 /* readonly */
+bool hasMetadata;
+/* readonly */
 int height;
 uint layers;
 /* readonly */
@@ -12979,6 +13131,7 @@ uint levels;
 bool levelsDirty;
 /* readonly */
 uint memoryUse;
+Array<Variant> metadata;
 Array<int> mipsToSkip;
 /* readonly */
 int multiSample;
@@ -13010,12 +13163,15 @@ public:
 Texture3D();
 Texture3D(const String&in);
 // Methods:
+void AddMetadata(const String&, const Variant&);
 void ClearDataLost();
 bool HasSubscribedToEvent(Object, const String&);
 bool HasSubscribedToEvent(const String&);
 bool Load(File);
 bool Load(VectorBuffer&);
 bool Load(const String&);
+void RemoveAllMetadata();
+void RemoveMetadata(const String&);
 bool Save(File) const;
 bool Save(VectorBuffer&) const;
 bool Save(const String&) const;
@@ -13043,6 +13199,8 @@ TextureFilterMode filterMode;
 /* readonly */
 uint format;
 /* readonly */
+bool hasMetadata;
+/* readonly */
 int height;
 /* readonly */
 Array<int> levelHeight;
@@ -13054,6 +13212,7 @@ uint levels;
 bool levelsDirty;
 /* readonly */
 uint memoryUse;
+Array<Variant> metadata;
 Array<int> mipsToSkip;
 /* readonly */
 int multiSample;
@@ -13083,6 +13242,7 @@ public:
 TextureCube();
 TextureCube(const String&in);
 // Methods:
+void AddMetadata(const String&, const Variant&);
 void ClearDataLost();
 Image GetImage(CubeMapFace) const;
 bool HasSubscribedToEvent(Object, const String&);
@@ -13090,6 +13250,8 @@ bool HasSubscribedToEvent(const String&);
 bool Load(File);
 bool Load(VectorBuffer&);
 bool Load(const String&);
+void RemoveAllMetadata();
+void RemoveMetadata(const String&);
 bool Save(File) const;
 bool Save(VectorBuffer&) const;
 bool Save(const String&) const;
@@ -13117,6 +13279,8 @@ TextureFilterMode filterMode;
 /* readonly */
 uint format;
 /* readonly */
+bool hasMetadata;
+/* readonly */
 int height;
 /* readonly */
 Array<int> levelHeight;
@@ -13128,6 +13292,7 @@ uint levels;
 bool levelsDirty;
 /* readonly */
 uint memoryUse;
+Array<Variant> metadata;
 Array<int> mipsToSkip;
 /* readonly */
 int multiSample;
@@ -13194,6 +13359,7 @@ WrapMode GetAttributeAnimationWrapMode(const String&) const;
 Variant GetAttributeDefault(const String&) const;
 bool GetInterceptNetworkUpdate(const String&) const;
 TileMapLayer2D GetLayer(uint) const;
+Array<TileMapObject2D> GetTileCollisionShapes(int) const;
 bool HasSubscribedToEvent(Object, const String&);
 bool HasSubscribedToEvent(const String&);
 bool Load(File, bool = false);
@@ -13725,6 +13891,9 @@ float doubleClickInterval;
 int dragBeginDistance;
 float dragBeginInterval;
 UIElement focusElement;
+FontHintLevel fontHintLevel;
+int fontOversampling;
+float fontSubpixelThreshold;
 bool forceAutoHint;
 /* readonly */
 UIElement frontElement;
@@ -13744,6 +13913,79 @@ String typeName;
 bool useMutableGlyphs;
 bool useScreenKeyboard;
 bool useSystemClipboard;
+/* readonly */
+int weakRefs;
+};
+
+class UIComponent
+{
+public:
+// Methods:
+void ApplyAttributes();
+Variant GetAttribute(const String&) const;
+ValueAnimation GetAttributeAnimation(const String&) const;
+float GetAttributeAnimationSpeed(const String&) const;
+float GetAttributeAnimationTime(const String&) const;
+WrapMode GetAttributeAnimationWrapMode(const String&) const;
+Variant GetAttributeDefault(const String&) const;
+bool GetInterceptNetworkUpdate(const String&) const;
+bool HasSubscribedToEvent(Object, const String&);
+bool HasSubscribedToEvent(const String&);
+bool Load(File, bool = false);
+bool Load(VectorBuffer&, bool = false);
+bool LoadJSON(const JSONValue&, bool = false);
+bool LoadXML(const XMLElement&, bool = false);
+void MarkNetworkUpdate() const;
+void Remove();
+void RemoveAttributeAnimation(const String&);
+void RemoveInstanceDefault();
+void RemoveObjectAnimation();
+void ResetToDefault();
+bool Save(File) const;
+bool Save(VectorBuffer&) const;
+bool SaveJSON(JSONValue&) const;
+bool SaveXML(XMLElement&) const;
+void SendEvent(const String&, VariantMap& = VariantMap ( ));
+void SetAnimationTime(float);
+bool SetAttribute(const String&, const Variant&);
+void SetAttributeAnimation(const String&, ValueAnimation, WrapMode = WM_LOOP, float = 1.0f);
+void SetAttributeAnimationSpeed(const String&, float);
+void SetAttributeAnimationTime(const String&, float);
+void SetAttributeAnimationWrapMode(const String&, WrapMode);
+void SetInterceptNetworkUpdate(const String&, bool);
+
+// Properties:
+bool animationEnabled;
+/* readonly */
+Array<Variant> attributeDefaults;
+/* readonly */
+Array<AttributeInfo> attributeInfos;
+Array<Variant> attributes;
+/* readonly */
+String category;
+bool enabled;
+/* readonly */
+bool enabledEffective;
+/* readonly */
+uint id;
+/* readonly */
+Material material;
+/* readonly */
+Node node;
+/* readonly */
+uint numAttributes;
+ObjectAnimation objectAnimation;
+/* readonly */
+int refs;
+/* readonly */
+UIElement root;
+bool temporary;
+/* readonly */
+Texture2D texture;
+/* readonly */
+StringHash type;
+/* readonly */
+String typeName;
 /* readonly */
 int weakRefs;
 };
@@ -14159,6 +14401,7 @@ bool IsNaN() const;
 Vector3 Lerp(const Vector3&, float) const;
 void Normalize();
 Vector3 Normalized() const;
+Vector3 Orthogonalize(const Vector3&) const;
 float ProjectOntoAxis(const Vector3&) const;
 String ToString() const;
 
@@ -14256,7 +14499,9 @@ Vector4 ReadVector4();
 VectorBuffer ReadVectorBuffer(uint);
 void Resize(uint);
 uint Seek(uint);
+uint SeekRelative(int);
 void SetData(Deserializer, uint);
+uint Tell() const;
 uint Write(Array<uint8>);
 bool WriteBool(bool);
 bool WriteBoundingBox(const BoundingBox&);
@@ -15365,6 +15610,13 @@ FM_FOCUSABLE,
 FM_FOCUSABLE_DEFOCUSABLE,
 };
 
+enum FontHintLevel
+{
+FONT_HINT_LEVEL_NONE,
+FONT_HINT_LEVEL_LIGHT,
+FONT_HINT_LEVEL_NORMAL,
+};
+
 enum FontType
 {
 FONT_NONE,
@@ -15397,6 +15649,8 @@ HTTP_CLOSED,
 
 enum IKAlgorithm
 {
+ONE_BONE,
+TWO_BONE,
 FABRIK,
 };
 
@@ -15778,6 +16032,7 @@ void ClearDelayedExecute(const String& = String ( ));
 VectorBuffer CompressVectorBuffer(VectorBuffer&);
 float Cos(float);
 uint CountSetBits(uint);
+Object CreateObject(const String&);
 VectorBuffer DecompressVectorBuffer(VectorBuffer&);
 void DelayedExecute(float, bool, const String&, const Array<Variant> = null);
 bool Equals(float, float);
@@ -15798,14 +16053,17 @@ uint GetFloat16Format();
 uint GetFloat32Format();
 uint GetFormat(const String&);
 Variant GetGlobalVar(const String&);
+String GetHostName();
 String GetInternalPath(const String&);
 uint GetLinearDepthFormat();
+String GetLoginName();
 uint GetLuminanceAlphaFormat();
 uint GetLuminanceFormat();
 uint GetMaxBones();
 String GetMiniDumpDir();
 uint GetNumLogicalCPUs();
 uint GetNumPhysicalCPUs();
+String GetOSVersion();
 Array<AttributeInfo> GetObjectAttributeInfos(const String&);
 Array<String> GetObjectCategories();
 Array<String> GetObjectsByCategory(const String&);
@@ -15823,6 +16081,7 @@ uint GetRGFloat32Format();
 uint GetRandomSeed();
 uint GetReadableDepthFormat();
 String GetTextureUnitName(TextureUnit);
+uint64 GetTotalMemory();
 VariantType GetVariantTypeFromName(const String&);
 String GetVariantTypeName(VariantType);
 bool HasSubscribedToEvent(Object, const String&);
@@ -15836,6 +16095,7 @@ bool IsPowerOfTwo(uint);
 String Join(Array<String>&, const String&);
 float Lerp(float, float, float);
 float Ln(float);
+uint LogBaseTwo(uint);
 void MarkNetworkUpdate();
 float Max(float, float);
 int Max(int, int);
@@ -15850,7 +16110,9 @@ void Print(const String&, bool = false);
 void Print(const Variant&, bool = false);
 void Print(float, bool = false);
 void Print(int, bool = false);
+void Print(int64, bool = false);
 void Print(uint, bool = false);
+void Print(uint64, bool = false);
 void PrintCallStack(bool = false);
 float Random();
 float Random(float);
