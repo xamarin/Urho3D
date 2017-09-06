@@ -545,7 +545,7 @@ String GetLoginName()
     struct passwd *p = getpwuid(getuid());
     if (p != NULL) 
         return p->pw_name;
-#elif defined(_WIN32)
+#elif defined(_WIN32) && !defined(UWP)
     char name[UNLEN + 1];
     DWORD len = UNLEN + 1;
     if (GetUserName(name, &len))
@@ -577,7 +577,7 @@ String GetHostName()
     char buffer[256]; 
     if (gethostname(buffer, 256) == 0) 
         return buffer; 
-#elif defined(_WIN32)
+#elif defined(_WIN32) && !defined(UWP)
     char buffer[MAX_COMPUTERNAME_LENGTH + 1]; 
     DWORD len = MAX_COMPUTERNAME_LENGTH + 1; 
     if (GetComputerName(buffer, &len))
@@ -587,7 +587,7 @@ String GetHostName()
 }
 
 // Disable Windows OS version functionality when compiling mini version for Web, see https://github.com/urho3d/Urho3D/issues/1998
-#if defined(_WIN32) && defined(HAVE_RTL_OSVERSIONINFOW) && !defined(MINI_URHO)
+#if defined(_WIN32) && defined(HAVE_RTL_OSVERSIONINFOW) && !defined(MINI_URHO) && !defined(UWP)
 typedef NTSTATUS (WINAPI *RtlGetVersionPtr)(PRTL_OSVERSIONINFOW);
 
 static void GetOS(RTL_OSVERSIONINFOW *r)
@@ -608,7 +608,7 @@ String GetOSVersion()
     struct utsname u;
     if (uname(&u) == 0)
         return String(u.sysname) + " " + u.release; 
-#elif defined(_WIN32) && defined(HAVE_RTL_OSVERSIONINFOW) && !defined(MINI_URHO)
+#elif defined(_WIN32) && defined(HAVE_RTL_OSVERSIONINFOW) && !defined(MINI_URHO) && !defined(UWP)
     RTL_OSVERSIONINFOW r;
     GetOS(&r); 
     // https://msdn.microsoft.com/en-us/library/windows/desktop/ms724832(v=vs.85).aspx
