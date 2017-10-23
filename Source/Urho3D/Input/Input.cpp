@@ -1419,7 +1419,7 @@ int Input::GetMouseMoveY() const
 TouchState* Input::GetTouch(unsigned index) const
 {
     if (index >= touches_.Size())
-        return 0;
+        return nullptr;
 
     HashMap<int, TouchState>::ConstIterator i = touches_.Begin();
     while (index--)
@@ -1437,7 +1437,7 @@ JoystickState* Input::GetJoystickByIndex(unsigned index)
             return &(i->second_);
     }
 
-    return 0;
+    return nullptr;
 }
 
 JoystickState* Input::GetJoystickByName(const String& name)
@@ -1448,13 +1448,13 @@ JoystickState* Input::GetJoystickByName(const String& name)
             return &(i->second_);
     }
 
-    return 0;
+    return nullptr;
 }
 
 JoystickState* Input::GetJoystick(SDL_JoystickID id)
 {
     HashMap<SDL_JoystickID, JoystickState>::Iterator i = joysticks_.Find(id);
-    return i != joysticks_.End() ? &(i->second_) : 0;
+    return i != joysticks_.End() ? &(i->second_) : nullptr;
 }
 
 bool Input::IsScreenJoystickVisible(SDL_JoystickID id) const

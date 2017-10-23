@@ -172,7 +172,7 @@ unsigned Time::GetSystemTime()
 
 unsigned Time::GetTimeSinceEpoch()
 {
-    return (unsigned)time(NULL);
+    return (unsigned)time(nullptr);
 }
 
 String Time::GetTimeStamp()

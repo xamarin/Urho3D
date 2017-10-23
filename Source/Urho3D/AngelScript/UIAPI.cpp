@@ -309,6 +309,9 @@ static void RegisterListView(asIScriptEngine* engine)
     engine->RegisterEnumValue("HighlightMode", "HM_ALWAYS", HM_ALWAYS);
 
     RegisterUIElement<ListView>(engine, "ListView");
+    engine->RegisterObjectMethod("ListView", "void UpdateInternalLayout()", asMETHOD(ListView, UpdateInternalLayout), asCALL_THISCALL);
+    engine->RegisterObjectMethod("ListView", "void DisableInternalLayoutUpdate()", asMETHOD(ListView, DisableInternalLayoutUpdate), asCALL_THISCALL);
+    engine->RegisterObjectMethod("ListView", "void EnableInternalLayoutUpdate()", asMETHOD(ListView, EnableInternalLayoutUpdate), asCALL_THISCALL);
     engine->RegisterObjectMethod("ListView", "void SetViewPosition(int, int)", asMETHODPR(ListView, SetViewPosition, (int, int), void), asCALL_THISCALL);
     engine->RegisterObjectMethod("ListView", "void SetScrollBarsVisible(bool, bool)", asMETHOD(ListView, SetScrollBarsVisible), asCALL_THISCALL);
     engine->RegisterObjectMethod("ListView", "void AddItem(UIElement@+)", asMETHOD(ListView, AddItem), asCALL_THISCALL);
@@ -664,7 +667,7 @@ static UIElement* UILoadLayoutFromFile(File* file, UI* ptr)
         return root.Get();
     }
     else
-        return 0;
+        return nullptr;
 }
 
 static UIElement* UILoadLayoutFromVectorBuffer(VectorBuffer& buffer, UI* ptr)
@@ -685,7 +688,7 @@ static UIElement* UILoadLayoutFromFileWithStyle(File* file, XMLFile* styleFile, 
         return root.Get();
     }
     else
-        return 0;
+        return nullptr;
 }
 
 static UIElement* UILoadLayoutFromVectorBufferWithStyle(VectorBuffer& buffer, XMLFile* styleFile, UI* ptr)

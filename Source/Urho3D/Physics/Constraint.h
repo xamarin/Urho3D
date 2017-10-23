@@ -53,18 +53,20 @@ public:
     /// Construct.
     Constraint(Context* context);
     /// Destruct.
-    ~Constraint();
+    virtual ~Constraint() override;
     /// Register object factory.
     static void RegisterObject(Context* context);
 
+    /// Handle attribute write access.
+    virtual void OnSetAttribute(const AttributeInfo& attr, const Variant& src) override;
     /// Apply attribute changes that can not be applied immediately. Called after scene load or a network update.
-    virtual void ApplyAttributes();
+    virtual void ApplyAttributes() override;
     /// Handle enabled/disabled state change.
-    virtual void OnSetEnabled();
+    virtual void OnSetEnabled() override;
     /// Return the depended on nodes to order network updates.
-    virtual void GetDependencyNodes(PODVector<Node*>& dest);
+    virtual void GetDependencyNodes(PODVector<Node*>& dest) override;
     /// Visualize the component as debug geometry.
-    virtual void DrawDebugGeometry(DebugRenderer* debug, bool depthTest);
+    virtual void DrawDebugGeometry(DebugRenderer* debug, bool depthTest) override;
 
     /// Set constraint type and recreate the constraint.
     void SetConstraintType(ConstraintType type);
@@ -97,51 +99,48 @@ public:
 
     /// Return physics world.
     PhysicsWorld* GetPhysicsWorld() const { return physicsWorld_; }
+
     /// Return Bullet constraint.
     btTypedConstraint* GetConstraint() const { return constraint_.Get(); }
+
     /// Return constraint type.
     ConstraintType GetConstraintType() const { return constraintType_; }
+
     /// Return rigid body in own scene node.
     RigidBody* GetOwnBody() const { return ownBody_; }
+
     /// Return the other rigid body. May be null if connected to the static world.
     RigidBody* GetOtherBody() const { return otherBody_; }
-    /// Return the other rigid body node ID.
-    unsigned GetOtherBodyNodeID() const { return otherBodyNodeID_; }
+
     /// Return constraint position relative to own body.
     const Vector3& GetPosition() const { return position_; }
+
     /// Return constraint rotation relative to own body.
     const Quaternion& GetRotation() const { return rotation_; }
+
     /// Return constraint position relative to other body.
     const Vector3& GetOtherPosition() const { return otherPosition_; }
+
     /// Return constraint rotation relative to other body.
     const Quaternion& GetOtherRotation() const { return otherRotation_; }
+
     /// Return constraint world position, calculated from own body.
     Vector3 GetWorldPosition() const;
+
     /// Return high limit.
     const Vector2& GetHighLimit() const { return highLimit_; }
+
     /// Return low limit.
     const Vector2& GetLowLimit() const { return lowLimit_; }
+
     /// Return constraint error reduction parameter.
     float GetERP() const { return erp_; }
+
     /// Return constraint force mixing parameter.
     float GetCFM() const { return cfm_; }
+
     /// Return whether collisions between connected bodies are disabled.
     bool GetDisableCollision() const { return disableCollision_; }
-
-    /// Set constraint type attribute.
-    void SetConstraintTypeAttr(ConstraintType type);
-    /// Set position attribute.
-    void SetPositionAttr(const Vector3& position);
-    /// Set rotation attribute.
-    void SetRotationAttr(const Quaternion& rotation);
-    /// Set other body position attribute.
-    void SetOtherPositionAttr(const Vector3& position);
-    /// Set other body rotation attribute.
-    void SetOtherRotationAttr(const Quaternion& rotation);
-    /// Set other body node ID attribute.
-    void SetOtherBodyNodeIDAttr(unsigned nodeID);
-    /// Set disable collision attribute.
-    void SetDisableCollitionAttr(bool value);
 
     /// Release the constraint.
     void ReleaseConstraint();
@@ -150,11 +149,11 @@ public:
 
 protected:
     /// Handle node being assigned.
-    virtual void OnNodeSet(Node* node);
+    virtual void OnNodeSet(Node* node) override;
     /// Handle scene being assigned.
-    virtual void OnSceneSet(Scene* scene);
+    virtual void OnSceneSet(Scene* scene) override;
     /// Handle node transform being dirtied.
-    virtual void OnMarkedDirty(Node* node);
+    virtual void OnMarkedDirty(Node* node) override;
 
 private:
     /// Create the constraint.

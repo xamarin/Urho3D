@@ -173,7 +173,7 @@ bool Scene::LoadXML(const XMLElement& source, bool setInstanceDefault)
     // Note: the scene filename and checksum can not be set, as we only used an XML element
     if (Node::LoadXML(source, setInstanceDefault))
     {
-        FinishLoading(0);
+        FinishLoading(nullptr);
         return true;
     }
     else
@@ -190,7 +190,7 @@ bool Scene::LoadJSON(const JSONValue& source, bool setInstanceDefault)
     // Note: the scene filename and checksum can not be set, as we only used an XML element
     if (Node::LoadJSON(source, setInstanceDefault))
     {
-        FinishLoading(0);
+        FinishLoading(nullptr);
         return true;
     }
     else
@@ -545,7 +545,7 @@ Node* Scene::Instantiate(Deserializer& source, const Vector3& position, const Qu
     else
     {
         node->Remove();
-        return 0;
+        return nullptr;
     }
 }
 
@@ -568,7 +568,7 @@ Node* Scene::InstantiateXML(const XMLElement& source, const Vector3& position, c
     else
     {
         node->Remove();
-        return 0;
+        return nullptr;
     }
 }
 
@@ -591,7 +591,7 @@ Node* Scene::InstantiateJSON(const JSONValue& source, const Vector3& position, c
     else
     {
         node->Remove();
-        return 0;
+        return nullptr;
     }
 }
 
@@ -599,7 +599,7 @@ Node* Scene::InstantiateXML(Deserializer& source, const Vector3& position, const
 {
     SharedPtr<XMLFile> xml(new XMLFile(context_));
     if (!xml->Load(source))
-        return 0;
+        return nullptr;
 
     return InstantiateXML(xml->GetRoot(), position, rotation, mode);
 }
@@ -608,7 +608,7 @@ Node* Scene::InstantiateJSON(Deserializer& source, const Vector3& position, cons
 {
     SharedPtr<JSONFile> json(new JSONFile(context_));
     if (!json->Load(source))
-        return 0;
+        return nullptr;
 
     return InstantiateJSON(json->GetRoot(), position, rotation, mode);
 }
@@ -709,12 +709,12 @@ Node* Scene::GetNode(unsigned id) const
     if (id < FIRST_LOCAL_ID)
     {
         HashMap<unsigned, Node*>::ConstIterator i = replicatedNodes_.Find(id);
-        return i != replicatedNodes_.End() ? i->second_ : 0;
+        return i != replicatedNodes_.End() ? i->second_ : nullptr;
     }
     else
     {
         HashMap<unsigned, Node*>::ConstIterator i = localNodes_.Find(id);
-        return i != localNodes_.End() ? i->second_ : 0;
+        return i != localNodes_.End() ? i->second_ : nullptr;
     }
 }
 
@@ -736,12 +736,12 @@ Component* Scene::GetComponent(unsigned id) const
     if (id < FIRST_LOCAL_ID)
     {
         HashMap<unsigned, Component*>::ConstIterator i = replicatedComponents_.Find(id);
-        return i != replicatedComponents_.End() ? i->second_ : 0;
+        return i != replicatedComponents_.End() ? i->second_ : nullptr;
     }
     else
     {
         HashMap<unsigned, Component*>::ConstIterator i = localComponents_.Find(id);
-        return i != localComponents_.End() ? i->second_ : 0;
+        return i != localComponents_.End() ? i->second_ : nullptr;
     }
 }
 
@@ -1063,7 +1063,7 @@ void Scene::ComponentRemoved(Component* component)
         localComponents_.Erase(id);
 
     component->SetID(0);
-    component->OnSceneSet(0);
+    component->OnSceneSet(nullptr);
     Mono::Callback(Component_OnSceneSet, component);
 }
 

@@ -52,10 +52,10 @@ const char* logLevelPrefixes[] =
     "INFO",
     "WARNING",
     "ERROR",
-    0
+    nullptr
 };
 
-static Log* logInstance = 0;
+static Log* logInstance = nullptr;
 static bool threadErrorDisplayed = false;
 
 Log::Log(Context* context) :
@@ -76,7 +76,7 @@ Log::Log(Context* context) :
 
 Log::~Log()
 {
-    logInstance = 0;
+    logInstance = nullptr;
 }
 
 void Log::Open(const String& fileName)

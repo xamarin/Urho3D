@@ -67,13 +67,23 @@ static const char* typeNames[] =
     "Rect",
     "IntVector3",
     "Int64",
-    0
+    "CustomPtr",
+    "Custom",
+    nullptr
 };
 
 static_assert(sizeof(typeNames) / sizeof(const char*) == MAX_VAR_TYPES + 1, "Variant type name array is out-of-date");
 
 Variant& Variant::operator =(const Variant& rhs)
 {
+    // Handle custom types separately
+    if (rhs.IsCustom())
+    {
+        SetCustomVariantValue(*rhs.GetCustomVariantValuePtr());
+        return *this;
+    }
+
+    // Assign other types here
     SetType(rhs.GetType());
 
     switch (type_)
@@ -141,6 +151,8 @@ bool Variant::operator ==(const Variant& rhs) const
 {
     if (type_ == VAR_VOIDPTR || type_ == VAR_PTR)
         return GetVoidPtr() == rhs.GetVoidPtr();
+    else if (IsCustom() && rhs.IsCustom())
+        return GetCustomVariantValuePtr()->Compare(*rhs.GetCustomVariantValuePtr());
     else if (type_ != rhs.type_)
         return false;
 
@@ -168,7 +180,7 @@ bool Variant::operator ==(const Variant& rhs) const
         return value_.vector4_ == rhs.value_.vector4_;
 
     case VAR_QUATERNION:
-        return value_.quaterion_ == rhs.value_.quaterion_;
+        return value_.quaternion_ == rhs.value_.quaternion_;
 
     case VAR_COLOR:
         return value_.color_ == rhs.value_.color_;
@@ -306,7 +318,7 @@ void Variant::FromString(VariantType type, const char* value)
 
     case VAR_VOIDPTR:
         // From string to void pointer not supported, set to null
-        *this = (void*)0;
+        *this = (void*)nullptr;
         break;
 
     case VAR_RESOURCEREF:
@@ -349,7 +361,7 @@ void Variant::FromString(VariantType type, const char* value)
 
     case VAR_PTR:
         // From string to RefCounted pointer not supported, set to null
-        *this = (RefCounted*)0;
+        *this = (RefCounted*)nullptr;
         break;
 
     case VAR_MATRIX3:
@@ -389,6 +401,32 @@ void Variant::SetBuffer(const void* data, unsigned size)
         memcpy(&buffer[0], data, size);
 }
 
+void Variant::SetCustomVariantValue(const CustomVariantValue& value)
+{
+    // Assign value if destination is already initialized
+    if (CustomVariantValue* custom = GetCustomVariantValuePtr())
+    {
+        if (custom->GetTypeInfo() == value.GetTypeInfo())
+        {
+            custom->Assign(value);
+            return;
+        }
+    }
+
+    if (value.GetSize() <= VARIANT_VALUE_SIZE)
+    {
+        SetType(VAR_CUSTOM_STACK);
+        value_.customValueStack_.~CustomVariantValue();
+        value.Clone(&value_.customValueStack_);
+    }
+    else
+    {
+        SetType(VAR_CUSTOM_HEAP);
+        delete value_.customValueHeap_;
+        value_.customValueHeap_ = value.Clone();
+    }
+}
+
 VectorBuffer Variant::GetVectorBuffer() const
 {
     return VectorBuffer(type_ == VAR_BUFFER ? value_.buffer_ : emptyBuffer);
@@ -425,7 +463,7 @@ String Variant::ToString() const
         return value_.vector4_.ToString();
 
     case VAR_QUATERNION:
-        return value_.quaterion_.ToString();
+        return value_.quaternion_.ToString();
 
     case VAR_COLOR:
         return value_.color_.ToString();
@@ -470,6 +508,10 @@ String Variant::ToString() const
     case VAR_RECT:
         return value_.rect_.ToString();
 
+    case VAR_CUSTOM_HEAP:
+    case VAR_CUSTOM_STACK:
+        return GetCustomVariantValuePtr()->ToString();
+
     default:
         // VAR_RESOURCEREF, VAR_RESOURCEREFLIST, VAR_VARIANTVECTOR, VAR_STRINGVECTOR, VAR_VARIANTMAP
         // Reference string serialization requires typehash-to-name mapping from the context. Can not support here
@@ -504,7 +546,7 @@ bool Variant::IsZero() const
         return value_.vector4_ == Vector4::ZERO;
 
     case VAR_QUATERNION:
-        return value_.quaterion_ == Quaternion::IDENTITY;
+        return value_.quaternion_ == Quaternion::IDENTITY;
 
     case VAR_COLOR:
         // WHITE is considered empty (i.e. default) color in the Color class definition
@@ -517,7 +559,7 @@ bool Variant::IsZero() const
         return value_.buffer_.Empty();
 
     case VAR_VOIDPTR:
-        return value_.voidPtr_ == 0;
+        return value_.voidPtr_ == nullptr;
 
     case VAR_RESOURCEREF:
         return value_.resourceRef_.name_.Empty();
@@ -552,7 +594,7 @@ bool Variant::IsZero() const
         return value_.intVector3_ == IntVector3::ZERO;
 
     case VAR_PTR:
-        return value_.weakPtr_ == (RefCounted*)0;
+        return value_.weakPtr_ == (RefCounted*)nullptr;
 
     case VAR_MATRIX3:
         return *value_.matrix3_ == Matrix3::IDENTITY;
@@ -568,6 +610,10 @@ bool Variant::IsZero() const
 
     case VAR_RECT:
         return value_.rect_ == Rect::ZERO;
+
+    case VAR_CUSTOM_HEAP:
+    case VAR_CUSTOM_STACK:
+        return GetCustomVariantValuePtr()->IsZero();
 
     default:
         return true;
@@ -625,6 +671,14 @@ void Variant::SetType(VariantType newType)
         delete value_.matrix4_;
         break;
 
+    case VAR_CUSTOM_HEAP:
+        delete value_.customValueHeap_;
+        break;
+
+    case VAR_CUSTOM_STACK:
+        value_.customValueStack_.~CustomVariantValue();
+        break;
+
     default:
         break;
     }
@@ -675,6 +729,16 @@ void Variant::SetType(VariantType newType)
 
     case VAR_MATRIX4:
         value_.matrix4_ = new Matrix4();
+        break;
+
+    case VAR_CUSTOM_HEAP:
+        // Must be initialized later
+        value_.customValueHeap_ = nullptr;
+        break;
+
+    case VAR_CUSTOM_STACK:
+        // Initialize virtual table with void custom object
+        new (&value_.customValueStack_) CustomVariantValue();
         break;
 
     default:

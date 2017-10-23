@@ -536,7 +536,7 @@ int Engine::RunFrame()
 Console* Engine::CreateConsole()
 {
     if (headless_ || !initialized_)
-        return 0;
+        return nullptr;
 
     // Return existing console if possible
     Console* console = GetSubsystem<Console>();
@@ -552,7 +552,7 @@ Console* Engine::CreateConsole()
 DebugHud* Engine::CreateDebugHud()
 {
     if (headless_ || !initialized_)
-        return 0;
+        return nullptr;
 
     // Return existing debug HUD if possible
     DebugHud* debugHud = GetSubsystem<DebugHud>();

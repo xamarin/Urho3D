@@ -42,7 +42,7 @@ Viewport::Viewport(Context* context) :
     stereo_(false),
     drawDebug_(true)
 {
-    SetRenderPath((RenderPath*)0);
+    SetRenderPath((RenderPath*)nullptr);
 }
 
 Viewport::Viewport(Context* context, Scene* scene, Camera* camera, RenderPath* renderPath) :

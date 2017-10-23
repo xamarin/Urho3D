@@ -62,7 +62,7 @@ static const char* methodDeclarations[] = {
 
 ScriptInstance::ScriptInstance(Context* context) :
     Component(context),
-    scriptObject_(0),
+    scriptObject_(nullptr),
     subscribed_(false),
     subscribedPostFixed_(false)
 {
@@ -201,7 +201,7 @@ bool ScriptInstance::CreateObject(ScriptFile* scriptFile, const String& classNam
     className_ = String::EMPTY; // Do not create object during SetScriptFile()
     SetScriptFile(scriptFile);
     SetClassName(className);
-    return scriptObject_ != 0;
+    return scriptObject_ != nullptr;
 }
 
 void ScriptInstance::SetScriptFile(ScriptFile* scriptFile)
@@ -387,14 +387,10 @@ bool ScriptInstance::IsA(const String& className) const
         return true;
     if (scriptObject_)
     {
-        // Start immediately at the first base class because we already checked the early out
-        asITypeInfo* currentType = scriptObject_->GetObjectType()->GetBaseType();
-        while (currentType)
-        {
-            if (className == currentType->GetName())
-                return true;
-            currentType = currentType->GetBaseType();
-        }
+        asITypeInfo* myType = scriptObject_->GetObjectType();
+        asITypeInfo* searchType = myType->GetModule()->GetTypeInfoByName(className.CString());
+        return searchType && (searchType->GetTypeId() & asTYPEID_MASK_OBJECT) != 0 &&
+            (myType->DerivesFrom(searchType) || myType->Implements(searchType));
     }
     return false;
 }
@@ -404,7 +400,7 @@ bool ScriptInstance::HasMethod(const String& declaration) const
     if (!scriptFile_ || !scriptObject_)
         return false;
     else
-        return scriptFile_->GetMethod(scriptObject_, declaration) != 0;
+        return scriptFile_->GetMethod(scriptObject_, declaration) != nullptr;
 }
 
 void ScriptInstance::SetScriptFileAttr(const ResourceRef& value)
@@ -574,16 +570,16 @@ void ScriptInstance::ReleaseObject()
         ClearScriptMethods();
         ClearScriptAttributes();
 
-        scriptObject_->SetUserData(0);
+        scriptObject_->SetUserData(nullptr);
         scriptObject_->Release();
-        scriptObject_ = 0;
+        scriptObject_ = nullptr;
     }
 }
 
 void ScriptInstance::ClearScriptMethods()
 {
     for (unsigned i = 0; i < MAX_SCRIPT_METHODS; ++i)
-        methods_[i] = 0;
+        methods_[i] = nullptr;
 
     delayedCalls_.Clear();
 }
@@ -829,7 +825,7 @@ void ScriptInstance::HandleSceneUpdate(StringHash eventType, VariantMap& eventDa
     if (methods_[METHOD_DELAYEDSTART])
     {
         scriptFile_->Execute(scriptObject_, methods_[METHOD_DELAYEDSTART]);
-        methods_[METHOD_DELAYEDSTART] = 0;  // Only execute once
+        methods_[METHOD_DELAYEDSTART] = nullptr;  // Only execute once
     }
 
     if (methods_[METHOD_UPDATE])
@@ -863,7 +859,7 @@ void ScriptInstance::HandlePhysicsPreStep(StringHash eventType, VariantMap& even
     if (methods_[METHOD_DELAYEDSTART])
     {
         scriptFile_->Execute(scriptObject_, methods_[METHOD_DELAYEDSTART]);
-        methods_[METHOD_DELAYEDSTART] = 0;  // Only execute once
+        methods_[METHOD_DELAYEDSTART] = nullptr;  // Only execute once
     }
 
     using namespace PhysicsPreStep;
@@ -930,28 +926,28 @@ Context* GetScriptContext()
     if (context)
         return static_cast<Script*>(context->GetEngine()->GetUserData())->GetContext();
     else
-        return 0;
+        return nullptr;
 }
 
 ScriptInstance* GetScriptContextInstance()
 {
     asIScriptContext* context = asGetActiveContext();
-    asIScriptObject* object = context ? static_cast<asIScriptObject*>(context->GetThisPointer()) : 0;
+    asIScriptObject* object = context ? static_cast<asIScriptObject*>(context->GetThisPointer()) : nullptr;
     if (object)
         return static_cast<ScriptInstance*>(object->GetUserData());
     else
-        return 0;
+        return nullptr;
 }
 
 Node* GetScriptContextNode()
 {
     ScriptInstance* instance = GetScriptContextInstance();
-    return instance ? instance->GetNode() : 0;
+    return instance ? instance->GetNode() : nullptr;
 }
 
 Scene* GetScriptContextScene()
 {
-    Scene* scene = 0;
+    Scene* scene = nullptr;
     Node* node = GetScriptContextNode();
     if (node)
         scene = node->GetScene();
@@ -975,7 +971,7 @@ ScriptEventListener* GetScriptContextEventListener()
             return GetScriptContextFile();
     }
     else
-        return 0;
+        return nullptr;
 }
 
 Object* GetScriptContextEventListenerObject()

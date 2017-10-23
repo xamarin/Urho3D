@@ -41,7 +41,7 @@ static const char* highlightModes[] =
     "Never",
     "Focus",
     "Always",
-    0
+    nullptr
 };
 
 static const StringHash expandedHash("Expanded");
@@ -321,6 +321,27 @@ void ListView::OnResize(const IntVector2& newSize, const IntVector2& delta)
     // When in hierarchy mode also need to resize the overlay container
     if (hierarchyMode_)
         overlayContainer_->SetSize(scrollPanel_->GetSize());
+}
+
+void ListView::UpdateInternalLayout()
+{
+    if (overlayContainer_)
+        overlayContainer_->UpdateLayout();
+    contentElement_->UpdateLayout();
+}
+
+void ListView::DisableInternalLayoutUpdate()
+{
+    if (overlayContainer_)
+        overlayContainer_->DisableLayoutUpdate();
+    contentElement_->DisableLayoutUpdate();
+}
+
+void ListView::EnableInternalLayoutUpdate()
+{
+    if (overlayContainer_)
+        overlayContainer_->EnableLayoutUpdate();
+    contentElement_->EnableLayoutUpdate();
 }
 
 void ListView::AddItem(UIElement* item)
