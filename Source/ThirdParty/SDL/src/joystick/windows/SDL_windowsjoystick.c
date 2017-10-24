@@ -304,11 +304,13 @@ SDL_SYS_JoystickInit(void)
 
     SDL_SYS_JoystickDetect();
 
-    if (!s_threadJoystick) {
-        /* spin up the thread to detect hotplug of devices */
-        s_bJoystickThreadQuit = SDL_FALSE;
-        s_threadJoystick = SDL_CreateThreadInternal(SDL_JoystickThread, "SDL_joystick", 64 * 1024, NULL);
-    }
+#ifdef SDL_DETECT_JOYSTICK_HOTPLUGS
+	if (!s_threadJoystick) {
+		/* spin up the thread to detect hotplug of devices */
+		s_bJoystickThreadQuit = SDL_FALSE;
+		s_threadJoystick = SDL_CreateThreadInternal(SDL_JoystickThread, "SDL_joystick", 64 * 1024, NULL);
+	}
+#endif
     return SDL_SYS_NumJoysticks();
 }
 
