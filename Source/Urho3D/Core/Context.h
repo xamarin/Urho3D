@@ -92,6 +92,8 @@ public:
     AttributeHandle RegisterAttribute(StringHash objectType, const AttributeInfo& attr);
     /// Remove object attribute.
     void RemoveAttribute(StringHash objectType, const char* name);
+    /// Remove all object attributes.
+    void RemoveAllAttributes(StringHash objectType);
     /// Update object attribute's default value.
     void UpdateAttributeDefaultValue(StringHash objectType, const char* name, const Variant& defaultValue);
     /// Return a preallocated map for event data. Used for optimization to avoid constant re-allocation of event data maps.
@@ -113,12 +115,16 @@ public:
     template <class T> void RegisterFactory();
     /// Template version of registering an object factory with category.
     template <class T> void RegisterFactory(const char* category);
+    /// Template version of registering subsystem.
+    template <class T> T* RegisterSubsystem();
     /// Template version of removing a subsystem.
     template <class T> void RemoveSubsystem();
     /// Template version of registering an object attribute.
     template <class T> AttributeHandle RegisterAttribute(const AttributeInfo& attr);
     /// Template version of removing an object attribute.
     template <class T> void RemoveAttribute(const char* name);
+    /// Template version of removing all object attributes.
+    template <class T> void RemoveAllAttributes();
     /// Template version of copying base class attributes to derived class.
     template <class T, class U> void CopyBaseAttributes();
     /// Template version of updating an object attribute's default value.
@@ -128,7 +134,7 @@ public:
     Object* GetSubsystem(StringHash type) const;
 
     /// Return global variable based on key
-    const Variant& GetGlobalVar(StringHash key) const ;
+    const Variant& GetGlobalVar(StringHash key) const;
 
     /// Return all global variables.
     const VariantMap& GetGlobalVars() const { return globalVars_; }
@@ -247,11 +253,20 @@ template <class T> void Context::RegisterFactory(const char* category)
     RegisterFactory(new ObjectFactoryImpl<T>(this), category);
 }
 
+template <class T> T* Context::RegisterSubsystem()
+{
+    T* subsystem = new T(this);
+    RegisterSubsystem(subsystem);
+    return subsystem;
+}
+
 template <class T> void Context::RemoveSubsystem() { RemoveSubsystem(T::GetTypeStatic()); }
 
 template <class T> AttributeHandle Context::RegisterAttribute(const AttributeInfo& attr) { return RegisterAttribute(T::GetTypeStatic(), attr); }
 
 template <class T> void Context::RemoveAttribute(const char* name) { RemoveAttribute(T::GetTypeStatic(), name); }
+
+template <class T> void Context::RemoveAllAttributes() { RemoveAllAttributes(T::GetTypeStatic()); }
 
 template <class T, class U> void Context::CopyBaseAttributes() { CopyBaseAttributes(T::GetTypeStatic(), U::GetTypeStatic()); }
 

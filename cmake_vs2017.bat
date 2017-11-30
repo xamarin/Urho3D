@@ -20,4 +20,4 @@
 :: THE SOFTWARE.
 ::
 
-@"%~dp0cmake_generic.bat" %* -VS=12
+@"%~dp0cmake_generic.bat" %* -VS=15
