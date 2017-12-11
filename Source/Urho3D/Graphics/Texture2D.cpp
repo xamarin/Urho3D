@@ -57,6 +57,11 @@ void Texture2D::RegisterObject(Context* context)
     context->RegisterFactory<Texture2D>();
 }
 
+void Texture2D::SetCustomTarget(unsigned target)
+{
+    target_ = target;
+}
+
 bool Texture2D::BeginLoad(Deserializer& source)
 {
     // In headless mode, do not actually load the texture, just return success

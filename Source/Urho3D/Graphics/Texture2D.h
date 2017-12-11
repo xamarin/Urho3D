@@ -55,7 +55,8 @@ public:
     virtual void OnDeviceReset() override;
     /// Release the texture.
     virtual void Release() override;
-
+    /// Set custom target (for example - EOS)
+    void SetCustomTarget(unsigned target);
     /// Set size, format, usage and multisampling parameters for rendertargets. Zero size will follow application window size. Return true if successful.
     /** Autoresolve true means the multisampled texture will be automatically resolved to 1-sample after being rendered to and before being sampled as a texture.
         Autoresolve false means the multisampled texture will be read as individual samples in the shader and is not supported on Direct3D9.
