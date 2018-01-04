@@ -68,20 +68,64 @@ generated/
 /Android/ThirdParty/
 /Android/libs/
 
+####### Cmake gitignore #######
+
 # CMake generated build files
 CMakeCache.txt
-CMakeFiles/
-CMakeScripts/
+CMakeFiles
+CMakeScripts
+Testing
 Makefile
 cmake_install.cmake
 install_manifest.txt
+compile_commands.json
 CPackConfig.cmake
 CPackSourceConfig.cmake
 CTestTestfile.cmake
+
+#######
+
 /Source/**/*.cmake
 !/Source/ThirdParty/SDL/cmake/*.cmake
 !/Source/ThirdParty/SDL/include/*cmake
 /Docs/**/*.cmake
+
+####### C++ gitignore #######
+
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+#######
 
 # Precompiled header files
 *.gch/
@@ -101,3 +145,14 @@ configure*
 *.bak
 Thumbs.db
 .directory
+
+### some misc cmake generated files.
+**/*.vcxproj
+**/*.tlog
+**/*.filters
+**/*.pdb
+**/*.exp
+**/*.sln
+**/*.cmake
+**/*.in
+.vs

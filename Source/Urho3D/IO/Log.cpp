@@ -81,7 +81,7 @@ Log::~Log()
 
 void Log::Open(const String& fileName)
 {
-#if !defined(__ANDROID__) && !defined(IOS) && !defined(TVOS)) && !defined(UWP)
+#if !defined(__ANDROID__) && !defined(IOS) && !defined(TVOS) && !defined(UWP)
     if (fileName.Empty())
         return;
     if (logFile_ && logFile_->IsOpen())
