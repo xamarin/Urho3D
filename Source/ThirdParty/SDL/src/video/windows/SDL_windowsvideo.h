@@ -79,7 +79,7 @@ typedef struct _TOUCHINPUT {
 
 #endif /* WINVER < 0x0601 */
 
-#if WINVER < 0x0603
+#if WINVER <= _WIN32_WINNT_WIN10
 
 typedef enum MONITOR_DPI_TYPE {
     MDT_EFFECTIVE_DPI = 0,
