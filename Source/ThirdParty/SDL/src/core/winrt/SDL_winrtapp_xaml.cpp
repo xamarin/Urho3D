@@ -98,6 +98,16 @@ WINRT_OnRenderViaXAML(_In_ Platform::Object^ sender, _In_ Platform::Object^ args
  * SDL + XAML Initialization
  */
 
+extern "C" __declspec(dllexport) void SDL_WINRT_InitSdl()
+{
+	SDL_SetMainReady();
+	if (SDL_InitSubSystem(SDL_INIT_VIDEO) < 0) {
+		// SDL_InitSubSystem will, on error, set the SDL error.  Let that propogate to
+		// the caller to here:
+		WINRT_XAMLWasEnabled = SDL_TRUE;
+	}
+}
+
 int
 SDL_WinRTInitXAMLApp(int (*mainFunction)(int, char **), void * backgroundPanelAsIInspectable)
 {

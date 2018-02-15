@@ -122,6 +122,13 @@ int SDL_WinRTInitNonXAMLApp(int (*mainFunction)(int, char **))
     return 0;
 }
 
+SDL_WinRTApp^ fakeApp;
+extern "C" __declspec(dllexport) void SDL_WINRT_SubscribeToWindowEvents()
+{
+	fakeApp = ref new SDL_WinRTApp();
+	fakeApp->SetWindow(CoreWindow::GetForCurrentThread());
+}
+
 static void WINRT_SetDisplayOrientationsPreference(void *userdata, const char *name, const char *oldValue, const char *newValue)
 {
     SDL_assert(SDL_strcmp(name, SDL_HINT_ORIENTATIONS) == 0);
@@ -186,6 +193,8 @@ static void WINRT_SetDisplayOrientationsPreference(void *userdata, const char *n
 static void
 WINRT_ProcessWindowSizeChange() // TODO: Pass an SDL_Window-identifying thing into WINRT_ProcessWindowSizeChange()
 {
+	return; //handled in the C# code (see UrhoSurface)
+
     CoreWindow ^ coreWindow = CoreWindow::GetForCurrentThread();
     if (coreWindow) {
         if (WINRT_GlobalSDLWindow) {
@@ -319,6 +328,7 @@ void SDL_WinRTApp::OnOrientationChanged(Object^ sender)
 #endif
 
 }
+
 
 void SDL_WinRTApp::SetWindow(CoreWindow^ window)
 {
