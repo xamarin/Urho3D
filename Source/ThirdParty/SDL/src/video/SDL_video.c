@@ -2461,8 +2461,8 @@ SDL_OnWindowHidden(SDL_Window * window)
 void
 SDL_OnWindowResized(SDL_Window * window)
 {
-    window->surface_valid = SDL_FALSE;
     int width = window->w;
+    window->surface_valid = SDL_FALSE;
     SDL_SendWindowEvent(window, SDL_WINDOWEVENT_SIZE_CHANGED, window->w, window->h);
 }
 
