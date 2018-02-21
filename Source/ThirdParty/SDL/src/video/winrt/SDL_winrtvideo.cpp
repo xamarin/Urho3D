@@ -680,7 +680,7 @@ WINRT_CreateWindow(_THIS, SDL_Window * window)
         if (!(requestedFlags & SDL_WINDOW_FULLSCREEN)) {
             const Windows::Foundation::Size size(WINRT_PHYSICAL_PIXELS_TO_DIPS(window->w),
                                                  WINRT_PHYSICAL_PIXELS_TO_DIPS(window->h));
-            didSetSize = data->appView->TryResizeView(size);
+            //didSetSize = data->appView->TryResizeView(size);
         }
         if (!didSetSize) {
             /* We either weren't able to set the window size, or a request for
@@ -719,7 +719,7 @@ WINRT_SetWindowSize(_THIS, SDL_Window * window)
     SDL_WindowData * data = (SDL_WindowData *)window->driverdata;
     const Windows::Foundation::Size size(WINRT_PHYSICAL_PIXELS_TO_DIPS(window->w),
                                          WINRT_PHYSICAL_PIXELS_TO_DIPS(window->h));
-    data->appView->TryResizeView(size); // TODO, WinRT: return failure (to caller?) from TryResizeView()
+    //data->appView->TryResizeView(size); // TODO, WinRT: return failure (to caller?) from TryResizeView()
 #endif
 }
 
