@@ -143,7 +143,12 @@
 
 
 #define ft_strtol  strtol
+#if UWP
+char *getenvCompat(const char *name);
+#define ft_getenv  getenvCompat
+#else
 #define ft_getenv  getenv
+#endif
 
 
   /**********************************************************************/
